@@ -1,11 +1,11 @@
 {
-  "name": "SerialCommand",
+  "name": "StreamCommandParser",
   "keywords": "serial, communication, protocol",
-  "description": "A Wiring/Arduino library to tokenize and parse commands received over a serial port.",
+  "description": "A Wiring/Arduino library to tokenize and parse commands received over stream interfaces like the serial port, BLE or SD streams.",
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/kroimon/Arduino-SerialCommand.git"
+    "url": "https://github.com/jongarrison/StreamCommandParser"
   },
   "frameworks": "arduino",
   "platforms": "atmelavr"
