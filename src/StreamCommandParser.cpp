@@ -13,13 +13,14 @@ struct NullStream : public Stream {
  * Constructor with preferred response stream
  */
 StreamCommandParser::StreamCommandParser(Stream& providedPreferredResponseStream, char *providedParserName)
-  : commandList(NULL),
+  :     
+    isPreferredResponseStreamAvailable(true),
+    preferredResponseStream(providedPreferredResponseStream),
+    commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
     last(NULL),
-    preferredResponseStream(providedPreferredResponseStream),
-    isPreferredResponseStreamAvailable(true),
     parserName(providedParserName)
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
@@ -27,14 +28,15 @@ StreamCommandParser::StreamCommandParser(Stream& providedPreferredResponseStream
 }
 
 StreamCommandParser::StreamCommandParser()
-  : commandList(NULL),
+  : 
+    isPreferredResponseStreamAvailable(false),
+    preferredResponseStream(nullStream),
+    commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
     last(NULL),
-    preferredResponseStream(nullStream),
-    isPreferredResponseStreamAvailable(false),
-    parserName("none")
+    parserName((char*)"none")
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();

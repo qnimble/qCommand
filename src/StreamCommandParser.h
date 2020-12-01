@@ -34,8 +34,8 @@ class StreamCommandParser {
     char *next();                                     // Returns pointer to next token found in command buffer (for getting arguments to commands).
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
 
-    Stream& preferredResponseStream;
     bool isPreferredResponseStreamAvailable;
+    Stream& preferredResponseStream;
 
   private:
     // Command/handler dictionary
@@ -45,17 +45,16 @@ class StreamCommandParser {
     };                                    // Data structure to hold Command/Handler function key-value pairs
     StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
     byte commandCount;
-
     // Pointer to the default handler function
     void (*defaultHandler)(const char *, StreamCommandParser& streamCommandParser);
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
+    char *last;                         // State variable used by strtok_r during processing
+    char *parserName;
 
     char buffer[STREAMCOMMAND_BUFFER + 1]; // Buffer of stored characters while waiting for terminator character
     byte bufPos;                        // Current position in the buffer
-    char *last;                         // State variable used by strtok_r during processing
-    char *parserName;
 
 };
 
