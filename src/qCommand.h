@@ -20,7 +20,7 @@ class qCommand {
 
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser));  // Add a command to the processing dictionary.
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser));   // A handler to call when no valid command received.
-
+    void setCaseInsensitive(bool InSensitive);
     void readSerial(Stream& inputStream);             // Main entry point.
     void clearBuffer();                               // Clears the input buffer.
     char *next();                                     // Returns pointer to next token found in command buffer (for getting arguments to commands).
@@ -40,6 +40,7 @@ class qCommand {
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
+    bool caseInsensitive;
     char *last;                         // State variable used by strtok_r during processing
     char *parserName;
 

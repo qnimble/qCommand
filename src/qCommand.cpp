@@ -12,6 +12,7 @@ qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParser
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
+    caseInsensitive(true),
     last(NULL),
     parserName(providedParserName)
 {
@@ -37,6 +38,11 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
   commandList[commandCount].function = function;
   commandCount++;
+
+  if (caseInsensitive) {
+	  strlwr(commandList[commandCount].command);
+     }
+
 }
 
 /**
@@ -67,6 +73,9 @@ void qCommand::readSerial(Stream& inputStream) {
         Serial.println(buffer);
       #endif
 
+        if (caseInsensitive) {
+		  strlwr(buffer);
+        }
       char *command = strtok_r(buffer, delim, &last);   // Search for command at start of buffer
       if (command != NULL) {
         boolean matched = false;
@@ -124,6 +133,12 @@ void qCommand::printAvailableCommands(Stream& outputStream) {
   }
 }
 
+/*
+ * Set whether the commands should be case insensitive
+ */
+void qCommand::setCaseInsensitive(bool InSensitive) {
+	caseInsensitive = InSensitive;
+}
 
 /*
  * Clear the input buffer.
