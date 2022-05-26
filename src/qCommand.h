@@ -15,8 +15,8 @@
 
 class qCommand {
   public:
-	qCommand(Stream&  providedPreferredResponseStream);
-	qCommand(Stream&  providedPreferredResponseStream, char *parserName);
+
+	qCommand(Stream&  providedPreferredResponseStream = Serial, char *parserName = (char*)"none");
 
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser));  // Add a command to the processing dictionary.
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser));   // A handler to call when no valid command received.

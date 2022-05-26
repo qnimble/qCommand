@@ -1,16 +1,8 @@
 #include "qCommand.h"
 
-struct NullStream : public Stream {
-      NullStream( void ) { return; }
-      int available( void ) { return 0; }
-      void flush( void ) { return; }
-      int peek( void ) { return -1; }
-      int read( void ){ return -1; };
-      size_t write( uint8_t u_Data ){ return sizeof(u_Data); }
-    } nullStream;
 
 /**
- * Constructor with preferred response stream
+ * Constructor
  */
 qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParserName)
   :     
@@ -22,21 +14,6 @@ qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParser
     term('\n'),           // default terminator for commands, newline character
     last(NULL),
     parserName(providedParserName)
-{
-  strcpy(delim, " "); // strtok_r needs a null-terminated string
-  clearBuffer();
-}
-
-qCommand::qCommand(Stream& providedPreferredResponseStream)
-  : 
-
-    S(providedPreferredResponseStream),
-    commandList(NULL),
-    commandCount(0),
-    defaultHandler(NULL),
-    term('\n'),           // default terminator for commands, newline character
-    last(NULL),
-    parserName((char*)"none")
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
