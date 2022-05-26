@@ -11,8 +11,9 @@ qCommand::qCommand()
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
-    caseInsensitive(true),
-    last(NULL)
+    caseSensitive(false),
+	cur(NULL),
+	last(NULL)
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
@@ -25,21 +26,24 @@ qCommand::qCommand()
  */
 void qCommand::addCommand(const char *command, void (*function)(qCommand& streamCommandParser, Stream& stream)) {
   #ifdef SERIALCOMMAND_DEBUG
-    Serial.print(parserName);
     Serial.print(" - Adding command (");
     Serial.print(commandCount);
     Serial.print("): ");
     Serial.println(command);
   #endif
 
-  commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
+   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
   commandList[commandCount].function = function;
+
+  if (!caseSensitive) {
+    strlwr(commandList[commandCount].command);
+  }
+
+
   commandCount++;
 
-  if (caseInsensitive) {
-	  strlwr(commandList[commandCount].command);
-     }
+
 
 }
 
@@ -71,7 +75,7 @@ void qCommand::readSerial(Stream& inputStream) {
         Serial.println(buffer);
       #endif
 
-        if (caseInsensitive) {
+        if (!caseSensitive) {
 		  strlwr(buffer);
         }
       char *command = strtok_r(buffer, delim, &last);   // Search for command at start of buffer
@@ -79,7 +83,6 @@ void qCommand::readSerial(Stream& inputStream) {
         boolean matched = false;
         for (int i = 0; i < commandCount; i++) {
           #ifdef SERIALCOMMAND_DEBUG
-            Serial.print(parserName);
             Serial.print(" - Comparing [");
             Serial.print(command);
             Serial.print("] to [");
@@ -134,8 +137,8 @@ void qCommand::printAvailableCommands(Stream& outputStream) {
 /*
  * Set whether the commands should be case insensitive
  */
-void qCommand::setCaseInsensitive(bool InSensitive) {
-	caseInsensitive = InSensitive;
+void qCommand::setCaseSensitive(bool Sensitive) {
+	caseSensitive = Sensitive;
 }
 
 /*
@@ -151,6 +154,14 @@ void qCommand::clearBuffer() {
  * Returns NULL if no more tokens exist.
  */
 char *qCommand::next() {
-  return strtok_r(NULL, delim, &last);
+  cur = strtok_r(NULL, delim, &last);
+  return cur;
 }
 
+/**
+ * Retrieve the current token ("word" or "argument") from the command buffer.
+ * Returns NULL if no more tokens exist.
+ */
+char *qCommand::current() {
+  return cur;
+}
