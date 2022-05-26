@@ -16,33 +16,31 @@
 class qCommand {
   public:
 
-	qCommand(Stream&  providedPreferredResponseStream = Serial, char *parserName = (char*)"none");
+	qCommand();
 
-    void addCommand(const char *command, void(*function)(qCommand& streamCommandParser));  // Add a command to the processing dictionary.
-    void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser));   // A handler to call when no valid command received.
+    void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.
+    void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.
     void setCaseInsensitive(bool InSensitive);
     void readSerial(Stream& inputStream);             // Main entry point.
     void clearBuffer();                               // Clears the input buffer.
     char *next();                                     // Returns pointer to next token found in command buffer (for getting arguments to commands).
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
-    Stream& S;
 
   private:
     // Command/handler dictionary
     struct StreamCommandParserCallback {
       char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
-      void (*function)(qCommand& streamCommandParser);
+      void (*function)(qCommand& streamCommandParser, Stream& stream);
     };                                    // Data structure to hold Command/Handler function key-value pairs
     StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
     byte commandCount;
     // Pointer to the default handler function
-    void (*defaultHandler)(const char *, qCommand& streamCommandParser);
+    void (*defaultHandler)(const char *, qCommand& streamCommandParser, Stream& stream);
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
     bool caseInsensitive;
     char *last;                         // State variable used by strtok_r during processing
-    char *parserName;
 
     char buffer[STREAMCOMMAND_BUFFER + 1]; // Buffer of stored characters while waiting for terminator character
     byte bufPos;                        // Current position in the buffer

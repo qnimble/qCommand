@@ -4,17 +4,15 @@
 /**
  * Constructor
  */
-qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParserName)
-  :     
+qCommand::qCommand()
+  :
 
-    S(providedPreferredResponseStream),
     commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
     caseInsensitive(true),
-    last(NULL),
-    parserName(providedParserName)
+    last(NULL)
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
@@ -25,7 +23,7 @@ qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParser
  * This is used for matching a found token in the buffer, and gives the pointer
  * to the handler function to deal with it.
  */
-void qCommand::addCommand(const char *command, void (*function)(qCommand& streamCommandParser)) {
+void qCommand::addCommand(const char *command, void (*function)(qCommand& streamCommandParser, Stream& stream)) {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(parserName);
     Serial.print(" - Adding command (");
@@ -49,7 +47,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
  * This sets up a handler to be called in the event that the receveived command string
  * isn't in the list of commands.
  */
-void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser)) {
+void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream)) {
   defaultHandler = function;
 }
 
@@ -97,14 +95,14 @@ void qCommand::readSerial(Stream& inputStream) {
             #endif
 
             // Execute the stored handler function for the command
-            (*commandList[i].function)(*this);
+            (*commandList[i].function)(*this,inputStream);
             matched = true;
             break;
           }
         }
         if (!matched) {
         	if (defaultHandler != NULL) {
-        		(*defaultHandler)(command, *this);
+                (*defaultHandler)(command, *this, inputStream);
         	} else {
         		inputStream.print("Unknown command: ");
         		inputStream.println(command);
