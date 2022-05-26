@@ -14,8 +14,8 @@ struct NullStream : public Stream {
  */
 qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParserName)
   :     
-    isPreferredResponseStreamAvailable(true),
-    preferredResponseStream(providedPreferredResponseStream),
+
+    S(providedPreferredResponseStream),
     commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
@@ -27,10 +27,10 @@ qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParser
   clearBuffer();
 }
 
-qCommand::qCommand()
+qCommand::qCommand(Stream& providedPreferredResponseStream)
   : 
-    isPreferredResponseStreamAvailable(false),
-    preferredResponseStream(nullStream),
+
+    S(providedPreferredResponseStream),
     commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
@@ -116,8 +116,13 @@ void qCommand::readSerial(Stream& inputStream) {
             break;
           }
         }
-        if (!matched && (defaultHandler != NULL)) {
-          (*defaultHandler)(command, *this);
+        if (!matched) {
+        	if (defaultHandler != NULL) {
+        		(*defaultHandler)(command, *this);
+        	} else {
+        		inputStream.print("Unknown command: ");
+        		inputStream.println(command);
+        	}
         }
       }
       clearBuffer();

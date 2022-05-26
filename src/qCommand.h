@@ -15,7 +15,7 @@
 
 class qCommand {
   public:
-	qCommand();
+	qCommand(Stream&  providedPreferredResponseStream);
 	qCommand(Stream&  providedPreferredResponseStream, char *parserName);
 
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser));  // Add a command to the processing dictionary.
@@ -25,9 +25,7 @@ class qCommand {
     void clearBuffer();                               // Clears the input buffer.
     char *next();                                     // Returns pointer to next token found in command buffer (for getting arguments to commands).
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
-
-    bool isPreferredResponseStreamAvailable;
-    Stream& preferredResponseStream;
+    Stream& S;
 
   private:
     // Command/handler dictionary
