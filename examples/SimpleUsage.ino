@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "StreamCommandParser.h"
 
-StreamCommandParser streamCommandParser(Serial, "streamCommandParser");
+qCommand qC(Serial, "streamCommandParser");
 
 void hi_handler(StreamCommandParser& commandParser) {
     commandParser.preferredResponseStream.println("Whazzup?");
@@ -20,13 +20,12 @@ void default_handler(const char * command, StreamCommandParser& commandParser) {
 
 void setup() {
     Serial.begin(9600);
-    streamCommandParser.addCommand("hi", hi_handler);
-    streamCommandParser.addCommand("sum", sum_handler);
-    streamCommandParser.setDefaultHandler(default_handler);
+    qC.addCommand("hi", hi_handler);
+    qC.addCommand("sum", sum_handler);
+    qC.setDefaultHandler(default_handler);
     Serial.println("ready...");
 }
 
 void loop() {
-    streamCommandParser.readSerial(Serial);
+    qC.readSerial(Serial);
 }
-

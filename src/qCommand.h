@@ -1,33 +1,25 @@
-#ifndef STREAMCOMMANDPARSER_h
-#define STREAMCOMMANDPARSER_h
-
-// #if defined(WIRING) && WIRING >= 100
-//   #include <Wiring.h>
-// #elif defined(ARDUINO) && ARDUINO >= 100
-//   #include <Arduino.h>
-// #else
-//   #include <WProgram.h>
-// #endif
+#ifndef QCOMMAND_h
+#define QCOMMAND_h
 
 #include <Arduino.h>
 #include <string.h>
 #include <Stream.h>
 
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
-#define STREAMCOMMAND_BUFFER 32
+#define STREAMCOMMAND_BUFFER 64
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 12 //8
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
 //#define SERIALCOMMAND_DEBUG
 
-class StreamCommandParser {
+class qCommand {
   public:
-    StreamCommandParser();
-    StreamCommandParser(Stream&  providedPreferredResponseStream, char *parserName);
+	qCommand();
+	qCommand(Stream&  providedPreferredResponseStream, char *parserName);
 
-    void addCommand(const char *command, void(*function)(StreamCommandParser& streamCommandParser));  // Add a command to the processing dictionary.
-    void setDefaultHandler(void (*function)(const char *, StreamCommandParser& streamCommandParser));   // A handler to call when no valid command received.
+    void addCommand(const char *command, void(*function)(qCommand& streamCommandParser));  // Add a command to the processing dictionary.
+    void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser));   // A handler to call when no valid command received.
 
     void readSerial(Stream& inputStream);             // Main entry point.
     void clearBuffer();                               // Clears the input buffer.
@@ -41,12 +33,12 @@ class StreamCommandParser {
     // Command/handler dictionary
     struct StreamCommandParserCallback {
       char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
-      void (*function)(StreamCommandParser& streamCommandParser);
+      void (*function)(qCommand& streamCommandParser);
     };                                    // Data structure to hold Command/Handler function key-value pairs
     StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
     byte commandCount;
     // Pointer to the default handler function
-    void (*defaultHandler)(const char *, StreamCommandParser& streamCommandParser);
+    void (*defaultHandler)(const char *, qCommand& streamCommandParser);
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
@@ -58,4 +50,4 @@ class StreamCommandParser {
 
 };
 
-#endif //STREAMCOMMANDPARSER_h
+#endif //QCOMMAND_h

@@ -1,4 +1,4 @@
-#include "StreamCommandParser.h"
+#include "qCommand.h"
 
 struct NullStream : public Stream {
       NullStream( void ) { return; }
@@ -12,7 +12,7 @@ struct NullStream : public Stream {
 /**
  * Constructor with preferred response stream
  */
-StreamCommandParser::StreamCommandParser(Stream& providedPreferredResponseStream, char *providedParserName)
+qCommand::qCommand(Stream& providedPreferredResponseStream, char *providedParserName)
   :     
     isPreferredResponseStreamAvailable(true),
     preferredResponseStream(providedPreferredResponseStream),
@@ -27,7 +27,7 @@ StreamCommandParser::StreamCommandParser(Stream& providedPreferredResponseStream
   clearBuffer();
 }
 
-StreamCommandParser::StreamCommandParser()
+qCommand::qCommand()
   : 
     isPreferredResponseStreamAvailable(false),
     preferredResponseStream(nullStream),
@@ -47,7 +47,7 @@ StreamCommandParser::StreamCommandParser()
  * This is used for matching a found token in the buffer, and gives the pointer
  * to the handler function to deal with it.
  */
-void StreamCommandParser::addCommand(const char *command, void (*function)(StreamCommandParser& streamCommandParser)) {
+void qCommand::addCommand(const char *command, void (*function)(qCommand& streamCommandParser)) {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(parserName);
     Serial.print(" - Adding command (");
@@ -66,7 +66,7 @@ void StreamCommandParser::addCommand(const char *command, void (*function)(Strea
  * This sets up a handler to be called in the event that the receveived command string
  * isn't in the list of commands.
  */
-void StreamCommandParser::setDefaultHandler(void (*function)(const char *, StreamCommandParser& streamCommandParser)) {
+void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser)) {
   defaultHandler = function;
 }
 
@@ -75,7 +75,7 @@ void StreamCommandParser::setDefaultHandler(void (*function)(const char *, Strea
  * When the terminator character (default '\n') is seen, it starts parsing the
  * buffer for a prefix command, and calls handlers setup by addCommand() member
  */
-void StreamCommandParser::readSerial(Stream& inputStream) {
+void qCommand::readSerial(Stream& inputStream) {
   // Serial.print("Time IN: ");
   // Serial.println(millis());
   while (inputStream.available() > 0) {
@@ -136,7 +136,7 @@ void StreamCommandParser::readSerial(Stream& inputStream) {
   // Serial.println(millis());
 }
 
-void StreamCommandParser::printAvailableCommands(Stream& outputStream) {
+void qCommand::printAvailableCommands(Stream& outputStream) {
   for (int i = 0; i < commandCount; i++) {
     outputStream.println(commandList[i].command);
   }
@@ -146,7 +146,7 @@ void StreamCommandParser::printAvailableCommands(Stream& outputStream) {
 /*
  * Clear the input buffer.
  */
-void StreamCommandParser::clearBuffer() {
+void qCommand::clearBuffer() {
   buffer[0] = '\0';
   bufPos = 0;
 }
@@ -155,7 +155,7 @@ void StreamCommandParser::clearBuffer() {
  * Retrieve the next token ("word" or "argument") from the command buffer.
  * Returns NULL if no more tokens exist.
  */
-char *StreamCommandParser::next() {
+char *qCommand::next() {
   return strtok_r(NULL, delim, &last);
 }
 

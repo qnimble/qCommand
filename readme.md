@@ -1,7 +1,12 @@
 
+This is a basic stream command parsing library, it is based on StreamCommand Parser, which is based on Arduino-SerialCommand and it allows use of any Stream interface that commands might come through, such as Serial.
+
+----------------------------------------
+Based on StreamCommandParser:
+----------------------------------------
 This is a basic stream command parsing library, it is based on Arduino-SerialCommand but allows use of any Stream interface that commands might come through, perhaps Serial, BLE and/or an SD card stream.
 
-This repo is set up for using with PlatformIO.
+StreamCommandParser was written by [jongarrison](https://github.com/jongarrison) and it available [here](https://github.com/jongarrison/StreamCommandParser).
 
 ----------------------------------------
 Based on Arduino-SerialCommand:
