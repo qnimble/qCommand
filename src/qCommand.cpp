@@ -1,12 +1,10 @@
 #include "qCommand.h"
 
-
 /**
  * Constructor
  */
 qCommand::qCommand()
   :
-
     commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
@@ -26,26 +24,89 @@ qCommand::qCommand()
  */
 void qCommand::addCommand(const char *command, void (*function)(qCommand& streamCommandParser, Stream& stream)) {
   #ifdef SERIALCOMMAND_DEBUG
-    Serial.print(" - Adding command (");
+    Serial.print(" - Adding Command (");
     Serial.print(commandCount);
     Serial.print("): ");
     Serial.println(command);
   #endif
 
-   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
+  commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
-  commandList[commandCount].function = function;
+  commandList[commandCount].function.f1 = function;
 
   if (!caseSensitive) {
     strlwr(commandList[commandCount].command);
   }
 
-
   commandCount++;
-
-
-
 }
+
+void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, void* variable, const char* command), void* var) {
+  #ifdef SERIALCOMMAND_DEBUG
+    Serial.print(" - Adding Assign Variable Command (");
+    Serial.print(commandCount);
+    Serial.print("): ");
+    Serial.println(command);
+  #endif
+
+	commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
+	strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
+	commandList[commandCount].function.f2 = function;
+	commandList[commandCount].ptr = var;
+	if (!caseSensitive) {
+	   strlwr(commandList[commandCount].command);
+	}
+	commandCount++;
+}
+
+void qCommand::assignVariable(const char* command, int* variable) {
+	addCommandInternal(command,&qCommand::reportInt, variable);
+}
+
+void qCommand::assignVariable(const char* command, uint* variable) {
+	addCommandInternal(command,&qCommand::reportUInt, variable);
+}
+
+
+void qCommand::assignVariable(const char* command, double* variable) {
+	addCommandInternal(command,&qCommand::reportDouble,variable);
+}
+
+
+void qCommand::reportInt(qCommand& qC, Stream& S, void* ptr, const char* command) {
+	int* ptrint = (int*) ptr;
+	if ( qC.next() != NULL) {
+	   	*ptrint = atoi(qC.current());
+	}
+	S.printf("%s is %d\n",command,*ptrint);
+}
+
+void qCommand::reportUInt(qCommand& qC, Stream& S, void* ptr, const char* command) {
+	uint* ptrint = (uint*) ptr;
+	if ( qC.next() != NULL) {
+	   	*ptrint = atoi(qC.current());
+	}
+	S.printf("%s is %u\n",command,*ptrint);
+}
+
+
+
+
+void qCommand::reportDouble(qCommand& qC, Stream& S, void* ptr, const char* command) {
+	double* ptrdouble = (double*) ptr;
+	if ( qC.next() != NULL) {
+	   	*ptrdouble = atof(qC.current());
+	}
+	if ( ( abs(*ptrdouble) > 10 ) || (abs(*ptrdouble < .1) ) ) {
+		S.printf("%s is %e\n",command,*ptrdouble); //print gain in scientific notation
+	} else {
+		S.printf("%s is %f\n",command,*ptrdouble); //print gain in scientific notation
+	}
+}
+
+
+
+
 
 /**
  * This sets up a handler to be called in the event that the receveived command string
@@ -98,7 +159,12 @@ void qCommand::readSerial(Stream& inputStream) {
             #endif
 
             // Execute the stored handler function for the command
-            (*commandList[i].function)(*this,inputStream);
+              if (commandList[i].ptr == NULL) {
+            	  (*commandList[i].function.f1)(*this,inputStream);
+              } else {
+            	  (this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command);
+              }
+
             matched = true;
             break;
           }
@@ -128,6 +194,10 @@ void qCommand::readSerial(Stream& inputStream) {
   // Serial.println(millis());
 }
 
+
+/*
+ * Print list of all available commands
+ */
 void qCommand::printAvailableCommands(Stream& outputStream) {
   for (int i = 0; i < commandCount; i++) {
     outputStream.println(commandList[i].command);
