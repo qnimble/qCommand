@@ -17,11 +17,17 @@ class qCommand {
   public:
 
 	qCommand();
-
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.
+    void assignVariable(const char* command, int8_t* variable);
+    void assignVariable(const char* command, int16_t* variable);
     void assignVariable(const char* command, int* variable);
+    void assignVariable(const char* command, long* variable);
+    void assignVariable(const char* command, uint8_t* variable);
+    void assignVariable(const char* command, uint16_t* variable);
     void assignVariable(const char* command, uint* variable);
+    void assignVariable(const char* command, unsigned long* variable);
     void assignVariable(const char* command, double* variable);
+    void assignVariable(const char* command, float* variable);
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.
     void setCaseSensitive(bool InSensitive);
     void readSerial(Stream& inputStream);             // Main entry point.
@@ -31,10 +37,15 @@ class qCommand {
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
 
   private:
-    	void addCommandInternal(const char *command, void(qCommand::*function)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command), void* ptr);  // Add a command to the processing dictionary.
-    	void reportInt(qCommand& qC, Stream& S, void* ptr, const char* command);
-    	void reportUInt(qCommand& qC, Stream& S, void* ptr, const char* command);
-    	void reportDouble(qCommand& qC, Stream& S, void* ptr, const char* command);
+      template <typename DataType>
+      void addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command), DataType* var);
+      template <class argInt>
+      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command);
+      template <class argUInt>
+      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command);
+      template <class argFloating>
+      void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command);
+      void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command);
 
     union callBack {
         void (*f1)(qCommand& streamCommandParser, Stream& stream);

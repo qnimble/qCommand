@@ -1,15 +1,17 @@
 #include "qCommand.h"
-
 qCommand qC;
-double loopGain = 1.021; // global for the loop gain
+
+double loopGain = 1.021;
+int anInteger;
 
 void setup() {
   qC.setDefaultHandler(UnknownCommand);
   //qC.setCaseSensitive(true); //uncomment to make commands case-sensitive
   qC.addCommand("Hello", hello);
   qC.addCommand("Hi", hello);
+  qC.addCommand("Gain",gain);
+  qC.assignVariable("Int",&anInteger);
   qC.addCommand("Mult",multiply);
-  qC.addCommand("Gain", gain);
   qC.addCommand("Help", help);
 }
 
@@ -29,8 +31,13 @@ void hello(qCommand& qC, Stream& S) {
 void gain(qCommand& qC, Stream& S) {
   if ( qC.next() != NULL) {
     loopGain = atof(qC.current());
-  }
-  S.printf("The gain is %e\n",loopGain); //print gain in scientific notation
+    if (loopGain < 0) {
+      loopGain = 0;
+    } else if (loopGain > 10) {
+      loopGain = 10;
+    }
+ }
+ S.printf("The gain is %f\n",loopGain);
 }
 
 void multiply(qCommand& qC, Stream& S) {
