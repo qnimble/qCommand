@@ -16,7 +16,7 @@
 class qCommand {
   public:
 
-	qCommand();
+	qCommand(bool caseSensitive = false);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.
     void assignVariable(const char* command, int8_t* variable);
     void assignVariable(const char* command, int16_t* variable);
@@ -29,7 +29,7 @@ class qCommand {
     void assignVariable(const char* command, double* variable);
     void assignVariable(const char* command, float* variable);
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.
-    void setCaseSensitive(bool InSensitive);
+    //void setCaseSensitive(bool InSensitive);
     void readSerial(Stream& inputStream);             // Main entry point.
     void clearBuffer();                               // Clears the input buffer.
     char *current();                                  // Returns pointer to current token found in command buffer (for getting arguments to commands).
@@ -65,7 +65,7 @@ class qCommand {
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
-    bool caseSensitive;
+    const bool caseSensitive;
     char *cur;
     char *last;                         // State variable used by strtok_r during processing
 

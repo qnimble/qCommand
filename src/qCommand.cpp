@@ -4,13 +4,14 @@
 /**
  * Constructor
  */
-qCommand::qCommand()
+qCommand::qCommand(bool caseSensitive)
   :
-    commandList(NULL),
+
+	commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
     term('\n'),           // default terminator for commands, newline character
-    caseSensitive(false),
+    caseSensitive(caseSensitive),
 	cur(NULL),
 	last(NULL)
 {
@@ -255,13 +256,6 @@ void qCommand::printAvailableCommands(Stream& outputStream) {
   for (int i = 0; i < commandCount; i++) {
     outputStream.println(commandList[i].command);
   }
-}
-
-/*
- * Set whether the commands should be case insensitive
- */
-void qCommand::setCaseSensitive(bool Sensitive) {
-	caseSensitive = Sensitive;
 }
 
 /*

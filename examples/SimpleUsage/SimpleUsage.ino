@@ -1,12 +1,12 @@
 #include "qCommand.h"
 qCommand qC;
+//qCommand qC = qCommand(true); //Use this line instead for case-sensitive commands
 
 double loopGain = 1.021;
 int anInteger;
 
 void setup() {
   qC.setDefaultHandler(UnknownCommand);
-  //qC.setCaseSensitive(true); //uncomment to make commands case-sensitive
   qC.addCommand("Hello", hello);
   qC.addCommand("Hi", hello);
   qC.addCommand("Gain",gain);
