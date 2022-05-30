@@ -231,6 +231,11 @@ void qCommand::readSerial(Stream& inputStream) {
         }
       }
       bufPos = 0; //do not clear buffer to enter after command repeats it.
+    } else if (inChar == '\b') { //backspace detected
+      if (bufPos > 0) {
+          bufPos--; //move back bufPos to overright previous character
+          buffer[bufPos] = '\0';// Null terminate
+      }
     } else if (isprint(inChar)) {     // Only printable characters into the buffer
       if (bufPos < STREAMCOMMAND_BUFFER) {
         buffer[bufPos++] = inChar;  // Put character into buffer
