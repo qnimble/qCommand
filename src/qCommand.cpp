@@ -154,7 +154,7 @@ void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char
 	if ( qC.next() != NULL) {
       *ptr= atof(qC.current());
 	}
-	if ( ( abs(*ptr) > 10 ) || (abs(*ptr < .1) ) ) {
+	if ( ( abs(*ptr) > 10 ) || (abs(*ptr) < .1) ) {
 		S.printf("%s is %e\n",command,*ptr); //print gain in scientific notation
 	} else {
 		S.printf("%s is %f\n",command,*ptr);
@@ -176,9 +176,7 @@ void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& stream
  * buffer for a prefix command, and calls handlers setup by addCommand() member
  */
 void qCommand::readSerial(Stream& inputStream) {
-  // Serial.print("Time IN: ");
-  // Serial.println(millis());
-  while (inputStream.available() > 0) {
+    while (inputStream.available() > 0) {
     char inChar = inputStream.read();   // Read single available character, there may be more waiting
     #ifdef SERIALCOMMAND_DEBUG
       Serial.print(inChar);   // Echo back to serial stream
@@ -232,7 +230,7 @@ void qCommand::readSerial(Stream& inputStream) {
         	}
         }
       }
-      clearBuffer();
+      bufPos = 0; //do not clear buffer to enter after command repeats it.
     } else if (isprint(inChar)) {     // Only printable characters into the buffer
       if (bufPos < STREAMCOMMAND_BUFFER) {
         buffer[bufPos++] = inChar;  // Put character into buffer
