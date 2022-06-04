@@ -18,6 +18,7 @@ class qCommand {
 
 	qCommand(bool caseSensitive = false);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.
+    void assignVariable(const char* command, bool* variable);
     void assignVariable(const char* command, int8_t* variable);
     void assignVariable(const char* command, int16_t* variable);
     void assignVariable(const char* command, int* variable);
@@ -39,6 +40,7 @@ class qCommand {
   private:
       template <typename DataType>
       void addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command), DataType* var);
+      void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command) ;
       template <class argInt>
       void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command);
       template <class argUInt>

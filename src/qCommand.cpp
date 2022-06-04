@@ -69,6 +69,9 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 	commandCount++;
 }
 
+void qCommand::assignVariable(const char* command, bool* variable) {
+	addCommandInternal(command,&qCommand::reportBool, variable);
+}
 
 void qCommand::assignVariable(const char* command, int8_t* variable) {
 	addCommandInternal(command,&qCommand::reportInt, variable);
@@ -113,6 +116,25 @@ void qCommand::assignVariable(const char* command, float* variable) {
 
 void qCommand::invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command) {
 	S.printf("Invalid memory address assigned to command %s\n",command);
+}
+
+void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command) {
+	if ( qC.next() != NULL) {
+		const uint8_t stringLen = 10;
+		char tempString[stringLen+1];
+		strncpy(tempString,qC.current(),stringLen); //make copy of argument to convert to lower case
+		tempString[stringLen] = '\0'; //null terminate in case arg is longer than size of tempString
+		strlwr(tempString);
+
+		if (strcmp(tempString,"on") == 0) *ptr = true;
+		else if (strcmp(tempString,"true") == 0) *ptr = true;
+		else if (strcmp(tempString,"1") == 0) *ptr = true;
+		else if (strcmp(tempString,"off") == 0) *ptr = false;
+		else if (strcmp(tempString,"false") == 0) *ptr = false;
+		else if (strcmp(tempString,"0") == 0) *ptr = false;
+	}
+
+	S.printf("%s is %s",command, *ptr ? "true":"false");
 }
 
 template <class argInt>
