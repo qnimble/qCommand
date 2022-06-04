@@ -134,7 +134,7 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 		else if (strcmp(tempString,"0") == 0) *ptr = false;
 	}
 
-	S.printf("%s is %s",command, *ptr ? "true":"false");
+	S.printf("%s is %s\n",command, *ptr ? "true":"false");
 }
 
 template <class argInt>
