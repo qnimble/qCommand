@@ -174,7 +174,15 @@ void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* com
 template <class argFloating>
 void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command) {
 	if ( qC.next() != NULL) {
-      *ptr= atof(qC.current());
+		argFloating newValue = atof(qC.current());
+
+		if ( sizeof(argFloating) >  4 ) { //make setting variable atomic for doubles or anything greater than 32bits.
+			__disable_irq();
+			*ptr = newValue;
+			__enable_irq();
+		} else {
+			*ptr = newValue;
+		}
 	}
 	if ( ( abs(*ptr) > 10 ) || (abs(*ptr) < .1) ) {
 		S.printf("%s is %e\n",command,*ptr); //print gain in scientific notation
