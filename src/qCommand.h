@@ -16,7 +16,7 @@
 class qCommand {
   public:
 
-	qCommand(bool caseSensitive = false);
+    qCommand(bool caseSensitive = false);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.
     void assignVariable(const char* command, bool* variable);
     void assignVariable(const char* command, int8_t* variable);
@@ -31,6 +31,7 @@ class qCommand {
     void assignVariable(const char* command, float* variable);
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.
     //void setCaseSensitive(bool InSensitive);
+    bool str2Bool(const char* string);
     void readSerial(Stream& inputStream);             // Main entry point.
     void clearBuffer();                               // Clears the input buffer.
     char *current();                                  // Returns pointer to current token found in command buffer (for getting arguments to commands).

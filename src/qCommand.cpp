@@ -118,20 +118,28 @@ void qCommand::invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* co
 	S.printf("Invalid memory address assigned to command %s\n",command);
 }
 
+bool qCommand::str2Bool(const char* string) {
+	bool result = false;
+	const uint8_t stringLen = 10;
+	char tempString[stringLen+1];
+	strncpy(tempString,string,stringLen); //make copy of argument to convert to lower case
+	tempString[stringLen] = '\0'; //null terminate in case arg is longer than size of tempString
+	strlwr(tempString);
+
+	if (strcmp(tempString,"on") == 0) result = true;
+	else if (strcmp(tempString,"true") == 0) result = true;
+	else if (strcmp(tempString,"1") == 0) result = true;
+	else if (strcmp(tempString,"off") == 0) result = false;
+	else if (strcmp(tempString,"false") == 0) result = false;
+	else if (strcmp(tempString,"0") == 0) result = false;
+	return result;
+
+}
+
+
 void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command) {
 	if ( qC.next() != NULL) {
-		const uint8_t stringLen = 10;
-		char tempString[stringLen+1];
-		strncpy(tempString,qC.current(),stringLen); //make copy of argument to convert to lower case
-		tempString[stringLen] = '\0'; //null terminate in case arg is longer than size of tempString
-		strlwr(tempString);
-
-		if (strcmp(tempString,"on") == 0) *ptr = true;
-		else if (strcmp(tempString,"true") == 0) *ptr = true;
-		else if (strcmp(tempString,"1") == 0) *ptr = true;
-		else if (strcmp(tempString,"off") == 0) *ptr = false;
-		else if (strcmp(tempString,"false") == 0) *ptr = false;
-		else if (strcmp(tempString,"0") == 0) *ptr = false;
+		*ptr = qC.str2Bool(command);
 	}
 
 	S.printf("%s is %s\n",command, *ptr ? "true":"false");
