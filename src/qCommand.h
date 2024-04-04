@@ -25,7 +25,7 @@ class qCommand {
     void assignVariable(const char* command, long* variable);
     void assignVariable(const char* command, uint8_t* variable);
     void assignVariable(const char* command, uint16_t* variable);
-    void assignVariable(const char* command, uint* variable);
+    void assignVariable(const char* command, unsigned int* variable);
     void assignVariable(const char* command, unsigned long* variable);
     void assignVariable(const char* command, double* variable);
     void assignVariable(const char* command, float* variable);

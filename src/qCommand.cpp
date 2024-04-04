@@ -97,7 +97,7 @@ void qCommand::assignVariable(const char* command, uint16_t* variable) {
 	addCommandInternal(command,&qCommand::reportUInt, variable);
 }
 
-void qCommand::assignVariable(const char* command, uint* variable) {
+void qCommand::assignVariable(const char* command, unsigned int* variable) {
 	addCommandInternal(command,&qCommand::reportUInt, variable);
 }
 
