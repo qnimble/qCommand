@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include <Stream.h>
+#include "smartData.h"
 
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define STREAMCOMMAND_BUFFER 64
@@ -12,20 +13,6 @@
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
 // #define SERIALCOMMAND_DEBUG
-
-template <class DataType>
-class DataObjectSpecific  {
-//class DataObjectSpecific : public DataObject {
-  private:
-    DataType value;
-
-  public:
-    DataObjectSpecific(DataType);
-    DataType get(void);
-    void set(DataType);
-    bool please(void);
-};
-
 
 
 class qCommand {
