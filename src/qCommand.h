@@ -31,7 +31,7 @@ class qCommand {
     
     // Assign Variable function for booleans: pointer to direct data or DataObject class
     void assignVariable(const char* command, bool* variable);
-    void assignVariable(const char* command, DataObjectSpecific<bool>* object);
+    void assignVariable(const char* command, SmartData<bool>* object);
 
     
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
@@ -49,7 +49,7 @@ class qCommand {
       std::is_same<argUInt, uint>::value || 
       std::is_same<argUInt, ulong>::value
       , uint> = 0>
-    void assignVariable(const char* command, DataObjectSpecific<argUInt>* object);
+    void assignVariable(const char* command, SmartData<argUInt>* object);
     
     
     // Assign Variable function for signed ints: pointer to direct data or DataObject class
@@ -59,7 +59,7 @@ class qCommand {
       std::is_same<argInt, int>::value ||  
       std::is_same<argInt, long>::value
       , int> = 0>        
-    void assignVariable(const char* command, DataObjectSpecific<argInt>* object);
+    void assignVariable(const char* command, SmartData<argInt>* object);
             
     template <typename argInt, std::enable_if_t<
       std::is_same<argInt,int8_t>::value || 
@@ -78,26 +78,26 @@ class qCommand {
     template <typename argFloat, std::enable_if_t<      
       std::is_floating_point<argFloat>::value
       , int> = 0>        
-    void assignVariable(const char* command, DataObjectSpecific<argFloat>* object) ;
+    void assignVariable(const char* command, SmartData<argFloat>* object) ;
 
   private:
       template <typename DataType>
       void addCommandInternal(const char* command, 
-                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, DataObjectSpecific<DataType>* object), 
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
                               DataType* var, 
-                              DataObjectSpecific<DataType>* object = NULL);
+                              SmartData<DataType>* object = NULL);
       
 
-      void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, DataObjectSpecific<bool>* object) ;
+      void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
-      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, DataObjectSpecific<argInt>* object) ;
+      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) ;
       
       template <class argUInt>
-      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, DataObjectSpecific<argUInt>* object) ;
+      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) ;
       
       template <class argFloating>
-      void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, DataObjectSpecific<argFloating>* object) ;
+      void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;
       
       void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) ;
 

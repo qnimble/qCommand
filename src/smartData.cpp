@@ -1,12 +1,12 @@
 #include "smartData.h"
 
 template <class SmartDataGeneric>
-SmartDataGeneric DataObjectSpecific<SmartDataGeneric>::get(void) {
+SmartDataGeneric SmartData<SmartDataGeneric>::get(void) {
   return value;
 }
 
 template <class SmartDataGeneric>
-void DataObjectSpecific<SmartDataGeneric>::set(SmartDataGeneric newValue) {
+void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   value = newValue;
 }
 
@@ -14,21 +14,21 @@ void DataObjectSpecific<SmartDataGeneric>::set(SmartDataGeneric newValue) {
 //DataObjectSpecific<SmartDataGeneric>::DataObjectSpecific<SmartDataGeneric>() {}
 
 template <class SmartDataGeneric>
-DataObjectSpecific<SmartDataGeneric>::DataObjectSpecific(SmartDataGeneric initValue): value(initValue) {}
+SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue) {}
 
 
 
-template class DataObjectSpecific<bool>;
-template class DataObjectSpecific<uint8_t>;
-template class DataObjectSpecific<uint16_t>;
-template class DataObjectSpecific<uint>;
-template class DataObjectSpecific<ulong>;
-template class DataObjectSpecific<int8_t>;
-template class DataObjectSpecific<int16_t>;
-template class DataObjectSpecific<int>;
-template class DataObjectSpecific<long>;
-template class DataObjectSpecific<float>;
-template class DataObjectSpecific<double>;
+template class SmartData<bool>;
+template class SmartData<uint8_t>;
+template class SmartData<uint16_t>;
+template class SmartData<uint>;
+template class SmartData<ulong>;
+template class SmartData<int8_t>;
+template class SmartData<int16_t>;
+template class SmartData<int>;
+template class SmartData<long>;
+template class SmartData<float>;
+template class SmartData<double>;
 
 
 //template bool DataObjectSpecific<bool>::get(void);
