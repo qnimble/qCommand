@@ -26,6 +26,10 @@ public:
 
 private:
     DataType value;
+    Stream* stream;
+    uint8_t id;
+    void _setId(uint8_t);
+    friend class qCommand;
 
 };
 

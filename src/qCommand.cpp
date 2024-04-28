@@ -50,6 +50,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
 
   commandCount++;
 }
+
 template <typename DataType>
 void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {
   #ifdef SERIALCOMMAND_DEBUG
@@ -67,6 +68,8 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].object = object;
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;
+
+    object->_setId(commandCount);
   } else {
     commandList[commandCount].object = NULL;
   
@@ -202,7 +205,6 @@ bool qCommand::str2Bool(const char* string) {
 	else if (strcmp(tempString,"false") == 0) result = false;
 	else if (strcmp(tempString,"0") == 0) result = false;
 	return result;
-
 }
 
 
