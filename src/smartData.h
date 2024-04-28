@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 12 //8
 
@@ -16,6 +17,7 @@
 #define TYPE2INFO_UINT  (2<<5)
 #define TYPE2INFO_INT  (3<<5)
 
+
 template <class DataType>
 class SmartData  {
 public:
@@ -26,11 +28,15 @@ public:
 
 private:
     DataType value;
-    Stream* stream;
-    uint8_t id;
-    void _setId(uint8_t);
+    
+    
+    void _setPrivateInfo(uint8_t id, Stream* stream);
     friend class qCommand;
-
+    
+    //private data that gets set by qC::addCommand
+    uint8_t id;
+    Stream* stream;
+    
 };
 
 template< typename T >

@@ -68,9 +68,8 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     //have SmartData object pointer
     commandList[commandCount].object = object;
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
-    commandList[commandCount].ptr = NULL;
-
-    object->_setId(commandCount);
+    commandList[commandCount].ptr = NULL;    
+    object->_setPrivateInfo(commandCount, binaryStream);
   } else {
     commandList[commandCount].object = NULL;
   

@@ -13,27 +13,27 @@ SmartDataGeneric SmartData<SmartDataGeneric>::get(void) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
-  value = newValue;
-
+  value = newValue;  
   if (stream) {    
     packer.clear();  
     uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
     packer.to_array(id,value, crc );
     stream->write(packer.data(),packer.size());
+
   }
 }
 
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_setId(uint8_t id) {
-  id = id;
+void SmartData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream) {
+  this->id = id;
+  this->stream = stream;
 }
 
 //template <class SmartDataGeneric>
 //DataObjectSpecific<SmartDataGeneric>::DataObjectSpecific<SmartDataGeneric>() {}
 
 template <class SmartDataGeneric>
-SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue), stream(&Serial2) {}
-
+SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue), id(0), stream(0) {}
 
 
 template class SmartData<bool>;
