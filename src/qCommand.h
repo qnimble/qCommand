@@ -19,6 +19,7 @@ class qCommand {
   public:
 
     qCommand(bool caseSensitive = false);
+    void sendBinaryCommands(void);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.    
     
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.    
@@ -81,6 +82,8 @@ class qCommand {
     void assignVariable(const char* command, SmartData<argFloat>* object) ;
 
   private:
+      Stream* binaryStream;
+      
       template <typename DataType>
       void addCommandInternal(const char* command, 
                               void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 

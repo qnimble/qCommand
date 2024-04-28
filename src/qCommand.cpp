@@ -14,7 +14,8 @@
  * Constructor
  */
 qCommand::qCommand(bool caseSensitive) :
-	commandList(NULL),
+	binaryStream(&Serial2),
+  commandList(NULL),
   commandCount(0),
   defaultHandler(NULL),
   term('\n'),           // default terminator for commands, newline character
