@@ -32,17 +32,27 @@ qCommand::qCommand(bool caseSensitive) :
 }
 
 void qCommand::sendBinaryCommands(void) {
+  packer.clear();
   packer.serialize(MsgPack::arr_size_t(commandCount));
-  for (uint8_t i=0; i < commandCount; i++) {
-    packer.clear();
-    MsgPack::str_t cmd_string = commandList[i].command;
-    packer.serialize(MsgPack::arr_size_t(3),i, cmd_string, (uint32_t) commandList[i].ptr );
+  for (uint8_t i=0; i < commandCount; i++) {    
+    if ( commandList[i].object == NULL) {
+      //not a smart data object
+      //packer.serialize(false);
+      packer.packBool(false);
+      //packer.serialize(1);
+    } else {
+    
+      MsgPack::str_t cmd_string = commandList[i].command;
+      packer.serialize(MsgPack::arr_size_t(3),i+1, cmd_string, commandList[i].data_type );
   
-    //packer.packBinary32(const uint8_t* value, const uint32_t size);
-    //uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
-    //packer.to_array(id,value, crc );
-    binaryStream->write(packer.data(),packer.size());
+      //packer.packBinary32(const uint8_t* value, const uint32_t size);
+      //uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
+      //packer.to_array(id,value, crc );
+    }
   }
+  
+  binaryStream->write(packer.data(),packer.size());
+  
 }
 
 
@@ -88,7 +98,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].object = object;
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;    
-    object->_setPrivateInfo(commandCount, binaryStream, &packer);    
+    object->_setPrivateInfo(commandCount+1, binaryStream, &packer);    
     commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
 
   } else {
