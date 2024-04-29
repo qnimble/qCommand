@@ -2,7 +2,7 @@
 #define SMARTDATA_h
 
 #include <Arduino.h>
-
+#include <MsgPack.h>
 
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 12 //8
@@ -26,11 +26,11 @@ public:
     void set(DataType);
     bool please(void);
 
+
 private:
     DataType value;
-    
-    
-    void _setPrivateInfo(uint8_t id, Stream* stream);
+    MsgPack::Packer* packer;    
+    void _setPrivateInfo(uint8_t id, Stream* stream, MsgPack::Packer* packer);
     friend class qCommand;
     
     //private data that gets set by qC::addCommand

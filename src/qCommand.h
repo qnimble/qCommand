@@ -115,9 +115,10 @@ class qCommand {
         union callBack function;
         void* object;
         void* ptr;
+        uint8_t data_type;
       };                                    // Data structure to hold Command/Handler function key-value pairs
       StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
-      byte commandCount;
+      uint8_t commandCount;
       // Pointer to the default handler function
       void (*defaultHandler)(const char *, qCommand& streamCommandParser, Stream& stream);
 

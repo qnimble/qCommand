@@ -1,5 +1,9 @@
 #include "qCommand.h"
 #include <limits>
+#include <MsgPack.h>
+
+
+MsgPack::Packer packer;
 
 /*
  * Using templates to handle different data types. Supprt for the following data types:
@@ -26,6 +30,21 @@ qCommand::qCommand(bool caseSensitive) :
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
 }
+
+void qCommand::sendBinaryCommands(void) {
+  packer.serialize(MsgPack::arr_size_t(commandCount));
+  for (uint8_t i=0; i < commandCount; i++) {
+    packer.clear();
+    MsgPack::str_t cmd_string = commandList[i].command;
+    packer.serialize(MsgPack::arr_size_t(3),i, cmd_string, (uint32_t) commandList[i].ptr );
+  
+    //packer.packBinary32(const uint8_t* value, const uint32_t size);
+    //uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
+    //packer.to_array(id,value, crc );
+    binaryStream->write(packer.data(),packer.size());
+  }
+}
+
 
 /**
  * Adds a "command" and a handler function to the list of available commands.
@@ -69,7 +88,9 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].object = object;
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;    
-    object->_setPrivateInfo(commandCount, binaryStream);
+    object->_setPrivateInfo(commandCount, binaryStream, &packer);    
+    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
+
   } else {
     commandList[commandCount].object = NULL;
   

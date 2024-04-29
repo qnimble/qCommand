@@ -3,7 +3,7 @@
 #include <MsgPack.h>
 #include <FastCRC.h>
 
-MsgPack::Packer packer;
+//MsgPack::Packer packer;
 FastCRC16 CRC16;
 
 template <class SmartDataGeneric>
@@ -15,18 +15,19 @@ template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   value = newValue;  
   if (stream) {    
-    packer.clear();  
+    packer->clear();  
     uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
-    packer.to_array(id,value, crc );
-    stream->write(packer.data(),packer.size());
+    packer->to_array(id,value, crc );
+    stream->write(packer->data(),packer->size());
 
   }
 }
 
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream) {
+void SmartData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, MsgPack::Packer* packer) {
   this->id = id;
   this->stream = stream;
+  this->packer = packer;
 }
 
 //template <class SmartDataGeneric>
