@@ -25,6 +25,7 @@ class qCommand {
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.    
     bool str2Bool(const char* string);                // Convert string of "true" or "false", etc to a bool.
     void readSerial(Stream& inputStream);             // Main entry point.
+    void readBinary(void);
     void clearBuffer();                               // Clears the input buffer.
     char *current();                                  // Returns pointer to current token found in command buffer (for getting arguments to commands).
     char *next();                                     // Returns pointer to next token found in command buffer (for getting arguments to commands).

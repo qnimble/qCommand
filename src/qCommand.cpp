@@ -4,7 +4,7 @@
 
 
 MsgPack::Packer packer;
-
+MsgPack::Unpacker unpacker;
 /*
  * Using templates to handle different data types. Supprt for the following data types:
     bool,
@@ -31,17 +31,46 @@ qCommand::qCommand(bool caseSensitive) :
   clearBuffer();
 }
 
+
+
+void qCommand::readBinary(void) {
+  int dataReady = binaryStream->available();
+  int ri;
+  float rf;
+  dataReady = max(dataReady,4096); //only read 4k at a time for reduced memory allocation
+  if (dataReady) {
+    Serial.printf("Got %d bytes to process\n",dataReady);
+    return;
+    uint8_t* data = new uint8_t[dataReady];
+    if (data) {
+      bool result = unpacker.feed(data,dataReady);
+      if (result) {
+        Serial.printf("Got success on feed with size %u\n", dataReady);
+        unpacker.deserialize(ri,rf);
+        Serial.printf("Got data: %d, %f\n",ri,rf);
+      }
+    }
+  }
+  
+}
+
+
+
 void qCommand::sendBinaryCommands(void) {
   packer.clear();
-  packer.serialize(MsgPack::arr_size_t(commandCount));
+  //uint8_t i = 5;
+  //uint8_t j = 9;
+  //packer.serialize(i,j);
+
+  uint8_t elements = 0;
   for (uint8_t i=0; i < commandCount; i++) {    
-    if ( commandList[i].object == NULL) {
-      //not a smart data object
-      //packer.serialize(false);
-      packer.packBool(false);
-      //packer.serialize(1);
-    } else {
-    
+    if (commandList[i].object != NULL) {
+      elements++;
+    }
+  }
+  packer.serialize(MsgPack::arr_size_t(elements));
+  for (uint8_t i=0; i < commandCount; i++) {    
+    if ( commandList[i].object != NULL) {         
       MsgPack::str_t cmd_string = commandList[i].command;
       packer.serialize(MsgPack::arr_size_t(3),i+1, cmd_string, commandList[i].data_type );
   
@@ -52,7 +81,7 @@ void qCommand::sendBinaryCommands(void) {
   }
   
   binaryStream->write(packer.data(),packer.size());
-  
+  Serial.printf("Send binary data of size %u\n",packer.size());
 }
 
 
@@ -245,7 +274,7 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
   if ( qC.next() != NULL) {
 		temp = qC.str2Bool(qC.current());
     if (object != NULL) {
-      Serial2.printf("Set Bool to %u\n",temp);
+      //Serial2.printf("Set Bool to %u\n",temp);
       object->set(temp);    
     } else {
       *ptr = temp;
@@ -383,6 +412,8 @@ void qCommand::reportGetSet(qCommand& qC, Stream& S, argType (*get_ptr)(void), v
 void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream)) {
   defaultHandler = function;
 }
+
+
 
 /**
  * This checks the Serial stream for characters, and assembles them into a buffer.
