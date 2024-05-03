@@ -2,10 +2,10 @@
 #define SMARTDATA_h
 
 #include <Arduino.h>
-#include <MsgPack.h>
+//#include <MsgPack.h>
+#include "cwpack.h"
 
 // Maximum length of a command excluding the terminating null
-#define STREAMCOMMAND_MAXCOMMANDLENGTH 12 //8
 
 #define TYPE2INFO_ARRAY (0)
 #define TYPE2INFO_MIN (1)
@@ -16,6 +16,35 @@
 #define TYPE2INFO_FLOAT  (1<<5)
 #define TYPE2INFO_UINT  (2<<5)
 #define TYPE2INFO_INT  (3<<5)
+
+extern cw_pack_context pc;
+extern char buffer[];
+#define DEFAULT_PACK_BUFFER_SIZE 500
+
+void cw_pack(cw_pack_context* cw, bool value);
+void cw_pack(cw_pack_context* cw, unsigned char value);
+template <typename argUInt, std::enable_if_t<
+  std::is_same<argUInt, uint8_t>::value ||
+  std::is_same<argUInt, uint16_t>::value || 
+  std::is_same<argUInt, uint>::value || 
+  std::is_same<argUInt, ulong>::value
+  , uint> = 0>    
+void cw_pack(cw_pack_context* cw, argUInt value);
+
+
+template <typename argInt, std::enable_if_t<
+  std::is_same<argInt,int8_t>::value || 
+  std::is_same<argInt, int16_t>::value || 
+  std::is_same<argInt, int>::value ||  
+  std::is_same<argInt, long>::value
+  , int> = 0>
+void cw_pack(cw_pack_context* cw, argInt value);
+
+template <typename argFloat, std::enable_if_t<      
+  std::is_floating_point<argFloat>::value
+  , int> = 0>        
+void cw_pack(cw_pack_context* cw, argFloat value);
+
 
 
 template <class DataType>
@@ -29,8 +58,8 @@ public:
 
 private:
     DataType value;
-    MsgPack::Packer* packer;    
-    void _setPrivateInfo(uint8_t id, Stream* stream, MsgPack::Packer* packer);
+    void* packer;
+    void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
     friend class qCommand;
     
     //private data that gets set by qC::addCommand

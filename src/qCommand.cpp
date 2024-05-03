@@ -1,10 +1,18 @@
 #include "qCommand.h"
 #include <limits>
-#include <MsgPack.h>
+//#include <MsgPack.h>
+
+#include "cwpack.h"
 
 
-MsgPack::Packer packer;
-MsgPack::Unpacker unpacker;
+#define PACK_BUFFER_SIZE 20
+cw_pack_context pc;
+char buffer[DEFAULT_PACK_BUFFER_SIZE];
+
+
+
+//MsgPack::Packer packer;
+//MsgPack::Unpacker unpacker;
 /*
  * Using templates to handle different data types. Supprt for the following data types:
     bool,
@@ -43,10 +51,11 @@ void qCommand::readBinary(void) {
     return;
     uint8_t* data = new uint8_t[dataReady];
     if (data) {
-      bool result = unpacker.feed(data,dataReady);
+      //bool result = unpacker.feed(data,dataReady);
+      bool result = false;
       if (result) {
         Serial.printf("Got success on feed with size %u\n", dataReady);
-        unpacker.deserialize(ri,rf);
+        //unpacker.deserialize(ri,rf);
         Serial.printf("Got data: %d, %f\n",ri,rf);
       }
     }
@@ -57,7 +66,7 @@ void qCommand::readBinary(void) {
 
 
 void qCommand::sendBinaryCommands(void) {
-  packer.clear();
+  //packer.clear();
   //uint8_t i = 5;
   //uint8_t j = 9;
   //packer.serialize(i,j);
@@ -68,20 +77,30 @@ void qCommand::sendBinaryCommands(void) {
       elements++;
     }
   }
-  packer.serialize(MsgPack::arr_size_t(elements));
+  //packer.serialize(MsgPack::arr_size_t(elements));
+  cw_pack_array_size(&pc,elements);
+  Serial.printf("Start Binary Command send with %u elements\n",elements);  
+  Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
   for (uint8_t i=0; i < commandCount; i++) {    
-    if ( commandList[i].object != NULL) {         
-      MsgPack::str_t cmd_string = commandList[i].command;
-      packer.serialize(MsgPack::arr_size_t(3),i+1, cmd_string, commandList[i].data_type );
+    if ( commandList[i].object != NULL) {               
+      cw_pack_array_size(&pc,3);
+      cw_pack_unsigned(&pc,i+1);
+      cw_pack_str(&pc, commandList[i].command, strlen(commandList[i].command));
+      cw_pack_unsigned(&pc,commandList[i].data_type);
+
+      //MsgPack::str_t cmd_string = commandList[i].command;
+      //packer.serialize(MsgPack::arr_size_t(3),i+1, cmd_string, commandList[i].data_type );
   
-      //packer.packBinary32(const uint8_t* value, const uint32_t size);
-      //uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
+      //packer.packBinary32(const uint8_t* value, const uint32_t size);      
       //packer.to_array(id,value, crc );
+      Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
+      Serial.printf("So far, binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
     }
   }
+  Serial.printf("Send binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
+  binaryStream->write(pc.start,pc.current - pc.start);  
+  pc.current = pc.start;
   
-  binaryStream->write(packer.data(),packer.size());
-  Serial.printf("Send binary data of size %u\n",packer.size());
 }
 
 
@@ -127,7 +146,8 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].object = object;
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;    
-    object->_setPrivateInfo(commandCount+1, binaryStream, &packer);    
+    //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
+    object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
     commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
 
   } else {
