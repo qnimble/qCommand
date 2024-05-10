@@ -3,7 +3,8 @@
 //#include <MsgPack.h>
 
 #include "cwpack.h"
-
+#include "basic_contexts.h"
+#include "cwpack_utils.h"
 
 #define PACK_BUFFER_SIZE 20
 cw_pack_context pc;
@@ -41,14 +42,101 @@ qCommand::qCommand(bool caseSensitive) :
 
 
 
-void qCommand::readBinary(void) {
+char qCommand::readBinary(void) {
+  //PT_FUNC_START(pt);
+  
+  //static uint8_t* data_ptr = 0;
+  const uint8_t buffer_size_default = 3;
+
+  static stream_unpack_context suc;
+  static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct
+  
   int dataReady = binaryStream->available();
+  if (dataReady != 0) {
+    Serial.printf("Got %u bytes available...\n", dataReady);
+  }
+  
   int ri;
   float rf;
-  dataReady = max(dataReady,4096); //only read 4k at a time for reduced memory allocation
-  if (dataReady) {
-    Serial.printf("Got %d bytes to process\n",dataReady);
-    return;
+  dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation
+  
+  if (dataReady != 0) {
+    //Serial.printf("Got %d bytes to process: ",dataReady);    
+    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
+    binaryStream->readBytes(uc->start,dataReady);
+    //void init_stream_unpack_context (stream_unpack_context* suc, unsigned long initial_buffer_length, size_t (*file)(const uint8_t*, size_t))
+    //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
+    
+    //Serial.printf("Read %u bytes\n", dataReady);
+    //uint8_t* temp = uc->current;
+    //Serial.printf("Data: 0x%02x %02x %02x %02x\n", temp[0], temp[1], temp[2], temp[3]);
+    //for (int i=0;i<dataReady;i++) {
+    //    Serial.printf("0x%02x ", temp[i]);
+    //}
+    //Serial.println();
+    //Serial.printf("Start: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
+    uint itemsTotal = cw_unpack_next_array_size(uc);
+    //cw_unpack_next(uc);
+    //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
+
+    //Serial.printf("Got an array with %u items\n", itemsTotal);
+    //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
+    uint index = cw_unpack_next_unsigned8(uc);
+    //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
+    //Serial.printf("First item has id: %u\n", index);
+    
+    #warning below is right
+    Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
+    //uint command;
+    switch (index) {
+      case 0:
+        //internal command
+        if (command == Commands::ListCommands && itemsTotal == 2) {
+          sendBinaryCommands();          
+        } else {
+          Serial.println("Error parsing internal command");
+        }
+        break;
+      default:
+        if (index > commandCount) {
+          Serial.println("Error: Command index out of range");
+          break;
+        }
+        switch (command) {
+          case Commands::Get:
+            if (commandList[index-1].object != NULL) {
+              //commandList[index-1].object->sendValue();
+              Serial.println("Shold run sendValue here for ");
+              Serial.print(commandList[index-1].command);
+              Serial.println();
+            } else {
+              Serial.println("Error: object not found Get command without object");
+            }
+            break;
+            default:
+              Serial.println("Uknown command");
+              break;
+        }
+        
+        Serial.println("Uknown command");
+        break;
+    }
+    
+    //uint junk = cw_unpack_next_unsigned32(uc);
+
+
+
+
+  //Serial.printf("4: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
+  //Serial.printf("Third item has id: %u\n", junk);
+
+    //if ((uc->return_code == 0) && (itemsTotal == 2)) {
+    //  Serial.println("Got a full packet with 2 items and we have their values");
+    //  return 0;
+    //}
+
+    
+    return 1;
     uint8_t* data = new uint8_t[dataReady];
     if (data) {
       //bool result = unpacker.feed(data,dataReady);
@@ -59,8 +147,8 @@ void qCommand::readBinary(void) {
         Serial.printf("Got data: %d, %f\n",ri,rf);
       }
     }
-  }
-  
+  }  
+  return 0;
 }
 
 
@@ -78,6 +166,9 @@ void qCommand::sendBinaryCommands(void) {
     }
   }
   //packer.serialize(MsgPack::arr_size_t(elements));
+  cw_pack_array_size(&pc,3); // three elements, first is id = 0 for internal. Second is the command (list Commands). Third is the data
+  cw_pack_unsigned(&pc,0); // set ID = 0 for internal
+  cw_pack_unsigned(&pc,static_cast<uint8_t>(Commands::ListCommands));
   cw_pack_array_size(&pc,elements);
   Serial.printf("Start Binary Command send with %u elements\n",elements);  
   Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
@@ -93,8 +184,8 @@ void qCommand::sendBinaryCommands(void) {
   
       //packer.packBinary32(const uint8_t* value, const uint32_t size);      
       //packer.to_array(id,value, crc );
-      Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
-      Serial.printf("So far, binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
+      //Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
+      //Serial.printf("So far, binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
     }
   }
   Serial.printf("Send binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
@@ -313,33 +404,50 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 
 template <class argUInt>
 void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) {
-	unsigned long temp;
+	setDebugWord(0x12344489);
+  unsigned long temp;
   argUInt newValue;
+  setDebugWord(0x01010001);
   if ( qC.next() != NULL) {
-		long temp2 = atoi(qC.current());
+		setDebugWord(0x01010002);
+    long temp2 = atoi(qC.current());
+    setDebugWord(0x01010003);
 		if (temp2 < 0) {		
       temp = 0;          
+      setDebugWord(0x01010004);
 		} else {
-			temp = strtoul(qC.current(),NULL,10);
+			setDebugWord(0x01010005);
+      temp = strtoul(qC.current(),NULL,10);
+      setDebugWord(0x01010006);
 			if ( temp > std::numeric_limits<argUInt>::max()) {
-				temp = std::numeric_limits<argUInt>::max();
+				setDebugWord(0x01010007);
+        temp = std::numeric_limits<argUInt>::max();
+        setDebugWord(0x01010008);
 			} 
 		}
-
+    setDebugWord(0x01010010);
     newValue = temp;
     if (object != NULL) {
+      setDebugWord(0x01010011);
       object->set(newValue);
+      setDebugWord(0x01010012);
     } else {
+      setDebugWord(0x01010013);
       *ptr = newValue;
+      setDebugWord(0x01010014);
     }
   }
-
+setDebugWord(0x01010015);
   if (object != NULL) {  
+    setDebugWord(0x01010016);
     newValue = object->get();
+    setDebugWord(0x01010017);
   } else {
+    setDebugWord(0x01010018);
     newValue = *ptr;
+    setDebugWord(0x01010019);
   }
-
+  setDebugWord(0x12344480);
 	S.printf("%s is %u\n",command,newValue);
 }
 

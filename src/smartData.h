@@ -46,20 +46,33 @@ template <typename argFloat, std::enable_if_t<
 void cw_pack(cw_pack_context* cw, argFloat value);
 
 
+class Base {  
+  public:
+    virtual void sendValue(void);
+  private:
+    virtual void _set(void* value ) = 0; // pure virtual function
+    virtual void* _get(void) = 0; // pure virtual function
+
+};
+
+
 
 template <class DataType>
-class SmartData  {
+class SmartData: public Base  {
 public:
     SmartData(DataType);
     DataType get(void);
     void set(DataType);
     bool please(void);
+    void sendValue(void);
 
 
 private:
     DataType value;
     void* packer;
     void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
+    void _set(void* value) override;
+    void* _get(void) override;
     friend class qCommand;
     
     //private data that gets set by qC::addCommand
