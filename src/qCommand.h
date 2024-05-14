@@ -88,7 +88,22 @@ class qCommand {
       Set = 2,
       
     };
+    #warning move back to private after testing
+    union callBack {
+        void (*f1)(qCommand& streamCommandParser, Stream& stream);
+        void (qCommand::*f2)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object);
+      } callBack;
+      
+    struct StreamCommandParserCallback {
+        char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
+        union callBack function;
+        Base* object;
+        void* ptr;
+        uint8_t data_type;
+      };                                    // Data structure to hold Command/Handler function key-value pairs
 
+    StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
+    uint8_t commandCount;
 
   private:
       Stream* binaryStream;
@@ -113,21 +128,12 @@ class qCommand {
       
       void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) ;
 
-      union callBack {
-        void (*f1)(qCommand& streamCommandParser, Stream& stream);
-        void (qCommand::*f2)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object);
-      } callBack;
+      
 
 
-      struct StreamCommandParserCallback {
-        char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
-        union callBack function;
-        Base* object;
-        void* ptr;
-        uint8_t data_type;
-      };                                    // Data structure to hold Command/Handler function key-value pairs
-      StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
-      uint8_t commandCount;
+      
+      
+      
       // Pointer to the default handler function
       void (*defaultHandler)(const char *, qCommand& streamCommandParser, Stream& stream);
 

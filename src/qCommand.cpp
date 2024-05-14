@@ -12,6 +12,9 @@ char buffer[DEFAULT_PACK_BUFFER_SIZE];
 
 
 
+#warning No need for this afger debugging
+#include "quarto_wdog.h"
+
 //MsgPack::Packer packer;
 //MsgPack::Unpacker unpacker;
 /*
@@ -50,20 +53,23 @@ char qCommand::readBinary(void) {
 
   static stream_unpack_context suc;
   static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct
-  
+  setDebugWord(0xdea123ff);
   int dataReady = binaryStream->available();
   if (dataReady != 0) {
     Serial.printf("Got %u bytes available...\n", dataReady);
   }
-  
+  setDebugWord(0xdea12401);
   int ri;
   float rf;
   dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation
-  
+  setDebugWord(0xdea12402);
   if (dataReady != 0) {
     //Serial.printf("Got %d bytes to process: ",dataReady);    
+    setDebugWord(0xdea12403);
     init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
+    setDebugWord(0xdea12404);
     binaryStream->readBytes(uc->start,dataReady);
+    setDebugWord(0xdea12405);
     //void init_stream_unpack_context (stream_unpack_context* suc, unsigned long initial_buffer_length, size_t (*file)(const uint8_t*, size_t))
     //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
     
@@ -76,23 +82,28 @@ char qCommand::readBinary(void) {
     //Serial.println();
     //Serial.printf("Start: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     uint itemsTotal = cw_unpack_next_array_size(uc);
+    setDebugWord(0xdea12406);
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
 
     //Serial.printf("Got an array with %u items\n", itemsTotal);
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
     uint index = cw_unpack_next_unsigned8(uc);
+    setDebugWord(0xdea12407);
     //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     //Serial.printf("First item has id: %u\n", index);
     
     #warning below is right
     Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
+    setDebugWord(0xdea12408);
     //uint command;
     switch (index) {
       case 0:
         //internal command
         if (command == Commands::ListCommands && itemsTotal == 2) {
-          sendBinaryCommands();          
+          setDebugWord(0xdea12409);
+          sendBinaryCommands();    
+
         } else {
           Serial.println("Error parsing internal command");
         }
@@ -105,7 +116,10 @@ char qCommand::readBinary(void) {
         switch (command) {
           case Commands::Get:
             if (commandList[index-1].object != NULL) {
-              //commandList[index-1].object->sendValue();
+              setDebugWord(0x4432abab);
+              Base* b = commandList[index-1].object;
+              commandList[index-1].object->sendValue();
+              setDebugWord(0x4432abcc);
               Serial.println("Shold run sendValue here for ");
               Serial.print(commandList[index-1].command);
               Serial.println();
@@ -114,11 +128,11 @@ char qCommand::readBinary(void) {
             }
             break;
             default:
-              Serial.println("Uknown command");
+              Serial.printf("Unknown command: %u, index: %u\n",command, index);
               break;
         }
         
-        Serial.println("Uknown command");
+        //Serial.println("Uknown command");
         break;
     }
     
@@ -135,7 +149,7 @@ char qCommand::readBinary(void) {
     //  return 0;
     //}
 
-    
+    setDebugWord(0xdea12410);
     return 1;
     uint8_t* data = new uint8_t[dataReady];
     if (data) {
@@ -216,8 +230,9 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   if (!caseSensitive) {
     strlwr(commandList[commandCount].command);
   }
-
+  Serial.printf("CC from %u", commandCount);
   commandCount++;
+  Serial.printf(" to %u\n", commandCount);
 }
 
 template <typename DataType>
@@ -257,7 +272,9 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 	if (!caseSensitive) {
 	   strlwr(commandList[commandCount].command);
 	}
-	commandCount++;
+	Serial.printf("CC from %u", commandCount);
+  commandCount++;
+  Serial.printf(" to %u\n", commandCount);
 }
 
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.

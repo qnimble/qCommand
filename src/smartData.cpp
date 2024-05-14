@@ -9,6 +9,8 @@ FastCRC16 CRC16;
 
 #include "cwpack.h"
 
+#warning No need for this afger debugging
+#include "quarto_wdog.h"
 
 
 
@@ -51,34 +53,25 @@ void cw_pack(cw_pack_context* cw, argFloat value) {
 
 
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_set(void* value) {
-  SmartDataGeneric* typedValue = static_cast<SmartDataGeneric*>(value);
-  set(*typedValue);  
-}
-
-
-template <class SmartDataGeneric>
-void* SmartData<SmartDataGeneric>::_get(void) {
-  setDebugWord(0x00344488);
-  return &value;
-}
-
-
-
-template <class SmartDataGeneric>
 SmartDataGeneric SmartData<SmartDataGeneric>::get(void) {
   setDebugWord(0x12344488);
   return value;
 }
 
 template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::_get(void* data) {  
+  SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+  *ptr = value;
+}
+
+
+template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
   setDebugWord(0x3310010);
   if (stream) {    
     setDebugWord(0x3310011);
-    //uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));    
-    uint16_t crc = 12;
-        setDebugWord(0x3310012);
+    uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));
+      setDebugWord(0x3310012);
     cw_pack_array_size(&pc,4);
     cw_pack_unsigned(&pc, id);
     cw_pack_unsigned(&pc, 2); //command for set, maybe expose this enum instead of hard-coding
@@ -109,8 +102,8 @@ void SmartData<SmartDataGeneric>::sendValue(void) {
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210010);
-  //value = newValue;  
-  value = 1;
+  value = newValue;  
+  //value = 1;
   setDebugWord(0x2210012);
   sendValue();  
   setDebugWord(0x2210020);

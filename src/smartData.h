@@ -5,6 +5,7 @@
 //#include <MsgPack.h>
 #include "cwpack.h"
 
+
 // Maximum length of a command excluding the terminating null
 
 #define TYPE2INFO_ARRAY (0)
@@ -49,9 +50,10 @@ void cw_pack(cw_pack_context* cw, argFloat value);
 class Base {  
   public:
     virtual void sendValue(void);
+    virtual void _get(void* data); // pure virtual function
   private:
-    virtual void _set(void* value ) = 0; // pure virtual function
-    virtual void* _get(void) = 0; // pure virtual function
+    //virtual void _set(void* value ) = 0; // pure virtual function
+    //virtual void* _get(void) = 0; // pure virtual function
 
 };
 
@@ -59,20 +61,22 @@ class Base {
 
 template <class DataType>
 class SmartData: public Base  {
+//  class SmartData {
 public:
     SmartData(DataType);
     DataType get(void);
     void set(DataType);
     bool please(void);
     void sendValue(void);
+    void _get(void* data); 
 
 
 private:
     DataType value;
     void* packer;
     void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
-    void _set(void* value) override;
-    void* _get(void) override;
+    //void _set(void* value) override;
+    //void* _get(void) override;
     friend class qCommand;
     
     //private data that gets set by qC::addCommand
