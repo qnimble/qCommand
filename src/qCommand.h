@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include <string.h>
 #include <Stream.h>
-#include "smartData.h"
+//#include "smartData.h"
+#include "test.h"
 
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define STREAMCOMMAND_BUFFER 64
@@ -33,7 +34,7 @@ class qCommand {
     
     // Assign Variable function for booleans: pointer to direct data or DataObject class
     void assignVariable(const char* command, bool* variable);
-    void assignVariable(const char* command, SmartData<bool>* object);
+    void assignVariable(const char* command, testData<bool>* object);
 
     
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
@@ -51,7 +52,7 @@ class qCommand {
       std::is_same<argUInt, uint>::value || 
       std::is_same<argUInt, ulong>::value
       , uint> = 0>
-    void assignVariable(const char* command, SmartData<argUInt>* object);
+    void assignVariable(const char* command, testData<argUInt>* object);
     
     
     // Assign Variable function for signed ints: pointer to direct data or DataObject class
@@ -61,7 +62,7 @@ class qCommand {
       std::is_same<argInt, int>::value ||  
       std::is_same<argInt, long>::value
       , int> = 0>        
-    void assignVariable(const char* command, SmartData<argInt>* object);
+    void assignVariable(const char* command, testData<argInt>* object);
             
     template <typename argInt, std::enable_if_t<
       std::is_same<argInt,int8_t>::value || 
@@ -80,7 +81,7 @@ class qCommand {
     template <typename argFloat, std::enable_if_t<      
       std::is_floating_point<argFloat>::value
       , int> = 0>        
-    void assignVariable(const char* command, SmartData<argFloat>* object) ;
+    void assignVariable(const char* command, testData<argFloat>* object) ;
 
     enum class Commands: uint8_t {
       ListCommands = 0,
@@ -110,21 +111,21 @@ class qCommand {
       
       template <typename DataType>
       void addCommandInternal(const char* command, 
-                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, testData<DataType>* object), 
                               DataType* var, 
-                              SmartData<DataType>* object = NULL);
+                              testData<DataType>* object = NULL);
       
 
-      void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
+      void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, testData<bool>* object) ;
       
       template <class argInt>
-      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) ;
+      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, testData<argInt>* object) ;
       
       template <class argUInt>
-      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) ;
+      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, testData<argUInt>* object) ;
       
       template <class argFloating>
-      void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;
+      void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, testData<argFloating>* object) ;
       
       void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) ;
 

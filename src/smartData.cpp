@@ -5,7 +5,7 @@
 
 
 //MsgPack::Packer packer;
-FastCRC16 CRC16;
+static FastCRC16 CRC16;
 
 #include "cwpack.h"
 
@@ -13,23 +13,31 @@ FastCRC16 CRC16;
 #include "quarto_wdog.h"
 
 
-
 void cw_pack(cw_pack_context* cw, bool value){
-	cw_pack_boolean(cw,value);
+	 Serial.printf("Running cw_pack_booleand with %u\n",value);
+  cw_pack_boolean(cw,value);
 }
 
-void cw_pack(cw_pack_context* cw, unsigned char value){
-	cw_pack_bin(cw,&value, 1);
-}
 
+/*
+template <typename argChar, std::enable_if_t<
+  std::is_same<argChar, unsigned char>::value, char> = 0>    
+void cw_pack(cw_pack_context* cw, argChar value){
+	 Serial.printf("Running cw_pack_bin with start %02x\n",value);
+  cw_pack_bin(cw,&value, 1);
+}
+*/
 
 template <typename argUInt, std::enable_if_t<
+  std::is_same<argUInt, unsigned char>::value ||
   std::is_same<argUInt, uint8_t>::value ||
   std::is_same<argUInt, uint16_t>::value || 
+  std::is_same<argUInt, short unsigned int>::value || 
   std::is_same<argUInt, uint>::value || 
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
 void cw_pack(cw_pack_context* cw, argUInt value){
+  Serial.printf("Running cw_pack_unsigned with %u\n",value);
   cw_pack_unsigned(cw,value);
 }
 
@@ -64,6 +72,12 @@ void SmartData<SmartDataGeneric>::_get(void* data) {
   *ptr = value;
 }
 
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::_set(void* data) {  
+  SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+  value = *ptr;
+}
+
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
@@ -80,15 +94,20 @@ void SmartData<SmartDataGeneric>::sendValue(void) {
     setDebugWord(0x3310013);
     if (pc.return_code != CWP_RC_OK) {
       Serial.printf("Error! Return Code %u\n",pc.return_code);
-      return;
-    } else {
-      Serial.printf("Good! Return Code %u\n",pc.return_code);
+      return;    
     }
     setDebugWord(0x3310015);
-    Serial.printf("0x%08x and 0x%08x\n", pc.start,*pc.start);
-    Serial.printf("Length %u on id=%u\n", pc.start -pc.current, id);
-    Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
+    //Serial.printf("0x%08x and 0x%08x\n", pc.start,*pc.start);
+    //Serial.printf("Length %u on id=%u\n", pc.start -pc.current, id);
+    //Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
     setDebugWord(0x3310017);
+    uint16_t leng = pc.current - pc.start;
+    leng = min(leng,16);
+    Serial.print("Sent packet: ");
+    for (uint i = 0; i < leng; i++) {
+      Serial.printf("0x%02x ",pc.start[i]);
+    }
+    Serial.println();
     stream->write(pc.start, pc.current - pc.start);
     pc.current = pc.start; //reset for next one.
     setDebugWord(0x3310019);
@@ -126,6 +145,8 @@ SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initVa
 
 
 template class SmartData<bool>;
+//template class SmartData<char>;
+
 template class SmartData<uint8_t>;
 template class SmartData<uint16_t>;
 template class SmartData<uint>;
@@ -137,6 +158,17 @@ template class SmartData<long>;
 template class SmartData<float>;
 template class SmartData<double>;
 
-
+template void cw_pack<uint8_t>(cw_pack_context*, uint8_t);
+//template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);
 //template bool DataObjectSpecific<bool>::get(void);
 //template float DataObjectSpecific<float>::get(void);
+template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);
+//template void SmartData<unsigned char>::cw_pack(cw_pack_context*, unsigned char);
+
+void uglytest(cw_pack_context* cw){
+   cw_pack<unsigned char>(cw, (unsigned char ) 50);   
+}
+
+void uglytest2(cw_pack_context* cw){
+   cw_pack<uint16_t>(cw, (uint16_t ) 50);   
+}

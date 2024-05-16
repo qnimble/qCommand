@@ -6,9 +6,11 @@
 static cw_pack_context pc;
 static FastCRC16 CRC16;
 
+extern char buffer[];
+
 template <typename Arg>
 void test(Arg value) {
-    printf("Hello, value is %u\n",value);
+    Serial.printf("Hello, value is %u\n",value);
 }
 
 
@@ -53,7 +55,7 @@ void test_pack(cw_pack_context* cw, argFloat value) {
 
 
 void test_pack(cw_pack_context* cw, bool value){
-    printf("Running test_pack_booleand with %u\n",value);
+    Serial.printf("Running test_pack_booleand with %u\n",value);
     cw_pack_boolean(cw,value);
 }
 
@@ -79,14 +81,14 @@ void testData<SmartDataGeneric>::_set(void* data) {
 
 template <class SmartDataGeneric>
 testData<SmartDataGeneric>::testData(SmartDataGeneric initValue): value(initValue) {
-  printf("Initializing testData with %u\n",value);
+  Serial.printf("Initializing testData with %lu\n",value);
+  cw_pack_context_init(&pc, buffer, DEFAULT_PACK_BUFFER_SIZE, 0);  
 }
 
 
 template <class SmartDataGeneric>
-void testData<SmartDataGeneric>::sendValue(void) {  
-  
-  
+void testData<SmartDataGeneric>::sendValue(void) {      
+  SRC_GPR5 = 0xcccca117;  
   if (stream) {        
     uint16_t crc = CRC16.ccitt((uint8_t*) &value, sizeof(value));
     cw_pack_array_size(&pc,4);
@@ -105,6 +107,7 @@ void testData<SmartDataGeneric>::sendValue(void) {
       Serial.printf("0x%02x ",pc.start[i]);
     }
     Serial.println();
+    //#warning this should be uncommented
     stream->write(pc.start, pc.current - pc.start);
     pc.current = pc.start; //reset for next one.
     
@@ -115,9 +118,21 @@ void testData<SmartDataGeneric>::sendValue(void) {
 
 
 template <class SmartDataGeneric>
+void testData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, void* packer) {
+  this->id = id;
+  this->stream = stream;
+  this->packer = packer;
+}
+
+
+
+template <class SmartDataGeneric>
 void testData<SmartDataGeneric>::set(SmartDataGeneric newValue) {  
+  SRC_GPR5 = 0xcccca111;
   value = newValue;  
+  SRC_GPR5 = 0xcccca112;
   sendValue();  
+  SRC_GPR5 = 0xcccca113;
 }
 
 
@@ -125,6 +140,13 @@ void testData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
 template class testData<uint8_t>;
 template class testData<uint16_t>;
 template class testData<uint32_t>;
+template class testData<int8_t>;
+template class testData<int16_t>;
+template class testData<int32_t>;
+template class testData<unsigned int>;
+template class testData<bool>;
+template class testData<float>;
+template class testData<double>;
 /*
 
 template void test_pack<uint8_t>(uint8_t);

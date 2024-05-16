@@ -1,6 +1,5 @@
 #include "qCommand.h"
 #include <limits>
-//#include <MsgPack.h>
 
 #include "cwpack.h"
 #include "basic_contexts.h"
@@ -10,29 +9,13 @@
 cw_pack_context pc;
 char buffer[DEFAULT_PACK_BUFFER_SIZE];
 
-
-
-#warning No need for this afger debugging
-#include "quarto_wdog.h"
-
-//MsgPack::Packer packer;
-//MsgPack::Unpacker unpacker;
-/*
- * Using templates to handle different data types. Supprt for the following data types:
-    bool,
-    uint8_t, uint16_t, uint, ulong
-    int8_t, int16_t, int, long
-    float, double
-*/
-
-
 /**
  * Constructor
  */
 qCommand::qCommand(bool caseSensitive) :
-	binaryStream(&Serial2),
   commandList(NULL),
   commandCount(0),
+  binaryStream(&Serial2),
   defaultHandler(NULL),
   term('\n'),           // default terminator for commands, newline character
   caseSensitive(caseSensitive),
@@ -52,24 +35,18 @@ char qCommand::readBinary(void) {
   const uint8_t buffer_size_default = 3;
 
   static stream_unpack_context suc;
-  static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct
-  setDebugWord(0xdea123ff);
+  static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct  
   int dataReady = binaryStream->available();
   if (dataReady != 0) {
     Serial.printf("Got %u bytes available...\n", dataReady);
-  }
-  setDebugWord(0xdea12401);
+  }  
   int ri;
   float rf;
-  dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation
-  setDebugWord(0xdea12402);
+  dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation  
   if (dataReady != 0) {
-    //Serial.printf("Got %d bytes to process: ",dataReady);    
-    setDebugWord(0xdea12403);
-    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
-    setDebugWord(0xdea12404);
-    binaryStream->readBytes(uc->start,dataReady);
-    setDebugWord(0xdea12405);
+    //Serial.printf("Got %d bytes to process: ",dataReady);        
+    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);    
+    binaryStream->readBytes(uc->start,dataReady);    
     //void init_stream_unpack_context (stream_unpack_context* suc, unsigned long initial_buffer_length, size_t (*file)(const uint8_t*, size_t))
     //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
     
@@ -82,26 +59,25 @@ char qCommand::readBinary(void) {
     //Serial.println();
     //Serial.printf("Start: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     uint itemsTotal = cw_unpack_next_array_size(uc);
-    setDebugWord(0xdea12406);
+    uint itemsReceived = 0;
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
 
     //Serial.printf("Got an array with %u items\n", itemsTotal);
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
-    uint index = cw_unpack_next_unsigned8(uc);
-    setDebugWord(0xdea12407);
+    uint index = cw_unpack_next_unsigned8(uc);  
+    itemsReceived++;  
     //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     //Serial.printf("First item has id: %u\n", index);
     
     #warning below is right
     Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
-    setDebugWord(0xdea12408);
+    itemsReceived++;
     //uint command;
     switch (index) {
       case 0:
         //internal command
-        if (command == Commands::ListCommands && itemsTotal == 2) {
-          setDebugWord(0xdea12409);
+        if (command == Commands::ListCommands && itemsTotal == 2) {          
           sendBinaryCommands();    
 
         } else {
@@ -116,8 +92,7 @@ char qCommand::readBinary(void) {
         switch (command) {
           case Commands::Get:
             if (commandList[index-1].object != NULL) {
-              setDebugWord(0x4432abab);
-              Base* b = commandList[index-1].object;
+              setDebugWord(0x4432abab);              
               commandList[index-1].object->sendValue();
               setDebugWord(0x4432abcc);
               Serial.println("Shold run sendValue here for ");
@@ -127,6 +102,100 @@ char qCommand::readBinary(void) {
               Serial.println("Error: object not found Get command without object");
             }
             break;
+            case Commands::Set:
+              goto cleanup;
+              if (commandList[index-1].object == NULL) {
+                //cannot update object that isn't of type smartData                
+                goto cleanup;
+              }
+              
+              if (uc->return_code != CWP_RC_OK) {
+                Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
+                goto cleanup;                 
+              }
+              Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
+              switch(commandList[index-1].data_type & 0x0F) {
+                case TYPE2INFO_MIN + TYPE2INFO_BOOL:{
+                  //bool 
+                  //bool res = cw_unpack_next_boolean(uc);
+                  cw_unpack_next(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&(uc->item.as));
+                  break;
+                }
+                case TYPE2INFO_MIN + TYPE2INFO_UINT:{
+                  //uint8_t
+                  uint8_t res = cw_unpack_next_unsigned8(uc);
+                  itemsReceived++;
+                  
+                  if (uc->return_code == 0) {
+                  commandList[index-1].object->_set(&res);
+                  } else {
+                    commandList[index-1].object->sendValue();
+                  }
+                  break;}
+                case TYPE2INFO_2MIN + TYPE2INFO_UINT:{
+                  //uint16_t
+                  uint16_t res = cw_unpack_next_unsigned16(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                case TYPE2INFO_4MIN + TYPE2INFO_UINT:{
+                  //uint32_t
+                  uint32_t res = cw_unpack_next_unsigned32(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                case TYPE2INFO_MIN + TYPE2INFO_INT:{
+                  //uint8_t
+                  int8_t res = cw_unpack_next_signed8(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                case TYPE2INFO_2MIN + TYPE2INFO_INT:{
+                  //uint16_t
+                  int16_t res = cw_unpack_next_signed16(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                case TYPE2INFO_4MIN + TYPE2INFO_INT:{
+                  //uint32_t
+                  int32_t res = cw_unpack_next_signed32(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                case TYPE2INFO_MIN + TYPE2INFO_FLOAT:{
+                  //float
+                  float res = cw_unpack_next_float(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  Serial.printf("Got float %f\n",res);
+                  break;}
+                case TYPE2INFO_2MIN + TYPE2INFO_FLOAT: {
+                  //float
+                  double res = cw_unpack_next_double(uc);
+                  itemsReceived++;
+                  commandList[index-1].object->_set(&res);
+                  break;}
+                default:
+                  Serial.printf("Unknown type: 0x02x\n",commandList[index-1].data_type);
+                break;
+              }
+
+
+              if (commandList[index-1].object != NULL) {
+                setDebugWord(0x4432abdd);
+                commandList[index-1].object->sendValue();
+                setDebugWord(0x4432abff);
+                Serial.println("Shold run sendValue here for ");
+                Serial.print(commandList[index-1].command);
+                Serial.println();
+              } else {
+                Serial.println("Error: object not found Set command without object");
+              }
+              break;
+            
+            
             default:
               Serial.printf("Unknown command: %u, index: %u\n",command, index);
               break;
@@ -138,7 +207,13 @@ char qCommand::readBinary(void) {
     
     //uint junk = cw_unpack_next_unsigned32(uc);
 
-
+  cleanup:
+  //clear out the data
+  while (itemsReceived < itemsTotal) {
+    cw_unpack_next(uc);
+    itemsReceived++;
+  }
+  return 0;
 
 
   //Serial.printf("4: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
@@ -236,7 +311,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
 }
 
 template <typename DataType>
-void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {
+void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, testData<DataType>* object),DataType* var, testData<DataType>* object)  {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(" - Adding Assign Variable Command (");
     Serial.print(commandCount);
@@ -254,7 +329,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
-    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
+    commandList[commandCount].data_type = type2int<testData<DataType>>::result;
 
   } else {
     commandList[commandCount].object = NULL;
@@ -279,10 +354,10 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.
 void qCommand::assignVariable(const char* command, bool* variable) {
-	addCommandInternal(command,&qCommand::reportBool, variable, (SmartData<bool>*) NULL);
+	addCommandInternal(command,&qCommand::reportBool, variable, (testData<bool>*) NULL);
 }
 
-void qCommand::assignVariable(const char* command, SmartData<bool>* object) {
+void qCommand::assignVariable(const char* command, testData<bool>* object) {
 	addCommandInternal(command,&qCommand::reportBool, (bool*) NULL, object);
 }
 
@@ -294,7 +369,7 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
 void qCommand::assignVariable(const char* command, argUInt* variable) {
-	addCommandInternal(command,&qCommand::reportUInt, variable, (SmartData<argUInt>*) NULL);
+	addCommandInternal(command,&qCommand::reportUInt, variable, (testData<argUInt>*) NULL);
 }
 
 template <typename argUInt, std::enable_if_t<
@@ -303,15 +378,15 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, uint>::value || 
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
-void qCommand::assignVariable(const char* command, SmartData<argUInt>* object) {
+void qCommand::assignVariable(const char* command, testData<argUInt>* object) {
 	addCommandInternal(command,&qCommand::reportUInt, (argUInt*) NULL, object);
 }
 
 //Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char* command, SmartData<uint8_t>* object);
-template void qCommand::assignVariable(const char* command, SmartData<uint16_t>* object);
-template void qCommand::assignVariable(const char* command, SmartData<uint>* object);
-template void qCommand::assignVariable(const char* command, SmartData<unsigned long>* object);
+template void qCommand::assignVariable(const char* command, testData<uint8_t>* object);
+template void qCommand::assignVariable(const char* command, testData<uint16_t>* object);
+template void qCommand::assignVariable(const char* command, testData<uint>* object);
+template void qCommand::assignVariable(const char* command, testData<unsigned long>* object);
 template void qCommand::assignVariable(const char* command, uint8_t* variable);
 template void qCommand::assignVariable(const char* command, uint16_t* variable);
 template void qCommand::assignVariable(const char* command, uint* variable);
@@ -327,7 +402,7 @@ template <typename argInt, std::enable_if_t<
   std::is_same<argInt, long>::value
   , int> = 0>
 void qCommand::assignVariable(const char* command, argInt* variable) {
-	addCommandInternal(command,&qCommand::reportInt, variable, (SmartData<argInt>*) NULL);
+	addCommandInternal(command,&qCommand::reportInt, variable, (testData<argInt>*) NULL);
 }
 
 template <typename argInt, std::enable_if_t<
@@ -336,16 +411,16 @@ template <typename argInt, std::enable_if_t<
   std::is_same<argInt, int>::value ||  
   std::is_same<argInt, long>::value
   , int> = 0>
-void qCommand::assignVariable(const char* command, SmartData<argInt>* object) {
+void qCommand::assignVariable(const char* command, testData<argInt>* object) {
 	addCommandInternal(command,&qCommand::reportInt, (argInt*) NULL, object);
 }
 
 
 //Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char* command, SmartData<int8_t>* object);
-template void qCommand::assignVariable(const char* command, SmartData<int16_t>* object);
-template void qCommand::assignVariable(const char* command, SmartData<int>* object);
-template void qCommand::assignVariable(const char* command, SmartData<long>* object);
+template void qCommand::assignVariable(const char* command, testData<int8_t>* object);
+template void qCommand::assignVariable(const char* command, testData<int16_t>* object);
+template void qCommand::assignVariable(const char* command, testData<int>* object);
+template void qCommand::assignVariable(const char* command, testData<long>* object);
 template void qCommand::assignVariable(const char* command, int8_t* variable);
 template void qCommand::assignVariable(const char* command, int16_t* variable);
 template void qCommand::assignVariable(const char* command, int* variable);
@@ -357,21 +432,21 @@ template <typename argFloat, std::enable_if_t<
   std::is_floating_point<argFloat>::value
   , int> = 0>        
 void qCommand::assignVariable(const char* command, argFloat* variable) {
-  addCommandInternal(command,&qCommand::reportFloat, variable, (SmartData<argFloat>*) NULL);
+  addCommandInternal(command,&qCommand::reportFloat, variable, (testData<argFloat>*) NULL);
 }
 
 template <typename argFloat, std::enable_if_t<      
   std::is_floating_point<argFloat>::value
   , int> = 0>        
-void qCommand::assignVariable(const char* command, SmartData<argFloat>* object) {
+void qCommand::assignVariable(const char* command, testData<argFloat>* object) {
   addCommandInternal(command,&qCommand::reportFloat, (argFloat*) NULL, object);
 }
 
 //Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char* command, float* variable);
 template void qCommand::assignVariable(const char* command, double* variable);
-template void qCommand::assignVariable(const char* command, SmartData<float>* object);
-template void qCommand::assignVariable(const char* command, SmartData<double>* object);
+template void qCommand::assignVariable(const char* command, testData<float>* object);
+template void qCommand::assignVariable(const char* command, testData<double>* object);
 
 
 void qCommand::invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) {
@@ -396,7 +471,7 @@ bool qCommand::str2Bool(const char* string) {
 }
 
 
-void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) {  
+void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, testData<bool>* object) {  
   bool temp;
   //Serial2.printf("String is %s\n", );
   if ( qC.next() != NULL) {
@@ -420,7 +495,7 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 
 
 template <class argUInt>
-void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) {
+void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, testData<argUInt>* object) {
 	setDebugWord(0x12344489);
   unsigned long temp;
   argUInt newValue;
@@ -470,7 +545,7 @@ setDebugWord(0x01010015);
 
 
 template <class argInt>
-void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) {
+void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, testData<argInt>* object) {
 	int temp;
   if ( qC.next() != NULL) {
 		temp = atoi(qC.current());
@@ -496,7 +571,7 @@ void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* comma
 
 
 template <class argFloating>
-void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) {	
+void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, testData<argFloating>* object) {	
   argFloating newValue;
   if ( qC.next() != NULL) {
 		newValue = atof(qC.current());        
