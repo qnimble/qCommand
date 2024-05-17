@@ -19,6 +19,14 @@ void cw_pack(cw_pack_context* cw, bool value){
 }
 
 
+//No idea why I need this as it should be built from the template, but for some reason it isn't.
+void cw_pack(cw_pack_context* cw, unsigned char value){
+	 Serial.printf("Running cw_pack with unsigned char as argument: %u\n",value);
+  cw_pack_unsigned(cw,value);
+}
+
+
+
 /*
 template <typename argChar, std::enable_if_t<
   std::is_same<argChar, unsigned char>::value, char> = 0>    
@@ -123,7 +131,7 @@ void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210010);
   value = newValue;  
   //value = 1;
-  setDebugWord(0x2210012);
+  setDebugWord(0x2210012);  
   sendValue();  
   setDebugWord(0x2210020);
 }

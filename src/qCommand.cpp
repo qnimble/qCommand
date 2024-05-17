@@ -30,7 +30,7 @@ qCommand::qCommand(bool caseSensitive) :
 
 char qCommand::readBinary(void) {
   //PT_FUNC_START(pt);
-  
+  setDebugWord(0xbbbb0001);
   //static uint8_t* data_ptr = 0;
   const uint8_t buffer_size_default = 3;
 
@@ -40,9 +40,11 @@ char qCommand::readBinary(void) {
   if (dataReady != 0) {
     Serial.printf("Got %u bytes available...\n", dataReady);
   }  
+  setDebugWord(0xbbbb0002);
   int ri;
   float rf;
   dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation  
+  setDebugWord(0xbbbc0000 + dataReady);
   if (dataReady != 0) {
     //Serial.printf("Got %d bytes to process: ",dataReady);        
     init_stream_unpack_context(&suc, buffer_size_default, binaryStream);    
@@ -92,7 +94,7 @@ char qCommand::readBinary(void) {
         switch (command) {
           case Commands::Get:
             if (commandList[index-1].object != NULL) {
-              setDebugWord(0x4432abab);              
+              setDebugWord(0x4432abab);                            
               commandList[index-1].object->sendValue();
               setDebugWord(0x4432abcc);
               Serial.println("Shold run sendValue here for ");
@@ -105,7 +107,7 @@ char qCommand::readBinary(void) {
             case Commands::Set:
               goto cleanup;
               if (commandList[index-1].object == NULL) {
-                //cannot update object that isn't of type smartData                
+                //cannot update object that isn't of type SmartData                
                 goto cleanup;
               }
               
@@ -311,7 +313,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
 }
 
 template <typename DataType>
-void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, testData<DataType>* object),DataType* var, testData<DataType>* object)  {
+void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(" - Adding Assign Variable Command (");
     Serial.print(commandCount);
@@ -329,7 +331,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
-    commandList[commandCount].data_type = type2int<testData<DataType>>::result;
+    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
 
   } else {
     commandList[commandCount].object = NULL;
@@ -354,10 +356,10 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.
 void qCommand::assignVariable(const char* command, bool* variable) {
-	addCommandInternal(command,&qCommand::reportBool, variable, (testData<bool>*) NULL);
+	addCommandInternal(command,&qCommand::reportBool, variable, (SmartData<bool>*) NULL);
 }
 
-void qCommand::assignVariable(const char* command, testData<bool>* object) {
+void qCommand::assignVariable(const char* command, SmartData<bool>* object) {
 	addCommandInternal(command,&qCommand::reportBool, (bool*) NULL, object);
 }
 
@@ -369,7 +371,7 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
 void qCommand::assignVariable(const char* command, argUInt* variable) {
-	addCommandInternal(command,&qCommand::reportUInt, variable, (testData<argUInt>*) NULL);
+	addCommandInternal(command,&qCommand::reportUInt, variable, (SmartData<argUInt>*) NULL);
 }
 
 template <typename argUInt, std::enable_if_t<
@@ -378,15 +380,15 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, uint>::value || 
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
-void qCommand::assignVariable(const char* command, testData<argUInt>* object) {
+void qCommand::assignVariable(const char* command, SmartData<argUInt>* object) {
 	addCommandInternal(command,&qCommand::reportUInt, (argUInt*) NULL, object);
 }
 
 //Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char* command, testData<uint8_t>* object);
-template void qCommand::assignVariable(const char* command, testData<uint16_t>* object);
-template void qCommand::assignVariable(const char* command, testData<uint>* object);
-template void qCommand::assignVariable(const char* command, testData<unsigned long>* object);
+template void qCommand::assignVariable(const char* command, SmartData<uint8_t>* object);
+template void qCommand::assignVariable(const char* command, SmartData<uint16_t>* object);
+template void qCommand::assignVariable(const char* command, SmartData<uint>* object);
+template void qCommand::assignVariable(const char* command, SmartData<unsigned long>* object);
 template void qCommand::assignVariable(const char* command, uint8_t* variable);
 template void qCommand::assignVariable(const char* command, uint16_t* variable);
 template void qCommand::assignVariable(const char* command, uint* variable);
@@ -402,7 +404,7 @@ template <typename argInt, std::enable_if_t<
   std::is_same<argInt, long>::value
   , int> = 0>
 void qCommand::assignVariable(const char* command, argInt* variable) {
-	addCommandInternal(command,&qCommand::reportInt, variable, (testData<argInt>*) NULL);
+	addCommandInternal(command,&qCommand::reportInt, variable, (SmartData<argInt>*) NULL);
 }
 
 template <typename argInt, std::enable_if_t<
@@ -411,16 +413,16 @@ template <typename argInt, std::enable_if_t<
   std::is_same<argInt, int>::value ||  
   std::is_same<argInt, long>::value
   , int> = 0>
-void qCommand::assignVariable(const char* command, testData<argInt>* object) {
+void qCommand::assignVariable(const char* command, SmartData<argInt>* object) {
 	addCommandInternal(command,&qCommand::reportInt, (argInt*) NULL, object);
 }
 
 
 //Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char* command, testData<int8_t>* object);
-template void qCommand::assignVariable(const char* command, testData<int16_t>* object);
-template void qCommand::assignVariable(const char* command, testData<int>* object);
-template void qCommand::assignVariable(const char* command, testData<long>* object);
+template void qCommand::assignVariable(const char* command, SmartData<int8_t>* object);
+template void qCommand::assignVariable(const char* command, SmartData<int16_t>* object);
+template void qCommand::assignVariable(const char* command, SmartData<int>* object);
+template void qCommand::assignVariable(const char* command, SmartData<long>* object);
 template void qCommand::assignVariable(const char* command, int8_t* variable);
 template void qCommand::assignVariable(const char* command, int16_t* variable);
 template void qCommand::assignVariable(const char* command, int* variable);
@@ -432,21 +434,21 @@ template <typename argFloat, std::enable_if_t<
   std::is_floating_point<argFloat>::value
   , int> = 0>        
 void qCommand::assignVariable(const char* command, argFloat* variable) {
-  addCommandInternal(command,&qCommand::reportFloat, variable, (testData<argFloat>*) NULL);
+  addCommandInternal(command,&qCommand::reportFloat, variable, (SmartData<argFloat>*) NULL);
 }
 
 template <typename argFloat, std::enable_if_t<      
   std::is_floating_point<argFloat>::value
   , int> = 0>        
-void qCommand::assignVariable(const char* command, testData<argFloat>* object) {
+void qCommand::assignVariable(const char* command, SmartData<argFloat>* object) {
   addCommandInternal(command,&qCommand::reportFloat, (argFloat*) NULL, object);
 }
 
 //Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char* command, float* variable);
 template void qCommand::assignVariable(const char* command, double* variable);
-template void qCommand::assignVariable(const char* command, testData<float>* object);
-template void qCommand::assignVariable(const char* command, testData<double>* object);
+template void qCommand::assignVariable(const char* command, SmartData<float>* object);
+template void qCommand::assignVariable(const char* command, SmartData<double>* object);
 
 
 void qCommand::invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) {
@@ -471,7 +473,7 @@ bool qCommand::str2Bool(const char* string) {
 }
 
 
-void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, testData<bool>* object) {  
+void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) {  
   bool temp;
   //Serial2.printf("String is %s\n", );
   if ( qC.next() != NULL) {
@@ -495,7 +497,7 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 
 
 template <class argUInt>
-void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, testData<argUInt>* object) {
+void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) {
 	setDebugWord(0x12344489);
   unsigned long temp;
   argUInt newValue;
@@ -545,7 +547,7 @@ setDebugWord(0x01010015);
 
 
 template <class argInt>
-void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, testData<argInt>* object) {
+void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) {
 	int temp;
   if ( qC.next() != NULL) {
 		temp = atoi(qC.current());
@@ -571,7 +573,7 @@ void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* comma
 
 
 template <class argFloating>
-void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, testData<argFloating>* object) {	
+void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) {	
   argFloating newValue;
   if ( qC.next() != NULL) {
 		newValue = atof(qC.current());        
