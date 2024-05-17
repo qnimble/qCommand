@@ -14,7 +14,7 @@ static FastCRC16 CRC16;
 
 
 void cw_pack(cw_pack_context* cw, bool value){
-	 Serial.printf("Running cw_pack_booleand with %u\n",value);
+	 //Serial.printf("Running cw_pack_booleand with %u\n",value);
   cw_pack_boolean(cw,value);
 }
 
@@ -45,7 +45,7 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
 void cw_pack(cw_pack_context* cw, argUInt value){
-  Serial.printf("Running cw_pack_unsigned with %u\n",value);
+  //Serial.printf("Running cw_pack_unsigned with %u\n",value);
   cw_pack_unsigned(cw,value);
 }
 
@@ -111,11 +111,11 @@ void SmartData<SmartDataGeneric>::sendValue(void) {
     setDebugWord(0x3310017);
     uint16_t leng = pc.current - pc.start;
     leng = min(leng,16);
-    Serial.print("Sent packet: ");
+    //Serial.print("Sent packet: ");
     for (uint i = 0; i < leng; i++) {
-      Serial.printf("0x%02x ",pc.start[i]);
+      //Serial.printf("0x%02x ",pc.start[i]);
     }
-    Serial.println();
+    //Serial.println();
     stream->write(pc.start, pc.current - pc.start);
     pc.current = pc.start; //reset for next one.
     setDebugWord(0x3310019);
@@ -165,12 +165,13 @@ template class SmartData<int>;
 template class SmartData<long>;
 template class SmartData<float>;
 template class SmartData<double>;
+template class SmartData<String>;
 
-template void cw_pack<uint8_t>(cw_pack_context*, uint8_t);
+//template void cw_pack<uint8_t>(cw_pack_context*, uint8_t);
 //template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);
 //template bool DataObjectSpecific<bool>::get(void);
 //template float DataObjectSpecific<float>::get(void);
-template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);
+//template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);
 //template void SmartData<unsigned char>::cw_pack(cw_pack_context*, unsigned char);
 
 void uglytest(cw_pack_context* cw){

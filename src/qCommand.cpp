@@ -246,8 +246,6 @@ char qCommand::readBinary(void) {
   return 0;
 }
 
-
-
 void qCommand::sendBinaryCommands(void) {
   //packer.clear();
   //uint8_t i = 5;
@@ -311,9 +309,9 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   if (!caseSensitive) {
     strlwr(commandList[commandCount].command);
   }
-  Serial.printf("CC from %u", commandCount);
+  //Serial.printf("CC from %u", commandCount);
   commandCount++;
-  Serial.printf(" to %u\n", commandCount);
+  //Serial.printf(" to %u\n", commandCount);
 }
 
 template <typename DataType>
@@ -357,6 +355,20 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
   commandCount++;
   Serial.printf(" to %u\n", commandCount);
 }
+
+
+//Assign variable to command list for string. Takes pointer to either data or DataObject.
+void qCommand::assignVariable(const char* command, String* variable) {
+	addCommandInternal(command,&qCommand::reportString, variable, (SmartData<String>*) NULL);
+}
+
+void qCommand::assignVariable(const char* command, SmartData<String>* object) {
+	Serial.printf("Trying to assign object to command %s\n",command);
+  addCommandInternal(command,&qCommand::reportString, (String*) NULL, object);
+}
+
+
+
 
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.
 void qCommand::assignVariable(const char* command, bool* variable) {
@@ -475,6 +487,25 @@ bool qCommand::str2Bool(const char* string) {
 	else if (strcmp(tempString,"0") == 0) result = false;
 	return result;
 }
+
+void qCommand::reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) {  
+  if ( qC.next() != NULL) {		    
+    if (object != NULL) {      
+      object->set(qC.current());
+    } else {
+      *ptr = qC.current();
+    }
+  }
+
+  if (object != NULL) {  
+    S.printf("%s is %s\n",command, object->get().c_str());    
+  } else {    
+    S.printf("%s is %s\n",command, ptr->c_str());
+  }
+  
+	
+}
+
 
 
 void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) {  

@@ -35,7 +35,9 @@ class qCommand {
     void assignVariable(const char* command, bool* variable);
     void assignVariable(const char* command, SmartData<bool>* object);
 
-    
+    void assignVariable(const char* command, String* variable);
+    void assignVariable(const char* command, SmartData<String>* object) ;
+
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
     template <typename argUInt, std::enable_if_t<
       std::is_same<argUInt, uint8_t>::value || 
@@ -114,7 +116,9 @@ class qCommand {
                               DataType* var, 
                               SmartData<DataType>* object = NULL);
       
-
+      
+      void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
+      
       void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
