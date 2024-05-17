@@ -129,8 +129,12 @@ char qCommand::readBinary(void) {
                   //uint8_t
                   uint8_t res = cw_unpack_next_unsigned8(uc);
                   itemsReceived++;
-                  
-                  if (uc->return_code == 0) {
+                  if ( uc->return_code == CWP_RC_COERCED_VALUE) {
+                    //do not care about coerced values
+                    uc->return_code = CWP_RC_OK;
+                  }
+
+                  if (uc->return_code == CWP_RC_OK)  {
                   commandList[index-1].object->_set(&res);
                   } else {
                     commandList[index-1].object->sendValue();
