@@ -64,15 +64,16 @@ char qCommand::readBinary(void) {
     uint itemsReceived = 0;
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
-
-    //Serial.printf("Got an array with %u items\n", itemsTotal);
+    if (uc->return_code != CWP_RC_OK)  {
+      Serial.printf("Error parsing array size, error is %d\n",uc->return_code);
+      return 0;
+    } 
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
     uint index = cw_unpack_next_unsigned8(uc);  
     itemsReceived++;  
     //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     //Serial.printf("First item has id: %u\n", index);
     
-    #warning below is right
     Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
     itemsReceived++;
     //uint command;
@@ -104,9 +105,8 @@ char qCommand::readBinary(void) {
               Serial.println("Error: object not found Get command without object");
             }
             break;
-            case Commands::Set:
-              goto cleanup;
-              if (commandList[index-1].object == NULL) {
+          case Commands::Set:              
+            if (commandList[index-1].object == NULL) {
                 //cannot update object that isn't of type SmartData                
                 goto cleanup;
               }
