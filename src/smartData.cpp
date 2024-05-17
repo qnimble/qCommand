@@ -13,8 +13,15 @@ static FastCRC16 CRC16;
 #include "quarto_wdog.h"
 
 
+
+void cw_pack(cw_pack_context* cw, String value){
+  cw_pack_str(cw,value.c_str(), value.length());
+}
+
+
+
+
 void cw_pack(cw_pack_context* cw, bool value){
-	 //Serial.printf("Running cw_pack_booleand with %u\n",value);
   cw_pack_boolean(cw,value);
 }
 

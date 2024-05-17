@@ -28,7 +28,7 @@ extern char buffer[];
 
 void cw_pack(cw_pack_context* cw, bool value);
 void cw_pack(cw_pack_context* cw, unsigned char value);
-
+void cw_pack(cw_pack_context* cw, String value);
 
 template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, unsigned char>::value ||
