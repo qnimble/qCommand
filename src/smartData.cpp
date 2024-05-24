@@ -93,6 +93,12 @@ void SmartData<SmartDataGeneric>::_set(void* data) {
   value = *ptr;
 }
 
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::_set(void* data) {  
+  //set not support for array data (pointers
+}
+
+
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
@@ -134,6 +140,88 @@ void SmartData<SmartDataGeneric>::sendValue(void) {
 
 
 template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::please(void) {  
+  Serial.println("Please called on SmartDataPtr");
+}
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::_get(void* data) {    
+  Serial.println("_get called on SmartDataPtr");
+  get();
+}
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::get(void) {  
+  Serial.printf("Get requested on SmartDataPtr\n");
+  dataRequested = true;  
+}
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
+  if ((dataRequested) && (currentElement == totalElements)) {
+    Serial.println("Sending value on SmartDataPtr");
+    sendValue();
+    dataRequested = false;
+    currentElement = 0;
+  }
+}
+
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::please(void) {  
+  Serial.println("Please called on SmartData");
+}
+
+template <class SmartDataGeneric>
+size_t SmartDataPtr<SmartDataGeneric>::getCurrentElement(void) {
+  return currentElement;
+}
+
+template <class SmartDataGeneric>
+size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
+  return totalElements;
+}
+
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::sendValue(void) {    
+  if (stream) {        
+    uint16_t crc = CRC16.ccitt((uint8_t*) value, totalElements * sizeof(SmartDataGeneric));
+    cw_pack_array_size(&pc,4);
+    cw_pack_unsigned(&pc, id);
+    cw_pack_unsigned(&pc, 2); //command for set, maybe expose this enum instead of hard-coding
+    Serial.printf("Check 1: Return Code %d\n",pc.return_code);
+    Serial.printf("Will run cw_pack_bin with size of %u\n", totalElements * sizeof(SmartDataGeneric));    
+    cw_pack_bin(&pc, value, totalElements * sizeof(SmartDataGeneric));    
+    Serial.printf("Check 2: Return Code %d\n",pc.return_code);
+    cw_pack_unsigned(&pc, crc);    
+    if (pc.return_code != CWP_RC_OK) {
+      Serial.printf("Error! Return Code %ld\n",pc.return_code);
+      return;    
+    }
+    //uint16_t leng = pc.current - pc.start;
+    //leng = min(leng,16);
+    //Serial.print("Sent packet: ");
+    //for (uint i = 0; i < leng; i++) {
+      //Serial.printf("0x%02x ",pc.start[i]);
+    //}
+    //Serial.println();
+    stream->write(pc.start, pc.current - pc.start);
+    pc.current = pc.start; //reset for next one.
+
+    //#warning maybe do not want to reset pointer send we send...
+    //currentElement = 0;
+    //dataRequested = false;
+    //setDebugWord(0x3310019);
+    //packer->clear();    
+    //packer->to_array(id,value, crc );
+    //stream->write(packer->data(),packer->size());
+  }
+}
+
+
+
+
+template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210010);
   value = newValue;  
@@ -143,8 +231,27 @@ void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210020);
 }
 
+
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::setNext(typename SmartDataPtr<SmartDataGeneric>::baseType data) {
+  if (dataRequested) {
+    if (currentElement < totalElements ) {
+      value[currentElement] = data;
+      currentElement++;
+    }
+  }
+}
+
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, void* packer) {
+  this->id = id;
+  this->stream = stream;
+  this->packer = packer;
+}
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, void* packer) {
   this->id = id;
   this->stream = stream;
   this->packer = packer;
@@ -157,6 +264,12 @@ template <class SmartDataGeneric>
 SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue), id(0), stream(0) {
   cw_pack_context_init(&pc, buffer, DEFAULT_PACK_BUFFER_SIZE, 0);  
 }
+
+template <class SmartDataGeneric>
+SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigned int size) :  value(initValue),totalElements(size), id(0), stream(0) {
+  cw_pack_context_init(&pc, buffer, DEFAULT_PACK_BUFFER_SIZE, 0);  
+}
+
 
 
 template class SmartData<bool>;
@@ -173,6 +286,9 @@ template class SmartData<long>;
 template class SmartData<float>;
 template class SmartData<double>;
 template class SmartData<String>;
+
+template class SmartDataPtr<float*>;
+
 
 //template void cw_pack<uint8_t>(cw_pack_context*, uint8_t);
 //template void cw_pack<unsigned char>(cw_pack_context*, unsigned char);

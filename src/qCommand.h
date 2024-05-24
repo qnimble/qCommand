@@ -37,6 +37,9 @@ class qCommand {
 
     void assignVariable(const char* command, String* variable);
     void assignVariable(const char* command, SmartData<String>* object) ;
+    
+    template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
+    void assignVariable(const char* command, SmartDataPtr<argArray>* object);
 
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
     template <typename argUInt, std::enable_if_t<
@@ -88,6 +91,7 @@ class qCommand {
       ListCommands = 0,
       Get = 1,
       Set = 2,
+      Request = 3, // Request new data (for arrays where data is not necessarily ready. Only valid for SmartDataPtr objects)
       
     };
     #warning move back to private after testing
@@ -116,6 +120,12 @@ class qCommand {
                               DataType* var, 
                               SmartData<DataType>* object = NULL);
       
+      template <typename DataType>
+      void addCommandInternal(const char* command, 
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartDataPtr<DataType>* object), 
+                              DataType* var, 
+                              SmartDataPtr<DataType>* object = NULL);
+
       
       void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
       

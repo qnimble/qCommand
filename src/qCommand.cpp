@@ -30,6 +30,20 @@ qCommand::qCommand(bool caseSensitive) :
 
 char qCommand::readBinary(void) {
   //PT_FUNC_START(pt);
+
+
+  for(uint8_t i=0; i<commandCount; i++) {
+      if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
+        //array
+        //AllSmartDataPtr *ptr = (AllSmartDataPtr*) commandList[i].object;
+        //SmartDataPtr<float*> *ptr = (void*) commandList[i].object;        
+        AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[i].object);
+        ptr->sendIfNeedValue();
+        //ptr->please();
+      }
+  }
+
+
   setDebugWord(0xbbbb0001);
   //static uint8_t* data_ptr = 0;
   const uint8_t buffer_size_default = 3;
@@ -48,7 +62,9 @@ char qCommand::readBinary(void) {
   if (dataReady != 0) {
     //Serial.printf("Got %d bytes to process: ",dataReady);        
     init_stream_unpack_context(&suc, buffer_size_default, binaryStream);    
+    setDebugWord(0xbbbd0000 + dataReady);
     binaryStream->readBytes(uc->start,dataReady);    
+    setDebugWord(0xbbbe0000 + dataReady);
     //void init_stream_unpack_context (stream_unpack_context* suc, unsigned long initial_buffer_length, size_t (*file)(const uint8_t*, size_t))
     //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
     
@@ -61,6 +77,7 @@ char qCommand::readBinary(void) {
     //Serial.println();
     //Serial.printf("Start: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     uint itemsTotal = cw_unpack_next_array_size(uc);
+    setDebugWord(0xbbbf0000 + dataReady);
     uint itemsReceived = 0;
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
@@ -71,16 +88,20 @@ char qCommand::readBinary(void) {
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
     uint index = cw_unpack_next_unsigned8(uc);  
     itemsReceived++;  
+    setDebugWord(0xbbc10000 + dataReady);
     //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     //Serial.printf("First item has id: %u\n", index);
     
     Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
     itemsReceived++;
+    
+    setDebugWord(0xbbc20000 + dataReady);
     //uint command;
     switch (index) {
       case 0:
         //internal command
         if (command == Commands::ListCommands && itemsTotal == 2) {          
+          setDebugWord(0xbbc30000 + dataReady);
           sendBinaryCommands();    
 
         } else {
@@ -92,31 +113,45 @@ char qCommand::readBinary(void) {
           Serial.println("Error: Command index out of range");
           break;
         }
-        switch (command) {
+        setDebugWord(0xbbc40000 + dataReady);          
+        Serial.printf("About to run command %u (%s)\n",command, commandList[index-1].command);
+        switch (command) {          
           case Commands::Get:
+            Serial.printf("Command is get and object ptr is 0x%08x\n", commandList[index-1].object);
             if (commandList[index-1].object != NULL) {
-              setDebugWord(0x4432abab);                            
+              //Serial.printf("About sendValue on %s\n", commandList[index-1].command);
+              //Serial.printf("Function callback address is 0x%08x and base is 0x%08x\n", &decltype(commandList[index-1].object)::sendValue, commandList[index-1].object);
+              //Serial.print(commandList[index-1].command);
+              //Serial.println();
+              setDebugWord(0x4432abab);
+              //#warning this is right, but crashes on SmartDataPtr
               commandList[index-1].object->sendValue();
-              setDebugWord(0x4432abcc);
-              Serial.println("Shold run sendValue here for ");
-              Serial.print(commandList[index-1].command);
-              Serial.println();
+              //Base* base = commandList[index-1].object;
+              //Serial.printf("Now running please on base object 0x%08x with data=%u\n", base,commandList[index-1].data_type);
+              
+              
+              //base->please();
+              //setDebugWord(0x4432abcc);
+              
             } else {
               Serial.println("Error: object not found Get command without object");
             }
             break;
           case Commands::Set:              
+            setDebugWord(0xbbe41000 + dataReady);
             if (commandList[index-1].object == NULL) {
                 //cannot update object that isn't of type SmartData                
                 goto cleanup;
               }
               
-              if (uc->return_code != CWP_RC_OK) {
-                Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
-                goto cleanup;                 
-              }
-              Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
-              switch(commandList[index-1].data_type & 0x0F) {
+            if (uc->return_code != CWP_RC_OK) {
+              Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
+              goto cleanup;                 
+            }
+            
+            Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
+            setDebugWord(0xbbc50000 + dataReady);
+            switch(commandList[index-1].data_type & 0x0F) {
                 case TYPE2INFO_MIN + TYPE2INFO_BOOL:{
                   //bool 
                   //bool res = cw_unpack_next_boolean(uc);
@@ -189,30 +224,46 @@ char qCommand::readBinary(void) {
               }
 
 
-              if (commandList[index-1].object != NULL) {
+            if (commandList[index-1].object != NULL) {
                 setDebugWord(0x4432abdd);
                 commandList[index-1].object->sendValue();
                 setDebugWord(0x4432abff);
                 Serial.println("Shold run sendValue here for ");
                 Serial.print(commandList[index-1].command);
                 Serial.println();
-              } else {
-                Serial.println("Error: object not found Set command without object");
-              }
-              break;
+            } else {
+              Serial.println("Error: object not found Set command without object");
+            }
+            break;
             
-            
+            case Commands::Request:
+              Serial.printf("Command is request and object ptr is 0x%08x\n", commandList[index-1].object);
+              if ( (commandList[index-1].object != NULL) && ( (commandList[index-1].data_type & 0x03 )== TYPE2INFO_ARRAY ) ) {
+                //Got SmartDataPtr object
+                commandList[index-1].object->_get(NULL);
+                //Base* base = commandList[index-1].object;
+                //Serial.printf("Now running please on base object 0x%08x with data=%u\n", base,commandList[index-1].data_type);
+                
+                
+                //base->please();
+                //setDebugWord(0x4432abcc);
+              
+            } else {
+              Serial.println("Error: SmartDataPtr object not found for Request command");
+            }
+
             default:
               Serial.printf("Unknown command: %u, index: %u\n",command, index);
-              break;
+              break;        
         }
         
         //Serial.println("Uknown command");
         break;
+
     }
     
     //uint junk = cw_unpack_next_unsigned32(uc);
-
+    setDebugWord(0xbbcf0000 + dataReady);          
   cleanup:
   //clear out the data
   while (itemsReceived < itemsTotal) {
@@ -256,6 +307,9 @@ void qCommand::sendBinaryCommands(void) {
   for (uint8_t i=0; i < commandCount; i++) {    
     if (commandList[i].object != NULL) {
       elements++;
+      Serial.printf("Adding: %s (ptr=0x%08x) data_type=0x%02x)\n",commandList[i].command, commandList[i].object, commandList[i].data_type);
+    } else {
+      Serial.printf("Skipping: %s (ptr=0x%08x) data_type=0x%02x)\n",commandList[i].command, commandList[i].object, commandList[i].data_type);
     }
   }
   //packer.serialize(MsgPack::arr_size_t(elements));
@@ -305,6 +359,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
   commandList[commandCount].function.f1 = function;
   commandList[commandCount].ptr = NULL;
+  commandList[commandCount].object = NULL;
 
   if (!caseSensitive) {
     strlwr(commandList[commandCount].command);
@@ -355,6 +410,53 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
   commandCount++;
   Serial.printf(" to %u\n", commandCount);
 }
+
+template <typename DataType>
+void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartDataPtr<DataType>* object),DataType* var, SmartDataPtr<DataType>* object)  {  
+  commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
+  strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
+  
+  if (object != NULL)  {
+    //have SmartData object pointer
+    commandList[commandCount].object = object;
+    commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
+    commandList[commandCount].ptr = NULL;    
+    //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
+    object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
+    commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
+
+  } else {
+    commandList[commandCount].object = NULL;
+  
+    if ( var == NULL) {
+		  //catch NULL pointer and trap with function that can handle it
+		  commandList[commandCount].function.f2 =  &qCommand::invalidAddress;
+		  commandList[commandCount].ptr = (void*) 1;
+	  } else {
+		  commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
+		  commandList[commandCount].ptr = (void*) var;
+    }
+	}
+
+	if (!caseSensitive) {
+	   strlwr(commandList[commandCount].command);
+	}
+	Serial.printf("CC from %u", commandCount);
+  commandCount++;
+  Serial.printf(" to %u\n", commandCount);
+}
+
+
+
+template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
+void qCommand::assignVariable(const char* command, SmartDataPtr<argArray>* object) {
+	Serial.printf("Trying to assign array to command %s\n",command);
+  void (qCommand::*function)(qCommand&, Stream&, argArray*, const char*, SmartDataPtr<argArray>*) = nullptr;
+  addCommandInternal(command, function, (argArray*) NULL, object);
+}
+
+template void qCommand::assignVariable(const char* command, SmartDataPtr<float*>* object);
+
 
 
 //Assign variable to command list for string. Takes pointer to either data or DataObject.
@@ -498,7 +600,7 @@ void qCommand::reportString(qCommand& qC, Stream& S, String* ptr, const char* co
   }
 
   if (object != NULL) {  
-    S.printf("%s is %s\n",command, object->get().c_str());    
+    S.printf("%s is %s\n",command, object->get().c_str());        
   } else {    
     S.printf("%s is %s\n",command, ptr->c_str());
   }
@@ -635,7 +737,7 @@ void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char
 		S.printf("%s is %e\n",command,newValue); //print gain in scientific notation
 	} else {
 		S.printf("%s is %f\n",command,newValue);
-	}
+	} 
 }
 /*
 template <class argType>
@@ -713,7 +815,18 @@ void qCommand::readSerial(Stream& inputStream) {
             #endif
             // Execute the stored handler function for the command
               if (commandList[i].object != NULL) {
-                (this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command, commandList[i].object);
+                //only run object function if object is single and not array
+                if ( (commandList[i].data_type & 0x03 ) != TYPE2INFO_ARRAY ) {
+                  //#warning this is right
+                  Serial.print("Running on non array object:\n");
+                  (this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command, commandList[i].object);
+                  Base* base = commandList[i].object;
+                  base->please();
+                } else {
+                  inputStream.println("Arrays do not support ASCII command line interaction, and must use binary command structure");                  
+                  Base* base = commandList[i].object;        
+                  Serial.printf("Cmd: %s, with data type: %u or 0x%02x and base of 0x%08x\n",commandList[i].command, commandList[i].data_type, commandList[i].data_type, base);
+                }
               } else {                
                 if (commandList[i].ptr == NULL) {
             	    (*commandList[i].function.f1)(*this,inputStream);

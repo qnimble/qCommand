@@ -57,9 +57,11 @@ void cw_pack(cw_pack_context* cw, argFloat value);
 #warning move these to private when done with debug
 class Base {  
   public:
-    virtual void _get(void* data); // pure virtual function
-    virtual void _set(void* data ); // pure virtual function
+    //virtual void _get(void* data); // pure virtual function
+    virtual void _set(void* data); // pure virtual function
     virtual void sendValue(void);
+    virtual void please() = 0 ;
+    virtual void _get(void* data); // pure virtual function
   private:
     
     
@@ -76,7 +78,7 @@ public:
     SmartData(DataType);
     DataType get(void);
     void set(DataType);
-    bool please(void);
+    void please(void);
     void sendValue(void);
     void _get(void* data); 
     void _set(void* data); 
@@ -93,6 +95,55 @@ private:
     uint8_t id;
     Stream* stream;  
 };
+
+class AllSmartDataPtr: public Base {
+  public:
+    virtual size_t getCurrentElement(void);
+    virtual size_t getTotalElements(void);
+    virtual void sendIfNeedValue(void);
+};
+
+
+template <class DataType>
+class SmartDataPtr: public AllSmartDataPtr  {
+//  class SmartData {
+public:
+    SmartDataPtr(DataType, size_t);
+    DataType get(size_t);
+    void get(void);
+    void set(DataType, size_t);
+    void set(DataType*, unsigned int);    
+    void sendValue(void);
+    void _set(void* data);
+    void please(void);
+    void sendIfNeedValue(void);
+    void _get(void* data); 
+    
+    using baseType = typename std::remove_pointer<DataType>::type;
+
+    void setNext(baseType);
+    size_t getCurrentElement(void);
+    size_t getTotalElements(void);
+
+private:
+    DataType value;
+    const size_t totalElements;
+    size_t currentElement;
+    void* packer;
+    bool dataRequested = false;
+    void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
+    //void _set(void* value) override;
+    //void* _get(void) override;
+    friend class qCommand;
+    
+    //private data that gets set by qC::addCommand
+    uint8_t id;
+    Stream* stream;  
+};
+
+//template <class DataType>
+//using SmartDataNew = typename std::conditional<std::is_pointer<DataType>::value, SmartDataPtr<DataType>, SmartData<DataType>>::type;
+
 
 template< typename T >
 struct type2int
@@ -113,6 +164,7 @@ template<> struct type2int<SmartData<long>> { enum { result = TYPE2INFO_4MIN +  
 template<> struct type2int<SmartData<float>> { enum { result = TYPE2INFO_MIN + TYPE2INFO_FLOAT }; };
 template<> struct type2int<SmartData<double>> { enum { result = TYPE2INFO_2MIN + TYPE2INFO_FLOAT }; };
     
+template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
 
 /*
 struct DataInfo {
