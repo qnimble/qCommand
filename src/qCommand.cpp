@@ -317,7 +317,7 @@ void qCommand::sendBinaryCommands(void) {
   cw_pack_unsigned(&pc,0); // set ID = 0 for internal
   cw_pack_unsigned(&pc,static_cast<uint8_t>(Commands::ListCommands));
   cw_pack_array_size(&pc,elements);
-  Serial.printf("Start Binary Command send with %u elements\n",elements);  
+  Serial.printf("Start Binary Command send with %u elements (error=%d)\n",elements,pc.return_code);
   Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
   for (uint8_t i=0; i < commandCount; i++) {    
     if ( commandList[i].object != NULL) {               

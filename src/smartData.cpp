@@ -8,7 +8,7 @@
 static FastCRC16 CRC16;
 
 #include "cwpack.h"
-
+#include "basic_contexts.h"
 #warning No need for this afger debugging
 #include "quarto_wdog.h"
 
@@ -262,12 +262,12 @@ void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream,
 
 template <class SmartDataGeneric>
 SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue), id(0), stream(0) {
-  cw_pack_context_init(&pc, buffer, DEFAULT_PACK_BUFFER_SIZE, 0);  
+  init_dynamic_memory_pack_context(&pc, DEFAULT_PACK_BUFFER_SIZE);
 }
 
 template <class SmartDataGeneric>
 SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigned int size) :  value(initValue),totalElements(size), id(0), stream(0) {
-  cw_pack_context_init(&pc, buffer, DEFAULT_PACK_BUFFER_SIZE, 0);  
+  init_dynamic_memory_pack_context(&pc, DEFAULT_PACK_BUFFER_SIZE);
 }
 
 
