@@ -6,7 +6,7 @@
 #include "cwpack_utils.h"
 
 #include "protothreads.h"
-
+#include "pt.h"
 /**
  * Constructor
  */
@@ -30,7 +30,8 @@ void qCommand::readBinary(void) {
 }
 
 char qCommand::readBinaryInt(void) {
-  //PT_FUNC_START(pt);
+  PT_FUNC_START(pt);
+
 
   for(uint8_t i=0; i<commandCount; i++) {
       if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
@@ -297,6 +298,7 @@ char qCommand::readBinaryInt(void) {
     }
   }  
   return 0;
+  PT_FUNC_END(pt);
 }
 
 void qCommand::sendBinaryCommands(void) {
