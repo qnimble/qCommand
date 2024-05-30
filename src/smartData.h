@@ -22,7 +22,7 @@
 #define TYPE2INFO_INT  (3<<2)
 #define TYPE2INFO_STRING (4<<2)
 
-extern cw_pack_context pc;
+//extern cw_pack_context pc;
 extern char buffer[];
 #define DEFAULT_PACK_BUFFER_SIZE 500
 
@@ -63,7 +63,7 @@ class Base {
     virtual void please() = 0 ;
     virtual void _get(void* data); // pure virtual function
   private:
-    
+    cw_pack_context* pc;
     
     //virtual void* _get(void) = 0; // pure virtual function
 
@@ -85,8 +85,9 @@ public:
 
 private:
     DataType value;
-    void* packer;
-    void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
+    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
+    cw_pack_context* pc;
+
     //void _set(void* value) override;
     //void* _get(void) override;
     friend class qCommand;
@@ -129,9 +130,10 @@ private:
     DataType value;
     const size_t totalElements;
     size_t currentElement;
-    void* packer;
     bool dataRequested = false;
-    void _setPrivateInfo(uint8_t id, Stream* stream, void* packer);
+    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
+    cw_pack_context* pc;
+
     //void _set(void* value) override;
     //void* _get(void) override;
     friend class qCommand;

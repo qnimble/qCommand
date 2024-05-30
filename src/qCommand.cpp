@@ -5,9 +5,7 @@
 #include "basic_contexts.h"
 #include "cwpack_utils.h"
 
-#define PACK_BUFFER_SIZE 20
-cw_pack_context pc;
-char buffer[DEFAULT_PACK_BUFFER_SIZE];
+#include "protothreads.h"
 
 /**
  * Constructor
@@ -26,11 +24,13 @@ qCommand::qCommand(bool caseSensitive) :
   clearBuffer();
 }
 
+void qCommand::readBinary(void) {
+    PT_SCHEDULE(readBinaryInt());
+    //readBinaryInt();
+}
 
-
-char qCommand::readBinary(void) {
+char qCommand::readBinaryInt(void) {
   //PT_FUNC_START(pt);
-
 
   for(uint8_t i=0; i<commandCount; i++) {
       if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
@@ -270,6 +270,8 @@ char qCommand::readBinary(void) {
     cw_unpack_next(uc);
     itemsReceived++;
   }
+  //PT_FUNC_END(pt);
+  //PT_RESTART(pt);
   return 0;
 
 
@@ -387,7 +389,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
-    object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
+    object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
     commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
 
   } else {
@@ -422,7 +424,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
-    object->_setPrivateInfo(commandCount+1, binaryStream, NULL);
+    object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
     commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
 
   } else {
