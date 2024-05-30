@@ -34,6 +34,14 @@ char qCommand::readBinaryInt(void) {
 
 
   for(uint8_t i=0; i<commandCount; i++) {
+      if ( commandList[i].object != NULL) {
+        Base *ptr = static_cast<Base*>(commandList[i].object);
+        if (ptr->updates_needed == STATE_NEED_TOSEND) {
+          ptr->sendValue();
+          ptr->updates_needed = STATE_WAIT_ON_ACK;
+        }
+      }      
+      /*
       if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
         //array
         //AllSmartDataPtr *ptr = (AllSmartDataPtr*) commandList[i].object;
@@ -41,7 +49,8 @@ char qCommand::readBinaryInt(void) {
         AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[i].object);
         ptr->sendIfNeedValue();
         //ptr->please();
-      }
+      }*/
+
   }
 
 
@@ -80,22 +89,24 @@ char qCommand::readBinaryInt(void) {
     uint itemsTotal = cw_unpack_next_array_size(uc);
     setDebugWord(0xbbbf0000 + dataReady);
     uint itemsReceived = 0;
+    uint index = 0;
+    Commands command = Commands::ListCommands;
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     if (uc->return_code != CWP_RC_OK)  {
       Serial.printf("Error parsing array size, error is %d\n",uc->return_code);
-      return 0;
+      goto error;
     } 
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
-    uint index = cw_unpack_next_unsigned8(uc);  
+    index = cw_unpack_next_unsigned8(uc);  
     itemsReceived++;  
     setDebugWord(0xbbc10000 + dataReady);
     //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
-    //Serial.printf("First item has id: %u\n", index);
     
-    Commands command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
+    
+    command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
     itemsReceived++;
-    
+    Serial.printf("Item = %u, Command=%u (total=%u\n", index, command, itemsTotal);
     setDebugWord(0xbbc20000 + dataReady);
     //uint command;
     switch (index) {
@@ -107,11 +118,13 @@ char qCommand::readBinaryInt(void) {
 
         } else {
           Serial.println("Error parsing internal command");
+          goto error;
         }
         break;
       default:
         if (index > commandCount) {
           Serial.println("Error: Command index out of range");
+          goto error;
           break;
         }
         setDebugWord(0xbbc40000 + dataReady);          
@@ -136,6 +149,22 @@ char qCommand::readBinaryInt(void) {
               
             } else {
               Serial.println("Error: object not found Get command without object");
+              goto error;
+            }
+            break;
+          case Commands::ACK:
+            Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].object);
+            if (commandList[index-1].object != NULL) {
+              Base *ptr = static_cast<Base*>(commandList[index-1].object);
+              if (ptr->updates_needed == STATE_WAIT_ON_ACK) {
+                ptr->updates_needed = STATE_IDLE;
+              } else if (ptr->updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
+                ptr->updates_needed = STATE_NEED_TOSEND;
+              } else {
+                Serial.printf("Unexpected ACK on Command ID %u -- state was %u\n", index, ptr->updates_needed);
+              }
+            } else {
+              Serial.println("Error: object not found ACK command without object");
             }
             break;
           case Commands::Set:              
@@ -147,7 +176,7 @@ char qCommand::readBinaryInt(void) {
               
             if (uc->return_code != CWP_RC_OK) {
               Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
-              goto cleanup;                 
+              goto error;                 
             }
             
             Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
@@ -173,7 +202,11 @@ char qCommand::readBinaryInt(void) {
                   if (uc->return_code == CWP_RC_OK)  {
                   commandList[index-1].object->_set(&res);
                   } else {
-                    commandList[index-1].object->sendValue();
+                    //didn't set value, but we should send it since original value may not be expected
+                    
+  
+                    commandList[index-1].object->setNeedToSend();
+                    //commandList[index-1].object->sendValue();
                   }
                   break;}
                 case TYPE2INFO_2MIN + TYPE2INFO_UINT:{
@@ -227,11 +260,11 @@ char qCommand::readBinaryInt(void) {
 
             if (commandList[index-1].object != NULL) {
                 setDebugWord(0x4432abdd);
-                commandList[index-1].object->sendValue();
+                //commandList[index-1].object->sendValue();
                 setDebugWord(0x4432abff);
-                Serial.println("Shold run sendValue here for ");
-                Serial.print(commandList[index-1].command);
-                Serial.println();
+                //Serial.println("Shold run sendValue here for ");
+                //Serial.print(commandList[index-1].command);
+                //Serial.println();
             } else {
               Serial.println("Error: object not found Set command without object");
             }
@@ -273,6 +306,10 @@ char qCommand::readBinaryInt(void) {
   }
   //PT_FUNC_END(pt);
   //PT_RESTART(pt);
+  return 0;
+
+  error:
+  Serial.println("Todo: got error, need to reset parsing");
   return 0;
 
 

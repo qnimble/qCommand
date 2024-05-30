@@ -91,6 +91,12 @@ template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::_set(void* data) {  
   SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
   value = *ptr;
+  
+  if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
+    updates_needed = STATE_NEED_TOSEND;
+  } else {
+    updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
+  }
 }
 
 template <class SmartDataGeneric>
@@ -102,6 +108,7 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
+  Serial.printf("Sending Data (sendValue) for %s\n",this->command);
   setDebugWord(0x3310010);
   if (stream) {    
     setDebugWord(0x3310011);
@@ -218,6 +225,23 @@ void SmartDataPtr<SmartDataGeneric>::sendValue(void) {
   }
 }
 
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
+   if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
+    updates_needed = STATE_NEED_TOSEND;
+  } else {
+    updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
+  }
+}
+
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::setNeedToSend(void) {
+   if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
+    updates_needed = STATE_NEED_TOSEND;
+  } else {
+    updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
+  }
+}
 
 
 
@@ -227,7 +251,8 @@ void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
   value = newValue;  
   //value = 1;
   setDebugWord(0x2210012);  
-  sendValue();  
+  setNeedToSend();  
+  //sendValue();  
   setDebugWord(0x2210020);
 }
 

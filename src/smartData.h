@@ -54,19 +54,27 @@ template <typename argFloat, std::enable_if_t<
   , int> = 0>        
 void cw_pack(cw_pack_context* cw, argFloat value);
 
+enum UpdateState {
+    STATE_IDLE,   // A
+    STATE_NEED_TOSEND,   // B
+    STATE_WAIT_ON_ACK, // C
+    STATE_WAIT_ON_ACK_PLUS_QUEUE  // BC
+};
+
+
 #warning move these to private when done with debug
 class Base {  
   public:
     //virtual void _get(void* data); // pure virtual function
     virtual void _set(void* data); // pure virtual function
+    virtual void setNeedToSend(void); // set states as if set ran, even though it didn't.
     virtual void sendValue(void);
     virtual void please() = 0 ;
     virtual void _get(void* data); // pure virtual function
-  private:
+  protected:
     cw_pack_context* pc;
-    
-    //virtual void* _get(void) = 0; // pure virtual function
-
+    UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function
+  friend class qCommand;
 };
 
 
@@ -81,8 +89,8 @@ public:
     void please(void);
     void sendValue(void);
     void _get(void* data); 
-    void _set(void* data); 
-
+    void _set(void* data);     
+    void setNeedToSend(void);
 private:
     DataType value;
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
@@ -102,6 +110,7 @@ class AllSmartDataPtr: public Base {
     virtual size_t getCurrentElement(void);
     virtual size_t getTotalElements(void);
     virtual void sendIfNeedValue(void);
+    virtual void setNeedToSend(void);
 };
 
 
@@ -118,8 +127,8 @@ public:
     void _set(void* data);
     void please(void);
     void sendIfNeedValue(void);
-    void _get(void* data); 
-    
+    void _get(void* data);
+    void setNeedToSend(void);
     using baseType = typename std::remove_pointer<DataType>::type;
 
     void setNext(baseType);
