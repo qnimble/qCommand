@@ -18,11 +18,24 @@ qCommand::qCommand(bool caseSensitive) :
   term('\n'),           // default terminator for commands, newline character
   caseSensitive(caseSensitive),
 	cur(NULL),
-	last(NULL)
+	last(NULL),
+  bufPos(0),
+  binaryConnected(false)
 {
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
 }
+
+
+void qCommand::reset(void) {
+  for(uint8_t i=0; i<commandCount; i++) {
+    if ( commandList[i].object != NULL) {
+      Base *ptr = static_cast<Base*>(commandList[i].object);
+      ptr->updates_needed = STATE_IDLE;
+    } 
+  }
+}
+
 
 void qCommand::readBinary(void) {
     PT_SCHEDULE(readBinaryInt());
@@ -32,11 +45,35 @@ void qCommand::readBinary(void) {
 char qCommand::readBinaryInt(void) {
   PT_FUNC_START(pt);
 
+  #warning hard coding binary Stream as Serial2 here..do not know how to avoid..
+  if (!Serial2) {
+    return 0;
+  }
+  /*
+  if (!binaryConnected) {
+    if ( binaryStream->availableForWrite() > 0 ) {    
+      Serial.printf("** Binary Stream connected\n");
+      binaryConnected = true;
+    } else {
+      return 0;
+    }
+  } else {
+    if ( binaryStream->availableForWrite() == 0) {
+      Serial.printf("** Binary Stream NOT connected\n");
+      binaryConnected = false;
+      return 0;
+    }
+  }
+*/
+  //PT_YIELD_UNTIL(pt, binaryStream);
 
   for(uint8_t i=0; i<commandCount; i++) {
       if ( commandList[i].object != NULL) {
         Base *ptr = static_cast<Base*>(commandList[i].object);
         if (ptr->updates_needed == STATE_NEED_TOSEND) {
+          if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
+            Serial.printf("Sending an sendValue on a Float Arraay!\n");
+          }
           ptr->sendValue();
           ptr->updates_needed = STATE_WAIT_ON_ACK;
         }
@@ -139,7 +176,8 @@ char qCommand::readBinaryInt(void) {
               //Serial.println();
               setDebugWord(0x4432abab);
               //#warning this is right, but crashes on SmartDataPtr
-              commandList[index-1].object->sendValue();
+              //commandList[index-1].object->sendValue();
+              commandList[index-1].object->setNeedToSend();
               //Base* base = commandList[index-1].object;
               //Serial.printf("Now running please on base object 0x%08x with data=%u\n", base,commandList[index-1].data_type);
               
@@ -162,6 +200,16 @@ char qCommand::readBinaryInt(void) {
                 ptr->updates_needed = STATE_NEED_TOSEND;
               } else {
                 Serial.printf("Unexpected ACK on Command ID %u -- state was %u\n", index, ptr->updates_needed);
+              }
+
+              //If array, reset data
+              if ( (commandList[index-1].data_type & 0x03 )== TYPE2INFO_ARRAY ) {
+                //SmartDataPtr<float*> *ptr = (void*) commandList[index-1].object;
+                AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[index-1].object);
+                ptr->resetCurrentElement();
+                Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
+                //ptr->sendIfNeedValue();
+                //ptr->please();
               }
             } else {
               Serial.println("Error: object not found ACK command without object");

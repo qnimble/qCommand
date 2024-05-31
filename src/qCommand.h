@@ -21,7 +21,7 @@ class qCommand {
     qCommand(bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.    
-    
+    void reset(void);
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.    
     bool str2Bool(const char* string);                // Convert string of "true" or "false", etc to a bool.
     void readSerial(Stream& inputStream);             // Main entry point.
@@ -161,6 +161,7 @@ class qCommand {
 
       char buffer[STREAMCOMMAND_BUFFER + 1]; // Buffer of stored characters while waiting for terminator character
       byte bufPos;                        // Current position in the buffer
+      bool binaryConnected;
 };
 
 #endif //QCOMMAND_h

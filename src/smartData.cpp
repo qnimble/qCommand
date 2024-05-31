@@ -108,7 +108,7 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
-  Serial.printf("Sending Data (sendValue) for %s\n",this->command);
+  Serial.printf("Sending Data (sendValue) for %u\n",this->id);
   setDebugWord(0x3310010);
   if (stream) {    
     setDebugWord(0x3310011);
@@ -162,6 +162,11 @@ void SmartDataPtr<SmartDataGeneric>::get(void) {
   Serial.printf("Get requested on SmartDataPtr\n");
   dataRequested = true;  
 }
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::resetCurrentElement(void) {
+  currentElement = 0;
+}
+
 
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
@@ -263,7 +268,11 @@ void SmartDataPtr<SmartDataGeneric>::setNext(typename SmartDataPtr<SmartDataGene
   if (dataRequested) {
     if (currentElement < totalElements ) {
       value[currentElement] = data;
-      currentElement++;
+      currentElement++;    
+      if (currentElement == totalElements) {
+        //if this was last element, then 
+        setNeedToSend();      
+      }
     }
   }
 }

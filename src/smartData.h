@@ -111,6 +111,7 @@ class AllSmartDataPtr: public Base {
     virtual size_t getTotalElements(void);
     virtual void sendIfNeedValue(void);
     virtual void setNeedToSend(void);
+    virtual void resetCurrentElement(void);
 };
 
 
@@ -134,6 +135,7 @@ public:
     void setNext(baseType);
     size_t getCurrentElement(void);
     size_t getTotalElements(void);
+    void resetCurrentElement(void);
 
 private:
     DataType value;
