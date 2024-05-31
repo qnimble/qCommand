@@ -165,6 +165,7 @@ void SmartDataPtr<SmartDataGeneric>::get(void) {
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::resetCurrentElement(void) {
   currentElement = 0;
+  dataRequested = true;
 }
 
 
