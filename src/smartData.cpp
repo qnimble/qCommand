@@ -100,9 +100,24 @@ void SmartData<SmartDataGeneric>::_set(void* data) {
 }
 
 template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::resetUpdateState(void) {  
+  updates_needed = STATE_IDLE;  
+}
+
+
+
+template <class SmartDataGeneric>
+void SmartDataPtr<SmartDataGeneric>::resetUpdateState(void) {  
+  updates_needed = STATE_IDLE;  
+}
+
+
+template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::_set(void* data) {  
   //set not support for array data (pointers
 }
+
+
 
 
 

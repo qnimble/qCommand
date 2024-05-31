@@ -71,6 +71,7 @@ class Base {
     virtual void sendValue(void);
     virtual void please() = 0 ;
     virtual void _get(void* data); // pure virtual function
+    virtual void resetUpdateState(void);
   protected:
     cw_pack_context* pc;
     UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function
@@ -91,6 +92,7 @@ public:
     void _get(void* data); 
     void _set(void* data);     
     void setNeedToSend(void);
+    void resetUpdateState(void);
 private:
     DataType value;
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
@@ -111,7 +113,7 @@ class AllSmartDataPtr: public Base {
     virtual size_t getTotalElements(void);
     virtual void sendIfNeedValue(void);
     virtual void setNeedToSend(void);
-    virtual void resetCurrentElement(void);
+    virtual void resetCurrentElement(void);    
 };
 
 
@@ -136,6 +138,7 @@ public:
     size_t getCurrentElement(void);
     size_t getTotalElements(void);
     void resetCurrentElement(void);
+    void resetUpdateState(void);
 
 private:
     DataType value;

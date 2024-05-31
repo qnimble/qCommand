@@ -108,7 +108,7 @@ char qCommand::readBinaryInt(void) {
   setDebugWord(0xbbbc0000 + dataReady);
   if (dataReady != 0) {
     //Serial.printf("Got %d bytes to process: ",dataReady);        
-    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);    
+    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
     setDebugWord(0xbbbd0000 + dataReady);
     binaryStream->readBytes(uc->start,dataReady);    
     setDebugWord(0xbbbe0000 + dataReady);
@@ -177,6 +177,7 @@ char qCommand::readBinaryInt(void) {
               setDebugWord(0x4432abab);
               //#warning this is right, but crashes on SmartDataPtr
               //commandList[index-1].object->sendValue();
+              commandList[index-1].object->resetUpdateState(); //if get requested, we should reset and send update
               commandList[index-1].object->setNeedToSend();
               //Base* base = commandList[index-1].object;
               //Serial.printf("Now running please on base object 0x%08x with data=%u\n", base,commandList[index-1].data_type);
@@ -357,7 +358,19 @@ char qCommand::readBinaryInt(void) {
   return 0;
 
   error:
-  Serial.println("Todo: got error, need to reset parsing");
+  size_t inQueue = binaryStream->available();
+  Serial.println("Todo: got error, need to test reset parsing");
+  Serial.printf("Bytes avail: %u\n", inQueue );
+  binaryStream->flush();
+  suc.uc.return_code = CWP_RC_OK;
+  suc.uc.current = suc.uc.start;
+  suc.uc.end = suc.uc.start;
+  inQueue = binaryStream->available();
+  Serial.printf("Bytes avail2: %u\n", inQueue );
+  char* ptr = malloc(inQueue);
+  binaryStream->readBytes(ptr, inQueue);
+  free(ptr);
+  //init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
   return 0;
 
 
@@ -481,7 +494,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 
   } else {
     commandList[commandCount].object = NULL;
-  
+    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
     if ( var == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  commandList[commandCount].function.f2 =  &qCommand::invalidAddress;
@@ -515,8 +528,8 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
 
   } else {
-    commandList[commandCount].object = NULL;
-  
+    commandList[commandCount].object = NULL;    
+    commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
     if ( var == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  commandList[commandCount].function.f2 =  &qCommand::invalidAddress;
