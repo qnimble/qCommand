@@ -93,26 +93,27 @@ char qCommand::readBinaryInt(void) {
 
   setDebugWord(0xbbbb0001);
   //static uint8_t* data_ptr = 0;
-  const uint8_t buffer_size_default = 3;
+  const uint16_t buffer_size_default = 4;
 
   static stream_unpack_context suc;
   static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct  
   int dataReady = binaryStream->available();
   if (dataReady != 0) {
-    Serial.printf("Got %u bytes available...\n", dataReady);
-  }  
+    Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
+  }
+
   setDebugWord(0xbbbb0002);
   int ri;
   float rf;
   dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation  
   setDebugWord(0xbbbc0000 + dataReady);
   if (dataReady != 0) {
-    //Serial.printf("Got %d bytes to process: ",dataReady);        
-    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
     setDebugWord(0xbbbd0000 + dataReady);
-    binaryStream->readBytes(uc->start,dataReady);    
+    //binaryStream->readBytes(uc->start,dataReady);
     setDebugWord(0xbbbe0000 + dataReady);
-    //void init_stream_unpack_context (stream_unpack_context* suc, unsigned long initial_buffer_length, size_t (*file)(const uint8_t*, size_t))
+    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
+    
+    Serial.printf("Got %d bytes to process. start=0x%08x, cur=0x%08x, end=0x%08x\n",dataReady, uc->start, uc->current, uc->end);
     //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
     
     //Serial.printf("Read %u bytes\n", dataReady);
@@ -131,7 +132,7 @@ char qCommand::readBinaryInt(void) {
     //cw_unpack_next(uc);
     //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
     if (uc->return_code != CWP_RC_OK)  {
-      Serial.printf("Error parsing array size, error is %d\n",uc->return_code);
+      Serial.printf("Error parsing array size, error is %d with Items=%u and type = %u\n",uc->return_code, itemsTotal, uc->item.type);
       goto error;
     } 
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
@@ -333,10 +334,12 @@ char qCommand::readBinaryInt(void) {
               
             } else {
               Serial.println("Error: SmartDataPtr object not found for Request command");
+              goto error;
             }
 
             default:
               Serial.printf("Unknown command: %u, index: %u\n",command, index);
+              goto error;
               break;        
         }
         
@@ -346,31 +349,54 @@ char qCommand::readBinaryInt(void) {
     }
     
     //uint junk = cw_unpack_next_unsigned32(uc);
-    setDebugWord(0xbbcf0000 + dataReady);          
+    //setDebugWord(0xbbcf0000 + dataReady);
+    //Serial.printf("Got here: items got: %u and expected %u\n", itemsReceived, itemsTotal);
+    //delayMicroseconds(10000);
   cleanup:
   //clear out the data
   while (itemsReceived < itemsTotal) {
+    setDebugWord(0xabcf0000 + itemsReceived);          
     cw_unpack_next(uc);
     itemsReceived++;
   }
   //PT_FUNC_END(pt);
   //PT_RESTART(pt);
+  //Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
+  //delayMicroseconds(10000);
+  terminate_stream_unpack_context(&suc);
+  //free(suc.uc.start);
+  //Serial.printf("Terminate Done\n");
+  //delayMicroseconds(10000);
   return 0;
 
   error:
+  //Serial.printf("Start of Error: start=0x%08x, cur=0x%08x, end=0x%08x\n", uc->start, uc->current, uc->end);
   size_t inQueue = binaryStream->available();
-  Serial.println("Todo: got error, need to test reset parsing");
-  Serial.printf("Bytes avail: %u\n", inQueue );
+  //Serial.println("Todo: got error, need to test reset parsing");
+  //Serial.printf("Bytes avail: %u\n", inQueue );
+  //delayMicroseconds(10000);
   binaryStream->flush();
-  suc.uc.return_code = CWP_RC_OK;
-  suc.uc.current = suc.uc.start;
-  suc.uc.end = suc.uc.start;
-  inQueue = binaryStream->available();
-  Serial.printf("Bytes avail2: %u\n", inQueue );
-  char* ptr = malloc(inQueue);
-  binaryStream->readBytes(ptr, inQueue);
-  free(ptr);
-  //init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
+  
+  if ( suc.uc.return_code != CWP_RC_MALLOC_ERROR ) {
+  
+    suc.uc.return_code = CWP_RC_OK;
+    suc.uc.current = suc.uc.start;
+    //suc.uc.end = suc.uc.start;
+    suc.uc.err_no = 0;  
+    inQueue = binaryStream->available();
+    Serial.printf("Bytes avail2: %u\n", inQueue );
+    if (inQueue > 0) {
+      //delayMicroseconds(10000);
+      char* ptr = new char[inQueue];
+      binaryStream->readBytes(ptr, inQueue);
+      delete[] (ptr);      
+    }
+    
+    //Serial.printf("Got to here, about totry to run terminate on address 0x%08x\n", suc.uc.start);
+    //delayMicroseconds(10000);
+    terminate_stream_unpack_context(&suc);
+    //init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
+  }
   return 0;
 
 
@@ -396,6 +422,8 @@ char qCommand::readBinaryInt(void) {
     }
   }  
   return 0;
+
+
   PT_FUNC_END(pt);
 }
 
