@@ -123,7 +123,7 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::sendValue(void) {
-  Serial.printf("Sending Data (sendValue) for %u\n",this->id);
+  //Serial.printf("Sending Data (sendValue) for %u\n",this->id);
   setDebugWord(0x3310010);
   if (stream) {    
     setDebugWord(0x3310011);
@@ -217,10 +217,10 @@ void SmartDataPtr<SmartDataGeneric>::sendValue(void) {
     cw_pack_array_size(pc,4);
     cw_pack_unsigned(pc, id);
     cw_pack_unsigned(pc, 2); //command for set, maybe expose this enum instead of hard-coding
-    Serial.printf("Check 1: Return Code %d\n",pc->return_code);
-    Serial.printf("Will run cw_pack_bin with size of %u\n", totalElements * sizeof(SmartDataGeneric));    
+    //Serial.printf("Check 1: Return Code %d\n",pc->return_code);
+    //Serial.printf("Will run cw_pack_bin with size of %u\n", totalElements * sizeof(SmartDataGeneric));    
     cw_pack_bin(pc, value, totalElements * sizeof(SmartDataGeneric));    
-    Serial.printf("Check 2: Return Code %d\n",pc->return_code);
+    //Serial.printf("Check 2: Return Code %d\n",pc->return_code);
     cw_pack_unsigned(pc, crc);    
     if (pc->return_code != CWP_RC_OK) {
       Serial.printf("Error! Return Code %ld\n",pc->return_code);

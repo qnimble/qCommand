@@ -72,7 +72,7 @@ char qCommand::readBinaryInt(void) {
         Base *ptr = static_cast<Base*>(commandList[i].object);
         if (ptr->updates_needed == STATE_NEED_TOSEND) {
           if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
-            Serial.printf("Sending an sendValue on a Float Arraay!\n");
+            //Serial.printf("Sending an sendValue on a Float Arraay!\n");
           }
           ptr->sendValue();
           ptr->updates_needed = STATE_WAIT_ON_ACK;
@@ -99,7 +99,7 @@ char qCommand::readBinaryInt(void) {
   static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct  
   int dataReady = binaryStream->available();
   if (dataReady != 0) {
-    Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
+    //Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
   }
 
   setDebugWord(0xbbbb0002);
@@ -113,7 +113,7 @@ char qCommand::readBinaryInt(void) {
     setDebugWord(0xbbbe0000 + dataReady);
     init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
     
-    Serial.printf("Got %d bytes to process. start=0x%08x, cur=0x%08x, end=0x%08x\n",dataReady, uc->start, uc->current, uc->end);
+    //Serial.printf("Got %d bytes to process. start=0x%08x, cur=0x%08x, end=0x%08x\n",dataReady, uc->start, uc->current, uc->end);
     //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
     
     //Serial.printf("Read %u bytes\n", dataReady);
@@ -144,7 +144,7 @@ char qCommand::readBinaryInt(void) {
     
     command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
     itemsReceived++;
-    Serial.printf("Item = %u, Command=%u (total=%u\n", index, command, itemsTotal);
+    //Serial.printf("Item = %u, Command=%u (total=%u\n", index, command, itemsTotal);
     setDebugWord(0xbbc20000 + dataReady);
     //uint command;
     switch (index) {
@@ -166,10 +166,10 @@ char qCommand::readBinaryInt(void) {
           break;
         }
         setDebugWord(0xbbc40000 + dataReady);          
-        Serial.printf("About to run command %u (%s)\n",command, commandList[index-1].command);
+        //Serial.printf("About to run command %u (%s)\n",command, commandList[index-1].command);
         switch (command) {          
           case Commands::Get:
-            Serial.printf("Command is get and object ptr is 0x%08x\n", commandList[index-1].object);
+            //Serial.printf("Command is get and object ptr is 0x%08x\n", commandList[index-1].object);
             if (commandList[index-1].object != NULL) {
               //Serial.printf("About sendValue on %s\n", commandList[index-1].command);
               //Serial.printf("Function callback address is 0x%08x and base is 0x%08x\n", &decltype(commandList[index-1].object)::sendValue, commandList[index-1].object);
@@ -193,7 +193,7 @@ char qCommand::readBinaryInt(void) {
             }
             break;
           case Commands::ACK:
-            Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].object);
+            //Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].object);
             if (commandList[index-1].object != NULL) {
               Base *ptr = static_cast<Base*>(commandList[index-1].object);
               if (ptr->updates_needed == STATE_WAIT_ON_ACK) {
@@ -209,7 +209,7 @@ char qCommand::readBinaryInt(void) {
                 //SmartDataPtr<float*> *ptr = (void*) commandList[index-1].object;
                 AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[index-1].object);
                 ptr->resetCurrentElement();
-                Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
+                //Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
                 //ptr->sendIfNeedValue();
                 //ptr->please();
               }
@@ -229,7 +229,7 @@ char qCommand::readBinaryInt(void) {
               goto error;                 
             }
             
-            Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
+            //Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
             setDebugWord(0xbbc50000 + dataReady);
             switch(commandList[index-1].data_type & 0x0F) {
                 case TYPE2INFO_MIN + TYPE2INFO_BOOL:{
@@ -294,7 +294,7 @@ char qCommand::readBinaryInt(void) {
                   float res = cw_unpack_next_float(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
-                  Serial.printf("Got float %f\n",res);
+                  //Serial.printf("Got float %f\n",res);
                   break;}
                 case TYPE2INFO_2MIN + TYPE2INFO_FLOAT: {
                   //float
@@ -321,7 +321,7 @@ char qCommand::readBinaryInt(void) {
             break;
             
             case Commands::Request:
-              Serial.printf("Command is request and object ptr is 0x%08x\n", commandList[index-1].object);
+              //Serial.printf("Command is request and object ptr is 0x%08x\n", commandList[index-1].object);
               if ( (commandList[index-1].object != NULL) && ( (commandList[index-1].data_type & 0x03 )== TYPE2INFO_ARRAY ) ) {
                 //Got SmartDataPtr object
                 commandList[index-1].object->_get(NULL);
