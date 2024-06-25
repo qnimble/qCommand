@@ -61,6 +61,15 @@ enum UpdateState {
     STATE_WAIT_ON_ACK_PLUS_QUEUE  // BC
 };
 
+template<typename T>
+struct TypeTraits {
+    static constexpr bool isArray = false;
+};
+
+template<>
+struct TypeTraits<float*> {
+    static constexpr bool isArray = true;
+};
 
 #warning move these to private when done with debug
 class Base {  
@@ -75,15 +84,36 @@ class Base {
   protected:
     cw_pack_context* pc;
     UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function
-  friend class qCommand;
+    friend class qCommand;    
 };
 
 
+template<typename DataType, bool Enable>
+class OnlyForArrays {
+  public:
+    void resetCurrentElement(void);
+};
+
+template<typename DataType>
+class OnlyForArrays<DataType, true> {
+  public:    
+    void resetCurrentElement(void);
+  protected:
+    size_t currentElement;
+    bool dataRequested = false;
+    
+};
+
+template <class SmartDataGeneric, bool IsArray>
+struct GetHelper;
+
 
 template <class DataType>
-class SmartData: public Base  {
-//  class SmartData {
-public:
+class SmartData: public Base, public OnlyForArrays<DataType, TypeTraits<DataType>::isArray> {
+    friend class OnlyForArrays<DataType, TypeTraits<DataType>::isArray>;
+    friend struct GetHelper<DataType, true>;
+    friend struct GetHelper<DataType, false>;
+  public:
     SmartData(DataType);
     DataType get(void);
     void set(DataType);
@@ -93,18 +123,27 @@ public:
     void _set(void* data);     
     void setNeedToSend(void);
     void resetUpdateState(void);
+
+  
+
 private:
     DataType value;
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
-
+    
     //void _set(void* value) override;
     //void* _get(void) override;
+    
     friend class qCommand;
     
     //private data that gets set by qC::addCommand
     uint8_t id;
     Stream* stream;  
+
+    protected:
+      //Only used in arrays, but need to define anyway (as compiler looks before evalulating const expr which prevents usage when not array)
+      
+      
 };
 
 class AllSmartDataPtr: public Base {
@@ -145,8 +184,8 @@ private:
     const size_t totalElements;
     size_t currentElement;
     bool dataRequested = false;
-    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
+    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
 
     //void _set(void* value) override;
     //void* _get(void) override;

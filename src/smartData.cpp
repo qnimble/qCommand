@@ -81,21 +81,43 @@ SmartDataGeneric SmartData<SmartDataGeneric>::get(void) {
   return value;
 }
 
+
+
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_get(void* data) {  
-  SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
-  *ptr = value;
+struct GetHelper<SmartDataGeneric, true> {
+  static void _get(SmartData<SmartDataGeneric>& self, void* data) {
+        self.dataRequested = true;
+    }
+};
+
+template <class SmartDataGeneric>
+struct GetHelper<SmartDataGeneric, false> {
+  static void _get(SmartData<SmartDataGeneric>& self, void* data) {
+    SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+    *ptr = self.value;
+  }
+};
+
+
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric>::_get(void* data) {
+    GetHelper<SmartDataGeneric, TypeTraits<SmartDataGeneric>::isArray>::_get(*this, data);
 }
+
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric>::_set(void* data) {  
-  SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
-  value = *ptr;
+  if constexpr (TypeTraits<SmartDataGeneric>::isArray) {
+    //set not supported for array data (pointers)
+  } else {    
+    SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+    value = *ptr;
   
-  if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
-    updates_needed = STATE_NEED_TOSEND;
-  } else {
-    updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
+    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
+      updates_needed = STATE_NEED_TOSEND;
+    } else {
+      updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
+    }
   }
 }
 
@@ -177,11 +199,23 @@ void SmartDataPtr<SmartDataGeneric>::get(void) {
   Serial.printf("Get requested on SmartDataPtr\n");
   dataRequested = true;  
 }
+
+
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::resetCurrentElement(void) {
   currentElement = 0;
   dataRequested = true;
 }
+
+template <class SmartDataGeneric>
+void OnlyForArrays<SmartDataGeneric,true>::resetCurrentElement(void) {
+  currentElement = 0;
+  dataRequested = true;
+}
+
+
+
+
 
 
 template <class SmartDataGeneric>
@@ -340,7 +374,11 @@ template class SmartData<float>;
 template class SmartData<double>;
 template class SmartData<String>;
 
+
+
 template class SmartDataPtr<float*>;
+template class SmartDataPtr<double*>;
+
 
 
 //template void cw_pack<uint8_t>(cw_pack_context*, uint8_t);
