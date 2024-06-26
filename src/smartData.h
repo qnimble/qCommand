@@ -12,6 +12,8 @@
 //next 3 bits are the type: bool, float, uint, int, string
 //last bit (7) is a read-only flag. 0 is read/write, 1 is read only
 // bits 5-6 are the TBD.
+
+#warning need to fix to support arrays of different sizes
 #define TYPE2INFO_ARRAY (0)
 #define TYPE2INFO_MIN (1)
 #define TYPE2INFO_2MIN (2)
@@ -61,15 +63,21 @@ enum UpdateState {
     STATE_WAIT_ON_ACK_PLUS_QUEUE  // BC
 };
 
-template<typename T>
+template<typename T, typename Enable = void>
 struct TypeTraits {
     static constexpr bool isArray = false;
 };
 
-template<>
-struct TypeTraits<float*> {
+template<typename T>
+struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>>  {
     static constexpr bool isArray = true;
 };
+
+
+static_assert(!TypeTraits<int>::isArray, "int should not be considered an array");
+static_assert(TypeTraits<float*>::isArray, "float* should be considered an array");
+static_assert(TypeTraits<double*>::isArray, "double* should be considered an array");
+
 
 #warning move these to private when done with debug
 class Base {  
@@ -97,24 +105,37 @@ class OnlyForArrays {
 template<typename DataType>
 class OnlyForArrays<DataType, true> {
   public:    
-    void resetCurrentElement(void);
+    
+    
+    
+
+    using baseType = typename std::remove_pointer<DataType>::type;
+    void setNext(baseType);
   protected:
-    size_t currentElement;
-    bool dataRequested = false;
+    //OnlyForArrays<DataType, true>(size_t totalElements) : totalElements(totalElements) {}
     
 };
 
-template <class SmartDataGeneric, bool IsArray>
+template <class SmartDataGeneric, bool HackIsArray>
 struct GetHelper;
 
 
-template <class DataType>
+//template <class DataType>
+template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData: public Base, public OnlyForArrays<DataType, TypeTraits<DataType>::isArray> {
     friend class OnlyForArrays<DataType, TypeTraits<DataType>::isArray>;
     friend struct GetHelper<DataType, true>;
     friend struct GetHelper<DataType, false>;
   public:
-    SmartData(DataType);
+    //template <typename T = DataType>
+    //SmartData(T data, typename std::enable_if<!TypeTraits<T>::is_array, T>::type* = 0): value(data), totalElements(1), id(0), stream(0) {};
+  
+    SmartData(DataType data): value(data), id(0), stream(0) {};
+    //template <typename T = DataType>
+    //SmartData(T data, size_t size, typename std::enable_if<TypeTraits<T>::is_array, T>::type* = 0): value(data), totalElements(size), id(0), stream(0) {};
+    //SmartData(DataType data, size_t size): OnlyForArrays<DataType, TypeTraits<DataType>::isArray>(size),value(data), id(0), stream(0) {};
+    SmartData(DataType data, size_t size): totalElements(size),value(data), id(0), stream(0) {};
+    //SmartData(DataType);
     DataType get(void);
     void set(DataType);
     void please(void);
@@ -123,14 +144,40 @@ class SmartData: public Base, public OnlyForArrays<DataType, TypeTraits<DataType
     void _set(void* data);     
     void setNeedToSend(void);
     void resetUpdateState(void);
+    
+    using baseType = typename std::remove_pointer<DataType>::type;
+    
+    
+    virtual void setNext(baseType);
 
-  
+
+    template<typename T = DataType>
+    typename std::enable_if<TypeTraits<T>::isArray, size_t>::type getTotalElements(void){
+      return totalElements;
+    };
+    
+    
+    template<typename T = DataType>
+    typename std::enable_if<TypeTraits<T>::isArray, size_t>::type getCurrentElement(void) {
+       return currentElement;
+    };
+    
+    template<typename T = DataType>
+    typename std::enable_if<TypeTraits<T>::isArray, void>::type   resetCurrentElement(void) {
+      currentElement = 0;
+      dataRequested = true;
+    };
 
 private:
     DataType value;
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
-    
+
+    size_t currentElement;
+    bool dataRequested = false;
+    const size_t totalElements;  
+
+    //const size_t totalElements;
     //void _set(void* value) override;
     //void* _get(void) override;
     
@@ -220,6 +267,8 @@ template<> struct type2int<SmartData<float>> { enum { result = TYPE2INFO_MIN + T
 template<> struct type2int<SmartData<double>> { enum { result = TYPE2INFO_2MIN + TYPE2INFO_FLOAT }; };
     
 template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
+template<> struct type2int<SmartData<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
+template<> struct type2int<SmartData<double*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
 
 /*
 struct DataInfo {

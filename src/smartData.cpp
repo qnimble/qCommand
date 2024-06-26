@@ -75,38 +75,53 @@ void cw_pack(cw_pack_context* cw, argFloat value) {
 
 
 
-template <class SmartDataGeneric>
-SmartDataGeneric SmartData<SmartDataGeneric>::get(void) {
+template <class SmartDataGeneric, bool isArray>
+SmartDataGeneric SmartData<SmartDataGeneric,isArray>::get(void) {
   setDebugWord(0x12344488);
   return value;
 }
 
 
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
+  if constexpr (isArray) {
+    dataRequested = true;
+  } else {
+     SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+    *ptr = value;
+  }
+}
 
-template <class SmartDataGeneric>
-struct GetHelper<SmartDataGeneric, true> {
-  static void _get(SmartData<SmartDataGeneric>& self, void* data) {
+
+
+
+/*
+template <class SmartDataGeneric, bool isArray>
+struct GetHelper<SmartData<SmartDataGeneric, isArray>,true> {
+  static void _get(SmartData<SmartDataGeneric,isArray>& self, void* data) {
         self.dataRequested = true;
     }
 };
 
-template <class SmartDataGeneric>
-struct GetHelper<SmartDataGeneric, false> {
-  static void _get(SmartData<SmartDataGeneric>& self, void* data) {
+template <class SmartDataGeneric, bool isArray>
+struct GetHelper<SmartData<SmartDataGeneric, isArray>,false> {
+  static void _get(SmartData<SmartDataGeneric,isArray>& self, void* data) {
     SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
     *ptr = self.value;
   }
 };
 
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_get(void* data) {
-    GetHelper<SmartDataGeneric, TypeTraits<SmartDataGeneric>::isArray>::_get(*this, data);
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
+    GetHelper<SmartDataGeneric, isArray>::_get(*this, data);
 }
 
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_set(void* data) {  
+*/
+
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::_set(void* data) {  
   if constexpr (TypeTraits<SmartDataGeneric>::isArray) {
     //set not supported for array data (pointers)
   } else {    
@@ -121,8 +136,8 @@ void SmartData<SmartDataGeneric>::_set(void* data) {
   }
 }
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::resetUpdateState(void) {  
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::resetUpdateState(void) {  
   updates_needed = STATE_IDLE;  
 }
 
@@ -143,8 +158,8 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::sendValue(void) {
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::sendValue(void) {
   //Serial.printf("Sending Data (sendValue) for %u\n",this->id);
   setDebugWord(0x3310010);
   if (stream) {    
@@ -207,14 +222,18 @@ void SmartDataPtr<SmartDataGeneric>::resetCurrentElement(void) {
   dataRequested = true;
 }
 
-template <class SmartDataGeneric>
-void OnlyForArrays<SmartDataGeneric,true>::resetCurrentElement(void) {
+
+/*
+template <typename DataType>
+typename std::enable_if<TypeTraits<DataType>::isArray, void>::type 
+//template<typename T, typename std::enable_if<TypeTraits<T>::isArray, int>::type>
+SmartData<DataType>::resetCurrentElement(void) {
   currentElement = 0;
   dataRequested = true;
 }
 
 
-
+*/
 
 
 
@@ -228,10 +247,43 @@ void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
   }
 }
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::please(void) {  
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::please(void) {  
   Serial.println("Please called on SmartData");
 }
+
+/*
+template <typename DataType>
+typename std::enable_if<TypeTraits<DataType>::isArray, size_t>::type
+ SmartData<DataType>::getCurrentElement(void) {
+  return currentElement;
+}
+*/
+
+
+/*
+
+template <typename DataType>
+typename std::enable_if<TypeTraits<DataType>::isArray, size_t>::type 
+ SmartData<DataType>::getTotalElements(void) {
+  return totalElements;
+}
+*/
+/*
+template <typename SmartDataGeneric, typename std::enable_if<TypeTraits<SmartDataGeneric>::isArray, int>::type = 0>
+size_t SmartData<SmartDataGeneric>::getCurrentElement(void) {
+  return currentElement;
+}
+
+
+template <typename SmartDataGeneric, typename std::enable_if<TypeTraits<SmartDataGeneric>::isArray, int>::type = 0>
+size_t SmartData<SmartDataGeneric>::getTotalElements(void) {
+  return totalElements;
+}
+
+*/
+
+
 
 template <class SmartDataGeneric>
 size_t SmartDataPtr<SmartDataGeneric>::getCurrentElement(void) {
@@ -289,8 +341,8 @@ void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
   }
 }
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::setNeedToSend(void) {
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::setNeedToSend(void) {
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
     updates_needed = STATE_NEED_TOSEND;
   } else {
@@ -300,8 +352,8 @@ void SmartData<SmartDataGeneric>::setNeedToSend(void) {
 
 
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
+template <class SmartDataGeneric, bool isArray>
+void SmartData<SmartDataGeneric,isArray>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210010);
   value = newValue;  
   //value = 1;
@@ -313,6 +365,24 @@ void SmartData<SmartDataGeneric>::set(SmartDataGeneric newValue) {
 
 
 
+//template <class DataType>
+//template <class DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
+template <class DataType, bool isArray>
+void SmartData<DataType,isArray>::setNext(typename SmartData<DataType,isArray>::baseType data) {
+  if constexpr (isArray) {
+    if (dataRequested) {
+      if (currentElement < totalElements ) {
+        value[currentElement] = data;
+        currentElement++;    
+        if (currentElement == totalElements) {
+          //if this was last element, then 
+          setNeedToSend();      
+        }
+      }
+    }
+  }
+}
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::setNext(typename SmartDataPtr<SmartDataGeneric>::baseType data) {
   if (dataRequested) {
@@ -326,10 +396,10 @@ void SmartDataPtr<SmartDataGeneric>::setNext(typename SmartDataPtr<SmartDataGene
     }
   }
 }
+*/
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {
-  
+template <class DataType, bool isArray>
+void SmartData<DataType,isArray>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {  
   this->id = id;
   this->stream = stream;
   this->pc = pc;
@@ -347,10 +417,21 @@ void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream,
 //template <class SmartDataGeneric>
 //DataObjectSpecific<SmartDataGeneric>::DataObjectSpecific<SmartDataGeneric>() {}
 
+/*
 template <class SmartDataGeneric>
-SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue): value(initValue), id(0), stream(0) {
+template <typename T, typename std::enable_if<!TypeTraits<T>::is_array, T>::type*>
+SmartData<SmartDataGeneric>::SmartData(T initValue): value(initValue), id(0), stream(0) {
   //init_dynamic_memory_pack_context(&pc, DEFAULT_PACK_BUFFER_SIZE);
 }
+
+template <class SmartDataGeneric>
+template <typename T, typename std::enable_if<TypeTraits<T>::is_array, T>::type*>
+SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue, size_t size): value(initValue), totalElements(size), id(0), stream(0) {
+  //init_dynamic_memory_pack_context(&pc, DEFAULT_PACK_BUFFER_SIZE);
+}
+*/
+
+
 
 template <class SmartDataGeneric>
 SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigned int size) :  value(initValue),totalElements(size), id(0), stream(0) {
@@ -359,6 +440,7 @@ SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigne
 
 
 
+template class SmartData<bool>;
 template class SmartData<bool>;
 //template class SmartData<char>;
 
@@ -375,9 +457,10 @@ template class SmartData<double>;
 template class SmartData<String>;
 
 
-
 template class SmartDataPtr<float*>;
-template class SmartDataPtr<double*>;
+
+template class SmartData<float*>;
+template class SmartData<double*>;
 
 
 

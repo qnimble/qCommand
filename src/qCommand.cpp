@@ -499,7 +499,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   //Serial.printf(" to %u\n", commandCount);
 }
 
-template <typename DataType>
+template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
 void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(" - Adding Assign Variable Command (");
@@ -541,8 +541,8 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
   Serial.printf(" to %u\n", commandCount);
 }
 
-template <typename DataType>
-void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartDataPtr<DataType>* object),DataType* var, SmartDataPtr<DataType>* object)  {  
+template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
+void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {  
   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
   
@@ -553,11 +553,11 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
-    commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
+    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
 
   } else {
     commandList[commandCount].object = NULL;    
-    commandList[commandCount].data_type = type2int<SmartDataPtr<DataType>>::result;
+    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
     if ( var == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  commandList[commandCount].function.f2 =  &qCommand::invalidAddress;
@@ -577,7 +577,17 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 }
 
 
+template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
+void qCommand::assignVariable(const char* command, SmartData<DataType>* object) {
+  Serial.printf("Trying to assign array to command %s\n",command);
+  void (qCommand::*function)(qCommand&, Stream&, DataType*, const char*, SmartData<DataType>*) = nullptr;
+  addCommandInternal(command, function, (DataType*) NULL, object);
+}
 
+template void qCommand::assignVariable(const char* command, SmartData<float*>* object);
+template void qCommand::assignVariable(const char* command, SmartData<double*>* object);
+
+/*
 template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
 void qCommand::assignVariable(const char* command, SmartDataPtr<argArray>* object) {
 	Serial.printf("Trying to assign array to command %s\n",command);
@@ -586,7 +596,7 @@ void qCommand::assignVariable(const char* command, SmartDataPtr<argArray>* objec
 }
 
 template void qCommand::assignVariable(const char* command, SmartDataPtr<float*>* object);
-
+*/
 
 
 //Assign variable to command list for string. Takes pointer to either data or DataObject.

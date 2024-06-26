@@ -38,6 +38,9 @@ class qCommand {
     void assignVariable(const char* command, String* variable);
     void assignVariable(const char* command, SmartData<String>* object) ;
     
+    template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
+    void assignVariable(const char* command, SmartData<DataType>* object);
+
     template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
     void assignVariable(const char* command, SmartDataPtr<argArray>* object);
 
@@ -116,17 +119,17 @@ class qCommand {
       cw_pack_context pc;
       
       char readBinaryInt(void);
-      template <typename DataType>
+      template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
       void addCommandInternal(const char* command, 
                               void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
                               DataType* var, 
                               SmartData<DataType>* object = NULL);
-      
-      template <typename DataType>
+    
+      template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
       void addCommandInternal(const char* command, 
-                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartDataPtr<DataType>* object), 
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
                               DataType* var, 
-                              SmartDataPtr<DataType>* object = NULL);
+                              SmartData<DataType>* object = NULL);
 
       
       void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
