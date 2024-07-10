@@ -6,23 +6,25 @@
 #include "cwpack.h"
 
 
-// Maximum length of a command excluding the terminating null
 
-//First 2 bits are the type size: array, 1bytes, 2 bytes or 4bytes. When type is float, the bytes are 4x, so array, 4bytes, 8bytes, 16bytes
-//next 3 bits are the type: bool, float, uint, int, string
-//last bit (7) is a read-only flag. 0 is read/write, 1 is read only
-// bits 5-6 are the TBD.
+// First bit (0) is the array flag. 0 is not an array, 1 is an array
+// Bits 1 and 2 are the type size: 1bytes, 2 bytes, 4bytes or 8 bytes.
+// Bits 3 - 5  set the type: bool, float, uint, int, string, and future options
+// Bit 6 is the read-only flag. 0 is read/write, 1 is read only
+// last bit (7) is TBD / future-proofing.
 
-#warning need to fix to support arrays of different sizes
-#define TYPE2INFO_ARRAY (0)
-#define TYPE2INFO_MIN (1)
-#define TYPE2INFO_2MIN (2)
-#define TYPE2INFO_4MIN (3)
-#define TYPE2INFO_BOOL  (0<<2)
-#define TYPE2INFO_FLOAT  (1<<2)
-#define TYPE2INFO_UINT  (2<<2)
-#define TYPE2INFO_INT  (3<<2)
-#define TYPE2INFO_STRING (4<<2)
+
+#define TYPE2INFO_ARRAY (1)
+#define TYPE2INFO_1BYTE (0<<1)
+#define TYPE2INFO_2BYTE (1<<1)
+#define TYPE2INFO_4BYTE (2<<1)
+#define TYPE2INFO_8BYTE (3<<1)
+#define TYPE2INFO_BOOL  (0<<3)
+#define TYPE2INFO_FLOAT (1<<3)
+#define TYPE2INFO_UINT  (2<<3)
+#define TYPE2INFO_INT  (3<<3)
+#define TYPE2INFO_STRING (4<<3)
+#define TYPE2INFO_READONLY (1<<6)
 
 //extern cw_pack_context pc;
 extern char buffer[];
@@ -261,22 +263,22 @@ struct type2int
    // enum { result = 0 }; // do this if you want a fallback value, empty to force a definition
 };
 
-template<> struct type2int<SmartData<String>> { enum { result = TYPE2INFO_MIN +  TYPE2INFO_STRING }; };
-template<> struct type2int<SmartData<bool>> { enum { result = TYPE2INFO_MIN +  TYPE2INFO_BOOL }; };
-template<> struct type2int<SmartData<uint8_t>> { enum { result =  TYPE2INFO_MIN + TYPE2INFO_UINT}; };
-template<> struct type2int<SmartData<uint16_t>> { enum { result = TYPE2INFO_2MIN + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<uint>> { enum { result = TYPE2INFO_4MIN + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<ulong>> { enum { result = TYPE2INFO_4MIN + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<int8_t>> { enum { result = TYPE2INFO_MIN + TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<int16_t>> { enum { result = TYPE2INFO_2MIN + TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<int>> { enum { result = TYPE2INFO_4MIN +  TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<long>> { enum { result = TYPE2INFO_4MIN +  TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<float>> { enum { result = TYPE2INFO_MIN + TYPE2INFO_FLOAT }; };
-template<> struct type2int<SmartData<double>> { enum { result = TYPE2INFO_2MIN + TYPE2INFO_FLOAT }; };
+template<> struct type2int<SmartData<String>> { enum { result = TYPE2INFO_1BYTE +  TYPE2INFO_STRING }; };
+template<> struct type2int<SmartData<bool>> { enum { result = TYPE2INFO_1BYTE +  TYPE2INFO_BOOL }; };
+template<> struct type2int<SmartData<uint8_t>> { enum { result =  TYPE2INFO_1BYTE + TYPE2INFO_UINT}; };
+template<> struct type2int<SmartData<uint16_t>> { enum { result = TYPE2INFO_2BYTE + TYPE2INFO_UINT }; };
+template<> struct type2int<SmartData<uint>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_UINT }; };
+template<> struct type2int<SmartData<ulong>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_UINT }; };
+template<> struct type2int<SmartData<int8_t>> { enum { result = TYPE2INFO_1BYTE + TYPE2INFO_INT }; };
+template<> struct type2int<SmartData<int16_t>> { enum { result = TYPE2INFO_2BYTE + TYPE2INFO_INT }; };
+template<> struct type2int<SmartData<int>> { enum { result = TYPE2INFO_4BYTE +  TYPE2INFO_INT }; };
+template<> struct type2int<SmartData<long>> { enum { result = TYPE2INFO_4BYTE +  TYPE2INFO_INT }; };
+template<> struct type2int<SmartData<float>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_FLOAT }; };
+template<> struct type2int<SmartData<double>> { enum { result = TYPE2INFO_8BYTE + TYPE2INFO_FLOAT }; };
     
-template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
-template<> struct type2int<SmartData<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
-template<> struct type2int<SmartData<double*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_FLOAT }; };    
+//template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_4BYTE +  TYPE2INFO_FLOAT }; };    
+template<> struct type2int<SmartData<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_4BYTE + TYPE2INFO_FLOAT }; };    
+template<> struct type2int<SmartData<double*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_8BYTE + TYPE2INFO_FLOAT }; };    
 
 /*
 struct DataInfo {

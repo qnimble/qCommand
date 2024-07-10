@@ -123,7 +123,7 @@ void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
 */
 
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric,true>::_set(void* data) {  
+void SmartData<SmartDataGeneric,false>::_set(void* data) {  
   SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
   value = *ptr;
 
@@ -136,7 +136,7 @@ void SmartData<SmartDataGeneric,true>::_set(void* data) {
 
 
 template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric,false>::_set(void* data) {  
+void SmartData<SmartDataGeneric,true>::_set(void* data) {  
   return; //not implemented for arrays
 }
 
@@ -451,25 +451,44 @@ SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigne
 
 
 template class SmartData<bool>;
+template class SmartData<bool*>;
+
 template class SmartData<char>;
+template class SmartData<char*>;
 
 template class SmartData<uint8_t>;
+template class SmartData<uint8_t*>;
+
 template class SmartData<uint16_t>;
+template class SmartData<uint16_t*>;
+
 template class SmartData<uint>;
+template class SmartData<uint*>;
+
 template class SmartData<ulong>;
+template class SmartData<ulong*>;
+
 template class SmartData<int8_t>;
+template class SmartData<int8_t*>;
+
 template class SmartData<int16_t>;
+template class SmartData<int16_t*>;
+
 template class SmartData<int>;
+template class SmartData<int*>;
+
 template class SmartData<long>;
+template class SmartData<long*>;
+
 template class SmartData<float>;
+template class SmartData<float*>;
+
 template class SmartData<double>;
+template class SmartData<double*>;
+
+
 template class SmartData<String>;
 
-
-template class SmartDataPtr<float*>;
-
-template class SmartData<float*>;
-template class SmartData<double*>;
 
 
 

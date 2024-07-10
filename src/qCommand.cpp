@@ -232,7 +232,7 @@ char qCommand::readBinaryInt(void) {
             //Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
             setDebugWord(0xbbc50000 + dataReady);
             switch(commandList[index-1].data_type & 0x0F) {
-                case TYPE2INFO_MIN + TYPE2INFO_BOOL:{
+                case TYPE2INFO_1BYTE + TYPE2INFO_BOOL:{
                   //bool 
                   //bool res = cw_unpack_next_boolean(uc);
                   cw_unpack_next(uc);
@@ -240,7 +240,7 @@ char qCommand::readBinaryInt(void) {
                   commandList[index-1].object->_set(&(uc->item.as));
                   break;
                 }
-                case TYPE2INFO_MIN + TYPE2INFO_UINT:{
+                case TYPE2INFO_1BYTE + TYPE2INFO_UINT:{
                   //uint8_t
                   uint8_t res = cw_unpack_next_unsigned8(uc);
                   itemsReceived++;
@@ -259,44 +259,44 @@ char qCommand::readBinaryInt(void) {
                     //commandList[index-1].object->sendValue();
                   }
                   break;}
-                case TYPE2INFO_2MIN + TYPE2INFO_UINT:{
+                case TYPE2INFO_2BYTE + TYPE2INFO_UINT:{
                   //uint16_t
                   uint16_t res = cw_unpack_next_unsigned16(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   break;}
-                case TYPE2INFO_4MIN + TYPE2INFO_UINT:{
+                case TYPE2INFO_4BYTE + TYPE2INFO_UINT:{
                   //uint32_t
                   uint32_t res = cw_unpack_next_unsigned32(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   break;}
-                case TYPE2INFO_MIN + TYPE2INFO_INT:{
+                case TYPE2INFO_1BYTE + TYPE2INFO_INT:{
                   //uint8_t
                   int8_t res = cw_unpack_next_signed8(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   break;}
-                case TYPE2INFO_2MIN + TYPE2INFO_INT:{
+                case TYPE2INFO_2BYTE + TYPE2INFO_INT:{
                   //uint16_t
                   int16_t res = cw_unpack_next_signed16(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   break;}
-                case TYPE2INFO_4MIN + TYPE2INFO_INT:{
+                case TYPE2INFO_4BYTE + TYPE2INFO_INT:{
                   //uint32_t
                   int32_t res = cw_unpack_next_signed32(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   break;}
-                case TYPE2INFO_MIN + TYPE2INFO_FLOAT:{
+                case TYPE2INFO_4BYTE + TYPE2INFO_FLOAT:{
                   //float
                   float res = cw_unpack_next_float(uc);
                   itemsReceived++;
                   commandList[index-1].object->_set(&res);
                   //Serial.printf("Got float %f\n",res);
                   break;}
-                case TYPE2INFO_2MIN + TYPE2INFO_FLOAT: {
+                case TYPE2INFO_8BYTE + TYPE2INFO_FLOAT: {
                   //float
                   double res = cw_unpack_next_double(uc);
                   itemsReceived++;
@@ -543,6 +543,10 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 
 template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
 void qCommand::addCommandInternal(const char *command, void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object),DataType* var, SmartData<DataType>* object)  {  
+  using baseType = typename std::remove_pointer<DataType>::type;
+
+
+  
   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
   
@@ -553,11 +557,11 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
     commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
-    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
+    commandList[commandCount].data_type = TYPE2INFO_ARRAY + type2int<SmartData<baseType>>::result;
 
   } else {
     commandList[commandCount].object = NULL;    
-    commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
+    commandList[commandCount].data_type = TYPE2INFO_ARRAY + type2int<SmartData<baseType>>::result;
     if ( var == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  commandList[commandCount].function.f2 =  &qCommand::invalidAddress;
