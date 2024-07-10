@@ -29,7 +29,7 @@ extern char buffer[];
 #define DEFAULT_PACK_BUFFER_SIZE 500
 
 void cw_pack(cw_pack_context* cw, bool value);
-void cw_pack(cw_pack_context* cw, unsigned char value);
+//void cw_pack(cw_pack_context* cw, unsigned char value);
 void cw_pack(cw_pack_context* cw, String value);
 
 template <typename argUInt, std::enable_if_t<
@@ -84,17 +84,16 @@ class Base {
   public:
     //virtual void _get(void* data); // pure virtual function
     virtual void _set(void* data); // pure virtual function
-    virtual void setNeedToSend(void); // set states as if set ran, even though it didn't.
+    void setNeedToSend(void); // set states as if set ran, even though it didn't.
     virtual void sendValue(void);
-    virtual void please() = 0 ;
+    void please();
     virtual void _get(void* data); // pure virtual function
-    virtual void resetUpdateState(void);
+    void resetUpdateState(void);
   protected:
     cw_pack_context* pc;
-    UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function
+    UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function    
     friend class qCommand;    
 };
-
 
 template<typename DataType, bool Enable>
 class OnlyForArrays {
@@ -106,9 +105,6 @@ template<typename DataType>
 class OnlyForArrays<DataType, true> {
   public:    
     
-    
-    
-
     using baseType = typename std::remove_pointer<DataType>::type;
     void setNext(baseType);
   protected:
@@ -122,48 +118,38 @@ struct GetHelper;
 
 //template <class DataType>
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
-class SmartData: public Base, public OnlyForArrays<DataType, TypeTraits<DataType>::isArray> {
-    friend class OnlyForArrays<DataType, TypeTraits<DataType>::isArray>;
-    friend struct GetHelper<DataType, true>;
-    friend struct GetHelper<DataType, false>;
-  public:
-    //template <typename T = DataType>
-    //SmartData(T data, typename std::enable_if<!TypeTraits<T>::is_array, T>::type* = 0): value(data), totalElements(1), id(0), stream(0) {};
-  
-    SmartData(DataType data): value(data), id(0), stream(0) {};
-    //template <typename T = DataType>
-    //SmartData(T data, size_t size, typename std::enable_if<TypeTraits<T>::is_array, T>::type* = 0): value(data), totalElements(size), id(0), stream(0) {};
-    //SmartData(DataType data, size_t size): OnlyForArrays<DataType, TypeTraits<DataType>::isArray>(size),value(data), id(0), stream(0) {};
-    SmartData(DataType data, size_t size): totalElements(size),value(data), id(0), stream(0) {};
-    //SmartData(DataType);
+class SmartData: public Base {
+public:    
+    SmartData(DataType data);    
     DataType get(void);
+};
+
+
+//For arrays!
+template <class DataType>
+class SmartData<DataType, true>: public Base {    
+  public:    
+    SmartData(DataType data, size_t size): value(data), totalElements(size), id(0), stream(0) {};    
+    using baseType = typename std::remove_pointer<DataType>::type;
+    baseType get(void);
     void set(DataType);
     void please(void);
     void sendValue(void);
     void _get(void* data); 
     void _set(void* data);     
-    void setNeedToSend(void);
+    //void setNeedToSend(void);
     void resetUpdateState(void);
-    
-    using baseType = typename std::remove_pointer<DataType>::type;
-    
-    
-    virtual void setNext(baseType);
-
-
-    template<typename T = DataType>
-    typename std::enable_if<TypeTraits<T>::isArray, size_t>::type getTotalElements(void){
+        
+    void setNext(baseType);
+    size_t getTotalElements(void) {
       return totalElements;
     };
     
-    
-    template<typename T = DataType>
-    typename std::enable_if<TypeTraits<T>::isArray, size_t>::type getCurrentElement(void) {
+    size_t getCurrentElement(void) {
        return currentElement;
     };
     
-    template<typename T = DataType>
-    typename std::enable_if<TypeTraits<T>::isArray, void>::type   resetCurrentElement(void) {
+    void resetCurrentElement(void) {
       currentElement = 0;
       dataRequested = true;
     };
@@ -173,25 +159,47 @@ private:
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
 
+    const size_t totalElements;  
     size_t currentElement;
     bool dataRequested = false;
-    const size_t totalElements;  
-
-    //const size_t totalElements;
-    //void _set(void* value) override;
-    //void* _get(void) override;
     
+
     friend class qCommand;
     
     //private data that gets set by qC::addCommand
     uint8_t id;
     Stream* stream;  
-
-    protected:
-      //Only used in arrays, but need to define anyway (as compiler looks before evalulating const expr which prevents usage when not array)
-      
-      
 };
+
+//For non-arrays
+template <class DataType>
+class SmartData<DataType, false>: public Base {    
+  public:    
+    SmartData(DataType data): value(data), id(0), stream(0) {};    
+    DataType get(void);
+    void set(DataType);
+    void please(void);
+    void sendValue(void);
+    void _get(void* data); 
+    void _set(void* data);     
+    //void setNeedToSend(void);
+    void resetUpdateState(void);
+
+private:
+    DataType value;
+    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
+    cw_pack_context* pc;
+    
+    bool dataRequested = false;
+    
+    friend class qCommand;
+    
+    //private data that gets set by qC::addCommand
+    uint8_t id;
+    Stream* stream;        
+};
+
+
 
 class AllSmartDataPtr: public Base {
   public:

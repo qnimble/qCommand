@@ -13,28 +13,24 @@ static FastCRC16 CRC16;
 #include "quarto_wdog.h"
 
 
-
 void cw_pack(cw_pack_context* cw, String value){
   cw_pack_str(cw,value.c_str(), value.length());
 }
-
-
-
 
 void cw_pack(cw_pack_context* cw, bool value){
   cw_pack_boolean(cw,value);
 }
 
-
+/*
 //No idea why I need this as it should be built from the template, but for some reason it isn't.
 void cw_pack(cw_pack_context* cw, unsigned char value){
 	 Serial.printf("Running cw_pack with unsigned char as argument: %u\n",value);
   cw_pack_unsigned(cw,value);
 }
-
-
+*/
 
 /*
+
 template <typename argChar, std::enable_if_t<
   std::is_same<argChar, unsigned char>::value, char> = 0>    
 void cw_pack(cw_pack_context* cw, argChar value){
@@ -74,22 +70,28 @@ void cw_pack(cw_pack_context* cw, argFloat value) {
 }
 
 
+template <class SmartDataGeneric>
+SmartDataGeneric SmartData<SmartDataGeneric,false>::get(void) {
+    setDebugWord(0x12344488);
+    return value;
+}
 
-template <class SmartDataGeneric, bool isArray>
-SmartDataGeneric SmartData<SmartDataGeneric,isArray>::get(void) {
-  setDebugWord(0x12344488);
-  return value;
+template <class DataType>
+typename SmartData<DataType,true>::baseType SmartData<DataType,true>::get(void) {
+  setDebugWord(0x4234448c);
+  return value[currentElement];        
 }
 
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
-  if constexpr (isArray) {
-    dataRequested = true;
-  } else {
-     SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
-    *ptr = value;
-  }
+template <class DataType>
+void SmartData<DataType,false>::_get(void* data) {
+  DataType* ptr = static_cast<DataType*>(data);
+  *ptr = value;
+}
+
+template <class DataType>
+void SmartData<DataType,true>::_get(void* data) {
+  dataRequested = true;
 }
 
 
@@ -120,24 +122,27 @@ void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
 
 */
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::_set(void* data) {  
-  if constexpr (TypeTraits<SmartDataGeneric>::isArray) {
-    //set not supported for array data (pointers)
-  } else {    
-    SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
-    value = *ptr;
-  
-    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
-      updates_needed = STATE_NEED_TOSEND;
-    } else {
-      updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
-    }
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,true>::_set(void* data) {  
+  SmartDataGeneric* ptr = static_cast<SmartDataGeneric*>(data);
+  value = *ptr;
+
+  if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
+    updates_needed = STATE_NEED_TOSEND;
+  } else {
+    updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
   }
 }
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::resetUpdateState(void) {  
+
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,false>::_set(void* data) {  
+  return; //not implemented for arrays
+}
+
+
+
+void Base::resetUpdateState(void) {  
   updates_needed = STATE_IDLE;  
 }
 
@@ -158,8 +163,8 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::sendValue(void) {
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,false>::sendValue(void) {
   //Serial.printf("Sending Data (sendValue) for %u\n",this->id);
   setDebugWord(0x3310010);
   if (stream) {    
@@ -247,8 +252,8 @@ void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
   }
 }
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::please(void) {  
+
+void Base::please(void) {  
   Serial.println("Please called on SmartData");
 }
 
@@ -297,7 +302,7 @@ size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
 
 
 template <class SmartDataGeneric>
-void SmartDataPtr<SmartDataGeneric>::sendValue(void) {    
+void SmartData<SmartDataGeneric, true>::sendValue(void) {    
   if (stream) {        
     uint16_t crc = CRC16.ccitt((uint8_t*) value, totalElements * sizeof(SmartDataGeneric));
     cw_pack_array_size(pc,4);
@@ -341,8 +346,7 @@ void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
   }
 }
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::setNeedToSend(void) {
+void Base::setNeedToSend(void) {
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
     updates_needed = STATE_NEED_TOSEND;
   } else {
@@ -352,13 +356,13 @@ void SmartData<SmartDataGeneric,isArray>::setNeedToSend(void) {
 
 
 
-template <class SmartDataGeneric, bool isArray>
-void SmartData<SmartDataGeneric,isArray>::set(SmartDataGeneric newValue) {
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,false>::set(SmartDataGeneric newValue) {
   setDebugWord(0x2210010);
   value = newValue;  
   //value = 1;
   setDebugWord(0x2210012);  
-  setNeedToSend();  
+  setNeedToSend();
   //sendValue();  
   setDebugWord(0x2210020);
 }
@@ -367,20 +371,18 @@ void SmartData<SmartDataGeneric,isArray>::set(SmartDataGeneric newValue) {
 
 //template <class DataType>
 //template <class DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
-template <class DataType, bool isArray>
-void SmartData<DataType,isArray>::setNext(typename SmartData<DataType,isArray>::baseType data) {
-  if constexpr (isArray) {
-    if (dataRequested) {
-      if (currentElement < totalElements ) {
-        value[currentElement] = data;
-        currentElement++;    
-        if (currentElement == totalElements) {
-          //if this was last element, then 
-          setNeedToSend();      
-        }
+template <class DataType>
+void SmartData<DataType,true>::setNext(typename SmartData<DataType,true>::baseType data) {  
+  if (dataRequested) {
+    if (currentElement < totalElements ) {
+      value[currentElement] = data;
+      currentElement++;    
+      if (currentElement == totalElements) {
+        //if this was last element, then 
+        setNeedToSend();      
       }
     }
-  }
+  }  
 }
 /*
 template <class SmartDataGeneric>
@@ -398,13 +400,22 @@ void SmartDataPtr<SmartDataGeneric>::setNext(typename SmartDataPtr<SmartDataGene
 }
 */
 
-template <class DataType, bool isArray>
-void SmartData<DataType,isArray>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {  
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,true>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {  
   this->id = id;
   this->stream = stream;
   this->pc = pc;
   init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
 }
+
+template <class SmartDataGeneric>
+void SmartData<SmartDataGeneric,false>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {  
+  this->id = id;
+  this->stream = stream;
+  this->pc = pc;
+  init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
+}
+
 
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {
@@ -439,10 +450,8 @@ SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigne
 }
 
 
-
 template class SmartData<bool>;
-template class SmartData<bool>;
-//template class SmartData<char>;
+template class SmartData<char>;
 
 template class SmartData<uint8_t>;
 template class SmartData<uint16_t>;
