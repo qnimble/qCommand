@@ -24,6 +24,7 @@
 #define TYPE2INFO_UINT  (2<<3)
 #define TYPE2INFO_INT  (3<<3)
 #define TYPE2INFO_STRING (4<<3)
+#define TYPE2INFO_EMPTY (5<<3)
 #define TYPE2INFO_READONLY (1<<6)
 
 //extern cw_pack_context pc;

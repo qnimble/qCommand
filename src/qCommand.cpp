@@ -13,7 +13,7 @@
 qCommand::qCommand(bool caseSensitive) :
   commandList(NULL),
   commandCount(0),
-  binaryStream(&Serial2),
+  binaryStream(&Serial3), //should be Serial2  
   defaultHandler(NULL),
   term('\n'),           // default terminator for commands, newline character
   caseSensitive(caseSensitive),
@@ -43,18 +43,32 @@ void qCommand::readBinary(void) {
 }
 
 char qCommand::readBinaryInt(void) {
-  PT_FUNC_START(pt);
-
-  #warning hard coding binary Stream as Serial2 here..do not know how to avoid..
-  if (!Serial2) {
+  PT_FUNC_START(pt);  
+/*
+  #warning hard coding binary Stream as Serial3 here..do not know how to avoid..
+  while(true){
+    if (Serial2) {
+      Serial.printf("Got Serial2\n");
+      break;
+    }
+    PT_SLEEP(pt, 1000);
+    Serial.printf("No Serial2\n");
+  }
+  */
+  //PT_WAIT_UNTIL(pt, Serial3);
+  /*
+  if (!Serial3) {
+    //Serial.println("No Serial3");
     return 0;
   }
+  */
   /*
   if (!binaryConnected) {
     if ( binaryStream->availableForWrite() > 0 ) {    
       Serial.printf("** Binary Stream connected\n");
       binaryConnected = true;
     } else {
+      Serial.println("Bad, Serial3 exists but not available for write");
       return 0;
     }
   } else {
@@ -74,6 +88,7 @@ char qCommand::readBinaryInt(void) {
           if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
             //Serial.printf("Sending an sendValue on a Float Arraay!\n");
           }
+          Serial.printf("Sending an sendValue on type %s where ptr base is 0x%08x\n", commandList->command, ptr);
           ptr->sendValue();
           ptr->updates_needed = STATE_WAIT_ON_ACK;
         }
@@ -99,7 +114,7 @@ char qCommand::readBinaryInt(void) {
   static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct  
   int dataReady = binaryStream->available();
   if (dataReady != 0) {
-    //Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
+    Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
   }
 
   setDebugWord(0xbbbb0002);
@@ -136,10 +151,10 @@ char qCommand::readBinaryInt(void) {
       goto error;
     } 
     //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
-    index = cw_unpack_next_unsigned8(uc);  
+    index = cw_unpack_next_unsigned8(uc);
     itemsReceived++;  
     setDebugWord(0xbbc10000 + dataReady);
-    //Serial.printf("2: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
+    //Serial.printf("New Command: index %u\n",index);
     
     
     command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
@@ -152,8 +167,13 @@ char qCommand::readBinaryInt(void) {
         //internal command
         if (command == Commands::ListCommands && itemsTotal == 2) {          
           setDebugWord(0xbbc30000 + dataReady);
-          sendBinaryCommands();    
-
+          reset();
+          binaryConnected = true;
+          sendBinaryCommands();
+        } else if (command == Commands::Disconnect && itemsTotal == 2) {
+          Serial.println("Resetting all objects and disconnecting");
+          binaryConnected = false;
+          reset();          
         } else {
           Serial.println("Error parsing internal command");
           goto error;
@@ -223,15 +243,18 @@ char qCommand::readBinaryInt(void) {
                 //cannot update object that isn't of type SmartData                
                 goto cleanup;
               }
-              
+              {
+            Base *ptr = static_cast<Base*>(commandList[index-1].object);
+            ptr->updates_needed == STATE_IDLE; //clear state if we get an update
+              }
             if (uc->return_code != CWP_RC_OK) {
               Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
               goto error;                 
             }
             
-            //Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
+            Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].data_type);
             setDebugWord(0xbbc50000 + dataReady);
-            switch(commandList[index-1].data_type & 0x0F) {
+            switch(commandList[index-1].data_type & 0x3E) {
                 case TYPE2INFO_1BYTE + TYPE2INFO_BOOL:{
                   //bool 
                   //bool res = cw_unpack_next_boolean(uc);
@@ -250,8 +273,9 @@ char qCommand::readBinaryInt(void) {
                   }
 
                   if (uc->return_code == CWP_RC_OK)  {
-                  commandList[index-1].object->_set(&res);
+                    commandList[index-1].object->_set(&res);
                   } else {
+                    Serial.printf("Error parsing uint8_t (will setNeedtoSend), error is %d\n",uc->return_code);
                     //didn't set value, but we should send it since original value may not be expected
                     
   
@@ -361,7 +385,7 @@ char qCommand::readBinaryInt(void) {
   }
   //PT_FUNC_END(pt);
   //PT_RESTART(pt);
-  //Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
+  Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
   //delayMicroseconds(10000);
   terminate_stream_unpack_context(&suc);
   //free(suc.uc.start);
@@ -370,7 +394,7 @@ char qCommand::readBinaryInt(void) {
   return 0;
 
   error:
-  //Serial.printf("Start of Error: start=0x%08x, cur=0x%08x, end=0x%08x\n", uc->start, uc->current, uc->end);
+  Serial.printf("Start of Error: start=0x%08x, cur=0x%08x, end=0x%08x\n", uc->start, uc->current, uc->end);
   size_t inQueue = binaryStream->available();
   //Serial.println("Todo: got error, need to test reset parsing");
   //Serial.printf("Bytes avail: %u\n", inQueue );
@@ -960,7 +984,7 @@ void qCommand::readSerial(Stream& inputStream) {
             // Execute the stored handler function for the command
               if (commandList[i].object != NULL) {
                 //only run object function if object is single and not array
-                if ( (commandList[i].data_type & 0x03 ) != TYPE2INFO_ARRAY ) {
+                if ( (commandList[i].data_type & 0x01 ) != TYPE2INFO_ARRAY ) {
                   //#warning this is right
                   Serial.print("Running on non array object:\n");
                   (this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command, commandList[i].object);

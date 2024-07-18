@@ -96,7 +96,6 @@ void SmartData<DataType,true>::_get(void* data) {
 
 
 
-
 /*
 template <class SmartDataGeneric, bool isArray>
 struct GetHelper<SmartData<SmartDataGeneric, isArray>,true> {
@@ -165,7 +164,7 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric,false>::sendValue(void) {
-  //Serial.printf("Sending Data (sendValue) for %u\n",this->id);
+  Serial.printf("Sending Data (sendValue non array) for %u\n",this->id);
   setDebugWord(0x3310010);
   if (stream) {    
     setDebugWord(0x3310011);
@@ -253,8 +252,8 @@ void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
 }
 
 
-void Base::please(void) {  
-  Serial.println("Please called on SmartData");
+void Base::please(void) {
+  Serial.printf("Please called on SmartData with updates_needed state %u\n",updates_needed);
 }
 
 /*
@@ -303,6 +302,7 @@ size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::sendValue(void) {    
+  Serial.printf("Sending Data (sendValue array) for %u\n",this->id);
   if (stream) {        
     uint16_t crc = CRC16.ccitt((uint8_t*) value, totalElements * sizeof(SmartDataGeneric));
     cw_pack_array_size(pc,4);
@@ -347,6 +347,7 @@ void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
 }
 
 void Base::setNeedToSend(void) {
+   Serial.printf("New update and state is %u\n",this->pc, updates_needed); 
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
     updates_needed = STATE_NEED_TOSEND;
   } else {

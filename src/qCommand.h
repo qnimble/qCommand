@@ -96,6 +96,7 @@ class qCommand {
       Set = 2,
       Request = 3, // Request new data (for arrays where data is not necessarily ready. Only valid for SmartDataPtr objects)
       ACK = 4, // Acknowledge receipt of data
+      Disconnect = 255,
     };
     #warning move back to private after testing
     union callBack {
