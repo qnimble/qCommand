@@ -213,7 +213,7 @@ char qCommand::readBinaryInt(void) {
             }
             break;
           case Commands::ACK:
-            //Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].object);
+            Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].object);
             if (commandList[index-1].object != NULL) {
               Base *ptr = static_cast<Base*>(commandList[index-1].object);
               if (ptr->updates_needed == STATE_WAIT_ON_ACK) {
@@ -225,11 +225,13 @@ char qCommand::readBinaryInt(void) {
               }
 
               //If array, reset data
-              if ( (commandList[index-1].data_type & 0x03 )== TYPE2INFO_ARRAY ) {
+              Serial.printf("ACK on %u (%s), with data_type = %u\n", index-1, commandList[index-1].command, commandList[index-1].data_type);
+
+              if ( (commandList[index-1].data_type & 0x03 ) == TYPE2INFO_ARRAY ) {
                 //SmartDataPtr<float*> *ptr = (void*) commandList[index-1].object;
                 AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[index-1].object);
                 ptr->resetCurrentElement();
-                //Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
+                Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
                 //ptr->sendIfNeedValue();
                 //ptr->please();
               }
@@ -242,11 +244,11 @@ char qCommand::readBinaryInt(void) {
             if (commandList[index-1].object == NULL) {
                 //cannot update object that isn't of type SmartData                
                 goto cleanup;
-              }
-              {
-            Base *ptr = static_cast<Base*>(commandList[index-1].object);
-            ptr->updates_needed == STATE_IDLE; //clear state if we get an update
-              }
+            }
+            {
+              Base *ptr = static_cast<Base*>(commandList[index-1].object);
+              ptr->updates_needed = STATE_IDLE; //clear state if we get an update
+            }
             if (uc->return_code != CWP_RC_OK) {
               Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
               goto error;                 
@@ -385,7 +387,7 @@ char qCommand::readBinaryInt(void) {
   }
   //PT_FUNC_END(pt);
   //PT_RESTART(pt);
-  Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
+  //Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
   //delayMicroseconds(10000);
   terminate_stream_unpack_context(&suc);
   //free(suc.uc.start);
@@ -461,7 +463,7 @@ void qCommand::sendBinaryCommands(void) {
   for (uint8_t i=0; i < commandCount; i++) {    
     if (commandList[i].object != NULL) {
       elements++;
-      Serial.printf("Adding: %s (ptr=0x%08x) data_type=0x%02x)\n",commandList[i].command, commandList[i].object, commandList[i].data_type);
+      Serial.printf("Adding(%u): %s (ptr=0x%08x) data_type=0x%02x)\n",i, commandList[i].command, commandList[i].object, commandList[i].data_type);
     } else {
       Serial.printf("Skipping: %s (ptr=0x%08x) data_type=0x%02x)\n",commandList[i].command, commandList[i].object, commandList[i].data_type);
     }

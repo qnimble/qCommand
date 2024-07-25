@@ -146,7 +146,7 @@ void Base::resetUpdateState(void) {
 }
 
 
-
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::resetUpdateState(void) {  
   updates_needed = STATE_IDLE;  
@@ -158,7 +158,7 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
   //set not support for array data (pointers
 }
 
-
+*/
 
 
 
@@ -201,7 +201,7 @@ void SmartData<SmartDataGeneric,false>::sendValue(void) {
   }
 }
 
-
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::please(void) {  
   Serial.println("Please called on SmartDataPtr");
@@ -225,7 +225,7 @@ void SmartDataPtr<SmartDataGeneric>::resetCurrentElement(void) {
   currentElement = 0;
   dataRequested = true;
 }
-
+*/
 
 /*
 template <typename DataType>
@@ -240,7 +240,7 @@ SmartData<DataType>::resetCurrentElement(void) {
 */
 
 
-
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
   if ((dataRequested) && (currentElement == totalElements)) {
@@ -250,7 +250,7 @@ void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
     currentElement = 0;
   }
 }
-
+*/
 
 void Base::please(void) {
   Serial.printf("Please called on SmartData with updates_needed state %u\n",updates_needed);
@@ -288,7 +288,7 @@ size_t SmartData<SmartDataGeneric>::getTotalElements(void) {
 */
 
 
-
+/*
 template <class SmartDataGeneric>
 size_t SmartDataPtr<SmartDataGeneric>::getCurrentElement(void) {
   return currentElement;
@@ -298,7 +298,7 @@ template <class SmartDataGeneric>
 size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
   return totalElements;
 }
-
+*/
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::sendValue(void) {    
@@ -336,7 +336,7 @@ void SmartData<SmartDataGeneric, true>::sendValue(void) {
     //stream->write(packer->data(),packer->size());
   }
 }
-
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
@@ -345,7 +345,7 @@ void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
     updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on ACK, so now that plus queue
   }
 }
-
+*/
 void Base::setNeedToSend(void) {
    Serial.printf("New update and state is %u\n",this->pc, updates_needed); 
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
@@ -377,7 +377,7 @@ void SmartData<DataType,true>::setNext(typename SmartData<DataType,true>::baseTy
   if (dataRequested) {
     if (currentElement < totalElements ) {
       value[currentElement] = data;
-      currentElement++;    
+      currentElement++;
       if (currentElement == totalElements) {
         //if this was last element, then 
         setNeedToSend();      
@@ -417,7 +417,7 @@ void SmartData<SmartDataGeneric,false>::_setPrivateInfo(uint8_t id, Stream* stre
   init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
 }
 
-
+/*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc) {
   this->id = id;
@@ -425,7 +425,7 @@ void SmartDataPtr<SmartDataGeneric>::_setPrivateInfo(uint8_t id, Stream* stream,
   this->pc = pc;
   init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
 }
-
+*/
 //template <class SmartDataGeneric>
 //DataObjectSpecific<SmartDataGeneric>::DataObjectSpecific<SmartDataGeneric>() {}
 
@@ -444,12 +444,12 @@ SmartData<SmartDataGeneric>::SmartData(SmartDataGeneric initValue, size_t size):
 */
 
 
-
+/*
 template <class SmartDataGeneric>
 SmartDataPtr<SmartDataGeneric>::SmartDataPtr(SmartDataGeneric initValue, unsigned int size) :  value(initValue),totalElements(size), id(0), stream(0) {
   //init_dynamic_memory_pack_context(&pc, DEFAULT_PACK_BUFFER_SIZE);
 }
-
+*/
 
 template class SmartData<bool>;
 template class SmartData<bool*>;

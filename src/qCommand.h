@@ -40,10 +40,10 @@ class qCommand {
     
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
     void assignVariable(const char* command, SmartData<DataType>* object);
-
+/*
     template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
     void assignVariable(const char* command, SmartDataPtr<argArray>* object);
-
+*/
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
     template <typename argUInt, std::enable_if_t<
       std::is_same<argUInt, uint8_t>::value || 

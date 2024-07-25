@@ -128,9 +128,21 @@ public:
 };
 
 
+
+class AllSmartDataPtr: public Base {
+  public:
+    virtual size_t getCurrentElement(void);
+    virtual size_t getTotalElements(void);
+    //virtual void sendIfNeedValue(void);
+    //virtual void setNeedToSend(void);
+    virtual void resetCurrentElement(void);    
+};
+
+
+
 //For arrays!
 template <class DataType>
-class SmartData<DataType, true>: public Base {    
+class SmartData<DataType, true>: public AllSmartDataPtr {    
   public:    
     SmartData(DataType data, size_t size): value(data), totalElements(size), id(0), stream(0) {};    
     using baseType = typename std::remove_pointer<DataType>::type;
@@ -204,16 +216,7 @@ private:
 
 
 
-class AllSmartDataPtr: public Base {
-  public:
-    virtual size_t getCurrentElement(void);
-    virtual size_t getTotalElements(void);
-    virtual void sendIfNeedValue(void);
-    virtual void setNeedToSend(void);
-    virtual void resetCurrentElement(void);    
-};
-
-
+/*
 template <class DataType>
 class SmartDataPtr: public AllSmartDataPtr  {
 //  class SmartData {
@@ -253,7 +256,7 @@ private:
     uint8_t id;
     Stream* stream;  
 };
-
+*/
 //template <class DataType>
 //using SmartDataNew = typename std::conditional<std::is_pointer<DataType>::value, SmartDataPtr<DataType>, SmartData<DataType>>::type;
 
