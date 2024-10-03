@@ -6,6 +6,8 @@
 #include <Stream.h>
 #include "smartData.h"
 
+#include "electricui.h"
+
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define STREAMCOMMAND_BUFFER 64
 // Maximum length of a command excluding the terminating null
@@ -13,6 +15,18 @@
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
 // #define SERIALCOMMAND_DEBUG
+eui_message_t* find_message_object( const char * search_id, uint8_t is_internal );
+uint8_t handle_packet_action(   eui_interface_t *valid_packet,
+                        eui_header_t    *header,
+                        eui_message_t   *p_msg_obj );
+
+uint8_t handle_packet_ack(  eui_interface_t *valid_packet,
+                   eui_header_t    *header,
+                    eui_message_t   *p_msg_obj );
+
+uint8_t handle_packet_query(    eui_interface_t *valid_packet,
+                       eui_header_t    *header,
+                        eui_message_t   *p_msg_obj );
 
 
 class qCommand {
@@ -98,6 +112,15 @@ class qCommand {
       ACK = 4, // Acknowledge receipt of data
       Disconnect = 255,
     };
+
+  enum PtrType {
+    PTR_NULL = 0,
+    PTR_RAW_DATA = 1,
+    PTR_QC_CALLBACK = 2,
+    PTR_SD_OBJECT = 3,    
+};
+
+
     #warning move back to private after testing
     union callBack {
         void (*f1)(qCommand& streamCommandParser, Stream& stream);
@@ -105,11 +128,15 @@ class qCommand {
       } callBack;
       
     struct StreamCommandParserCallback {
-        char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
-        union callBack function;
-        Base* object;
-        void* ptr;
-        uint8_t data_type;
+        const char* command;
+        uint8_t data_type : 4; //4 bits to match eui_header type
+        PtrType ptr_type : 4; //4 bits to set what ptr type is used
+        uint16_t size;
+        union ptr {
+          void* data;  // ptr to raw data
+          void (*f1)(qCommand& streamCommandParser, Stream& stream); // for custom callback to qC object          
+          Base* object; //smart object
+        } ptr;
       };                                    // Data structure to hold Command/Handler function key-value pairs
 
     StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
@@ -120,6 +147,7 @@ class qCommand {
       cw_pack_context pc;
       
       char readBinaryInt(void);
+      char readBinaryInt2(void);
       template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
       void addCommandInternal(const char* command, 
                               void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
