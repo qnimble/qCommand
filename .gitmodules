@@ -1,0 +1,3 @@
+[submodule "eui"]
+	path = eui
+	url = git@github.com:electricui/electricui-embedded.git
