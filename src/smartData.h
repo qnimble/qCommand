@@ -267,22 +267,22 @@ struct type2int
    // enum { result = 0 }; // do this if you want a fallback value, empty to force a definition
 };
 
-template<> struct type2int<SmartData<String>> { enum { result = TYPE2INFO_1BYTE +  TYPE2INFO_STRING }; };
-template<> struct type2int<SmartData<bool>> { enum { result = TYPE2INFO_1BYTE +  TYPE2INFO_BOOL }; };
-template<> struct type2int<SmartData<uint8_t>> { enum { result =  TYPE2INFO_1BYTE + TYPE2INFO_UINT}; };
-template<> struct type2int<SmartData<uint16_t>> { enum { result = TYPE2INFO_2BYTE + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<uint>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<ulong>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_UINT }; };
-template<> struct type2int<SmartData<int8_t>> { enum { result = TYPE2INFO_1BYTE + TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<int16_t>> { enum { result = TYPE2INFO_2BYTE + TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<int>> { enum { result = TYPE2INFO_4BYTE +  TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<long>> { enum { result = TYPE2INFO_4BYTE +  TYPE2INFO_INT }; };
-template<> struct type2int<SmartData<float>> { enum { result = TYPE2INFO_4BYTE + TYPE2INFO_FLOAT }; };
-template<> struct type2int<SmartData<double>> { enum { result = TYPE2INFO_8BYTE + TYPE2INFO_FLOAT }; };
+template<> struct type2int<SmartData<String>> { enum { result = 4 }; };
+template<> struct type2int<SmartData<bool>> { enum { result = 6 }; };
+template<> struct type2int<SmartData<uint8_t>> { enum { result = 6}; };
+template<> struct type2int<SmartData<uint16_t>> { enum { result = 8 }; };
+template<> struct type2int<SmartData<uint>> { enum { result = 10 }; };
+template<> struct type2int<SmartData<ulong>> { enum { result = 10 }; };
+template<> struct type2int<SmartData<int8_t>> { enum { result = 5 }; };
+template<> struct type2int<SmartData<int16_t>> { enum { result = 7 }; };
+template<> struct type2int<SmartData<int>> { enum { result = 9 }; };
+template<> struct type2int<SmartData<long>> { enum { result = 9 }; };
+template<> struct type2int<SmartData<float>> { enum { result = 11 }; };
+template<> struct type2int<SmartData<double>> { enum { result = 12 }; };
     
 //template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_4BYTE +  TYPE2INFO_FLOAT }; };    
-template<> struct type2int<SmartData<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_4BYTE + TYPE2INFO_FLOAT }; };    
-template<> struct type2int<SmartData<double*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_8BYTE + TYPE2INFO_FLOAT }; };    
+template<> struct type2int<SmartData<float*>> { enum { result = 11 }; };    
+template<> struct type2int<SmartData<double*>> { enum { result = 12 }; };    
 
 /*
 struct DataInfo {

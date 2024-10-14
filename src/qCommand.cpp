@@ -11,7 +11,7 @@
 #include "electricui.h"
 #include "eui_binary_transport.h"
 
-
+static eui_interface_t serial_comms = EUI_INTERFACE( &serial_write ); 
 
 /**
  * Constructor
@@ -40,6 +40,7 @@ qCommand::qCommand(bool caseSensitive) :
   uint32_t uuid = 0x13572468;  
   eui_setup_identifier((char*) uuid, sizeof(uuid));  // set EUI unique ID based on hardware UUID
 #endif
+eui_setup_interfaces(&serial_comms,1);
 }
 
 void qCommand::reset(void) {
@@ -63,66 +64,110 @@ void qCommand::readBinary(void) {
 void serial_write( uint8_t *data, uint16_t len )
 {
   Serial2.write( data, len ); //output on the main serial port
-  Serial.printf("Sending %u bytes (first is 0x%02x\n", len, data[0]);
+  
+  Serial.printf("\nSending %u bytes: 0x  ",len);
+  len = min(len,16);
+  for (uint8_t i = 0; i < len; i++) {
+    Serial.printf("%02x",data[i]);
+  }
+  Serial.println();
+
+  
 }
 
 extern "C" {
   void desc(const char* msg, uint16_t value) ;
   void descs(const char* msg, const char* info) ;
+  void descl(const char* msg, uint32_t value);
 }
   
 void desc(const char* msg, uint16_t value) {
   Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
 }
+void descl(const char* msg, uint32_t value) {
+  //Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
+}
 void descs(const char* msg, const char* info) {
-  Serial.printf("%s: %s\n", msg, info);
+  //Serial.printf("%s: %s\n", msg, info);
 }
 
 
 
-static eui_interface_t serial_comms = EUI_INTERFACE( &serial_write ); 
+
 
 char qCommand::readBinaryInt2(void){
   PT_FUNC_START(pt);
-
+  static uint8_t store[256];
+  static uint8_t count = 0;
+  
+  setDebugWord(0xdead1111);
   static eui_interface_t     *p_interface_last;
   eui_interface_t *p_link = &serial_comms;
 
   int dataReady = binaryStream->available();
+  setDebugWord(0xdead1112);  
   if (dataReady != 0) {
-    Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
+    //Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
   } else {
     return PT_WAITING;
   }
   uint8_t inbound_byte = binaryStream->read();
+  
+  if (inbound_byte == 0) {
+    Serial.println();
+    /* if ( count > 0) {
+      Serial.printf("Received Packet: ");
+      for (uint8_t i=0; i < count; i++) {
+        Serial.printf(" %02x", store[i]);
+      }
+      Serial.println();
+      count = 0;
+    }      */
+  } else {
+    //store[count++] = inbound_byte;
+    Serial.printf("%02x", inbound_byte);
+  }
+    
 
+  setDebugWord(0xdead1113);
   eui_errors_t status;
-  status.parser = eui_decode(inbound_byte, &serial_comms.packet);
-  Serial.printf("Got status %u (state=%u)\n", status.parser, serial_comms.packet.parser.state);
+  status.parser = eui_decode(inbound_byte, &serial_comms.packet);  
+  setDebugWord(0xdead1114);
+  if (status.parser != 1) {
+  //Serial.printf("Got status %u (state=%u)\n", status.parser, serial_comms.packet.parser.state);
+  }
   if( EUI_PARSER_OK == status.parser )
     {
         p_interface_last              = p_link;
         eui_header_t   header_in    = *(eui_header_t*)&p_link->packet.header;
         eui_message_t *p_msglocal   = find_message_object(  (char*)p_link->packet.id_in,
                                                             header_in.internal );
-        Serial.printf("p_msglocal is 0x%08x\n", p_msglocal);
+        //Serial.printf("p_msglocal is 0x%08x\n", p_msglocal);
         if( p_msglocal )
         {
             // Running callbacks or write inbound data as required
-            Serial.printf("response is %u, acknum is %u, type is %u\n", header_in.response, header_in.acknum,header_in.type);
+            //Serial.printf("response is %u, acknum is %u, type is %u\n", header_in.response, header_in.acknum,header_in.type);
+            //Serial.printf("ID: %s Callback to 0x%08x\n",  p_msglocal->id, p_msglocal->ptr.callback);
+            setDebugWord(0xdeaC1111);            
+            delayMicroseconds(100000);
             status.action = handle_packet_action( p_link, &header_in, p_msglocal );
-            Serial.printf("Action is %u\n",status.action);
+            setDebugWord(0xdeaC1112);
+            //Serial.printf("Action is %u\n",status.action);
             // Respond to a request for ack if the action completed successfully
             if( status.action == EUI_ACTION_OK )
             {
+                setDebugWord(0xdeaC1113);
                 status.ack = handle_packet_ack( p_link, &header_in, p_msglocal );
+                setDebugWord(0xdeaC1114);
             }
 
-            Serial.printf("status Action is %u\n", status.action);
+            //Serial.printf("status Action is %u\n", status.action);
             // Respond to queries 
             // this includes invalid inbound header types, as we provide 'correct' type info
+            setDebugWord(0xdeaC1117);
             status.query = handle_packet_query( p_link, &header_in, p_msglocal );
-            Serial.printf("status query is %u and interface_cb is 0x%08x\n", status.query, p_link->interface_cb);
+            setDebugWord(0xdeaC1118);
+            //Serial.printf("status query is %u and interface_cb is 0x%08x\n", status.query, p_link->interface_cb);
             // Notify the developer of the tracked message
             if( p_link->interface_cb )
             {
@@ -150,6 +195,7 @@ char qCommand::readBinaryInt2(void){
     }
 
     //return status;
+    setDebugWord(0xdead1115);
     return 0;
   PT_FUNC_END(pt);
 }
@@ -635,8 +681,14 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
   commandList[commandCount].size = 0;
   commandList[commandCount].data_type = 0;
   
-
-  eui_setup_tracked((eui_message_t*) commandList,commandCount + 1);  
+  Serial.printf("Adding Command %s: (count to track is %u\n",command, commandCount+1);
+  Serial.printf("commandList starts at 0x%08x\n", commandList);
+  for (uint8_t i=0; i<commandCount+1; i++) {
+    Serial.printf("Command %s: has length %u\n",commandList[i].command, strlen(commandList[i].command));
+  }
+  Serial.printf("Setting commandCount in eui to %u", commandCount+1);
+  Serial.printf("Add Command pre eui setup: commandList is %08x\n", commandList);
+  eui_setup_tracked((eui_message_t*) &commandList[0],commandCount + 1);  
 
   #warning with const char cannot make lower case
   //if (!caseSensitive) {
@@ -658,19 +710,26 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
   
   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   //strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
+  Serial.printf("commandList starts at 0x%08x\n", commandList);
+  //Serial.printf("Setting commandCount in eui to %u", commandCount+1);
+  Serial.printf("Command addr is 0x%08x\n", command);
   commandList[commandCount].command = command;
   if (object != NULL)  {
     //have SmartData object pointer
     commandList[commandCount].ptr_type = PTR_SD_OBJECT;
     commandList[commandCount].ptr.object = object;
+    #warning hardcoding array size to 7, BAD!!
+    commandList[commandCount].size = 7;
     //commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
     //commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
     commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
-
+    Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x\n", commandList[commandCount].data_type, PTR_SD_OBJECT);
   } else {    
     commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
+    commandList[commandCount].size = sizeof(DataType);
+    
     if ( var == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  //commandList[commandCount].ptr.f1 =  &qCommand::invalidAddress;
@@ -680,14 +739,21 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
 		  commandList[commandCount].ptr.data = (void*) var;
       commandList[commandCount].ptr_type = PTR_RAW_DATA;
     }
+    Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x and size=%u\n", commandList[commandCount].data_type, commandList[commandCount].ptr_type, sizeof(DataType));
+
 	}
 
 #warning skipping case sensitive stuff
 	//if (!caseSensitive) {
 	 //  strlwr(commandList[commandCount].command);
 	//}
-	Serial.printf("CC from %u", commandCount);
+	Serial.printf("CC from %u\n", commandCount);
   commandCount++;
+  Serial.printf("Setting commandCount in eui to %u\n", commandCount);
+  Serial.printf("Add Cmd int: pre eui setup: commandList is %08x\n", commandList);
+
+  eui_setup_tracked((eui_message_t*) commandList,commandCount);  
+
   Serial.printf(" to %u\n", commandCount);
 }
 
@@ -699,6 +765,7 @@ void qCommand::addCommandInternal(const char *command, void (qCommand::*function
   
   commandList = (StreamCommandParserCallback *) realloc(commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
   //strncpy(commandList[commandCount].command, command, STREAMCOMMAND_MAXCOMMANDLENGTH);
+  Serial.printf("commandList starts at 0x%08x\n", commandList);
   commandList[commandCount].command = command;
   if (object != NULL)  {
     //have SmartData object pointer

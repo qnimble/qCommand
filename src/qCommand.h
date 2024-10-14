@@ -13,6 +13,8 @@
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 25 //8
 
+void serial_write( uint8_t *data, uint16_t len );
+
 // Uncomment the next line to run the library in debug mode (verbose messages)
 // #define SERIALCOMMAND_DEBUG
 eui_message_t* find_message_object( const char * search_id, uint8_t is_internal );
