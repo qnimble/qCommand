@@ -95,20 +95,20 @@ void descs(const char* msg, const char* info) {
 
 
 
-char qCommand::readBinaryInt2(void){
-  PT_FUNC_START(pt);
-  static uint8_t store[256];
-  static uint8_t count = 0;
+char qCommand::readBinaryInt2(void){  
+  PT_FUNC_START(pt);  
   
-  setDebugWord(0xdead1111);
-  //static eui_interface_t     *p_interface_last;
   eui_interface_t *p_link = &serial_comms;  
-  int dataReady = binaryStream->available();
-  setDebugWord(0xdead1112);  
+  
+  static int dataReady;
+  static uint8_t count = 0;  
+  
+  dataReady = binaryStream->available();  
   if (dataReady != 0) {
     Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
   } else {
-    return PT_WAITING;
+    PT_RESTART(pt);
+    return PT_YIELDED;
   }
   for (count = 0; count < dataReady; count++) {
     uint8_t inbound_byte = binaryStream->read();
@@ -127,11 +127,16 @@ char qCommand::readBinaryInt2(void){
       Serial.printf("%02x", inbound_byte);
     }
     
-  //eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
-  eui_parse(inbound_byte, p_link);
+    //eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
+    eui_parse(inbound_byte, p_link);
+    //Serial.printf("Yield with count=%u and dataready=%u (data=%02x)\n",count,dataReady,inbound_byte);
+    PT_YIELD(pt);
   }
 
-  return PT_WAITING;
+  
+  PT_RESTART(pt);
+  return PT_YIELDED;
+  //return PT_WAITING;
   /*
   setDebugWord(0xdead1113);
   eui_errors_t status;
