@@ -101,20 +101,19 @@ char qCommand::readBinaryInt2(void){
   static uint8_t count = 0;
   
   setDebugWord(0xdead1111);
-  static eui_interface_t     *p_interface_last;
-  eui_interface_t *p_link = &serial_comms;
-
+  //static eui_interface_t     *p_interface_last;
+  eui_interface_t *p_link = &serial_comms;  
   int dataReady = binaryStream->available();
   setDebugWord(0xdead1112);  
   if (dataReady != 0) {
-    //Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
+    Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
   } else {
     return PT_WAITING;
   }
-  uint8_t inbound_byte = binaryStream->read();
-  
-  if (inbound_byte == 0) {
-    Serial.println();
+  for (count = 0; count < dataReady; count++) {
+    uint8_t inbound_byte = binaryStream->read();
+    if (inbound_byte == 0) {
+      Serial.println("");
     /* if ( count > 0) {
       Serial.printf("Received Packet: ");
       for (uint8_t i=0; i < count; i++) {
@@ -123,12 +122,17 @@ char qCommand::readBinaryInt2(void){
       Serial.println();
       count = 0;
     }      */
-  } else {
-    //store[count++] = inbound_byte;
-    Serial.printf("%02x", inbound_byte);
-  }
+    } else {
+      //store[count++] = inbound_byte;
+      Serial.printf("%02x", inbound_byte);
+    }
     
+  //eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
+  eui_parse(inbound_byte, p_link);
+  }
 
+  return PT_WAITING;
+  /*
   setDebugWord(0xdead1113);
   eui_errors_t status;
   status.parser = eui_decode(inbound_byte, &serial_comms.packet);  
@@ -197,6 +201,7 @@ char qCommand::readBinaryInt2(void){
     //return status;
     setDebugWord(0xdead1115);
     return 0;
+    */
   PT_FUNC_END(pt);
 }
 
