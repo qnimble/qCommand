@@ -81,6 +81,11 @@ static_assert(!TypeTraits<int>::isArray, "int should not be considered an array"
 static_assert(TypeTraits<float*>::isArray, "float* should be considered an array");
 static_assert(TypeTraits<double*>::isArray, "double* should be considered an array");
 
+template<typename T, std::size_t N>
+constexpr std::size_t arraySize(T (&)[N]) {
+    return N;
+}
+
 
 #warning move these to private when done with debug
 class Base {  

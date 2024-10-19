@@ -347,7 +347,7 @@ void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
 }
 */
 void Base::setNeedToSend(void) {
-   Serial.printf("New update and state is %u\n",this->pc, updates_needed); 
+   //Serial.printf("New update and state is %u\n",this->pc, updates_needed); 
    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
     updates_needed = STATE_NEED_TOSEND;
   } else {

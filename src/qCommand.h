@@ -37,6 +37,7 @@ class qCommand {
     qCommand(bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.    
+    void printTable(void);
     void reset(void);
     void setDefaultHandler(void (*function)(const char *, qCommand& streamCommandParser, Stream& stream));   // A handler to call when no valid command received.    
     bool str2Bool(const char* string);                // Convert string of "true" or "false", etc to a bool.
@@ -56,10 +57,15 @@ class qCommand {
     
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
     void assignVariable(const char* command, SmartData<DataType>* object);
+
+    template <typename T>
+    void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
 /*
     template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
     void assignVariable(const char* command, SmartDataPtr<argArray>* object);
 */
+
+  //void qCommand::assignVariable(const char* command, argUInt* variable, size_t elements);
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
     template <typename argUInt, std::enable_if_t<
       std::is_same<argUInt, uint8_t>::value || 
@@ -116,10 +122,10 @@ class qCommand {
     };
 
   enum PtrType {
-    PTR_NULL = 0,
-    PTR_RAW_DATA = 1,
-    PTR_QC_CALLBACK = 2,
-    PTR_SD_OBJECT = 3,    
+    PTR_RAW_DATA = 0, //default for data
+    PTR_QC_CALLBACK = 4,
+    PTR_SD_OBJECT = 6,  
+    PTR_NULL = 15, //maybe this should never happen  
 };
 
 
@@ -143,6 +149,7 @@ class qCommand {
 
     StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
     uint8_t commandCount;
+    
 
   private:
       Stream* binaryStream;
@@ -175,7 +182,8 @@ class qCommand {
       
       template <class argFloating>
       void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;
-      
+          
+      void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
       void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) ;
 
       
