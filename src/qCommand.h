@@ -34,6 +34,28 @@ uint8_t handle_packet_query(    eui_interface_t *valid_packet,
 class qCommand {
   public:
 
+  enum class Commands: uint8_t {
+    ListCommands = 0,
+    Get = 1,
+    Set = 2,
+    Request = 3, // Request new data (for arrays where data is not necessarily ready. Only valid for SmartDataPtr objects)
+    ACK = 4, // Acknowledge receipt of data
+    Disconnect = 255,
+    };
+
+  enum PtrType {
+    PTR_RAW_DATA = 0, //default for data
+    PTR_QC_CALLBACK = 4,
+    PTR_SD_OBJECT = 6,  
+    PTR_NULL = 15, //maybe this should never happen  
+  };
+
+  struct Types {
+    uint8_t data_type : 4; //4 bits to match eui_header type
+    PtrType ptr_type : 4; //4 bits to set what ptr type is used}
+  } ;
+
+
     qCommand(bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command, void(*function)(qCommand& streamCommandParser, Stream& stream));  // Add a command to the processing dictionary.    
@@ -49,6 +71,8 @@ class qCommand {
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
     
     // Assign Variable function for booleans: pointer to direct data or DataObject class
+    void assignVariable(const char* command, uint8_t ptr_type, void* object); 
+
     void assignVariable(const char* command, bool* variable);
     void assignVariable(const char* command, SmartData<bool>* object);
 
@@ -58,8 +82,12 @@ class qCommand {
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
     void assignVariable(const char* command, SmartData<DataType>* object);
 
-    template <typename T>
-    void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+    //template <typename T>
+    //void reportData(qCommand& qC, Stream& inputStream, const char* command, SmartData<T>* baseObject);    
+    //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+    void reportData(qCommand& qC, Stream& inputStream, const char* command, Types types, void* ptr);
+    //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+    
 /*
     template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
     void assignVariable(const char* command, SmartDataPtr<argArray>* object);
@@ -112,21 +140,9 @@ class qCommand {
       , int> = 0>        
     void assignVariable(const char* command, SmartData<argFloat>* object) ;
 
-    enum class Commands: uint8_t {
-      ListCommands = 0,
-      Get = 1,
-      Set = 2,
-      Request = 3, // Request new data (for arrays where data is not necessarily ready. Only valid for SmartDataPtr objects)
-      ACK = 4, // Acknowledge receipt of data
-      Disconnect = 255,
-    };
+    
 
-  enum PtrType {
-    PTR_RAW_DATA = 0, //default for data
-    PTR_QC_CALLBACK = 4,
-    PTR_SD_OBJECT = 6,  
-    PTR_NULL = 15, //maybe this should never happen  
-};
+  
 
 
     #warning move back to private after testing
@@ -137,8 +153,9 @@ class qCommand {
       
     struct StreamCommandParserCallback {
         const char* command;
-        uint8_t data_type : 4; //4 bits to match eui_header type
-        PtrType ptr_type : 4; //4 bits to set what ptr type is used
+        Types types;
+        //uint8_t data_type : 4; //4 bits to match eui_header type
+        //PtrType ptr_type : 4; //4 bits to set what ptr type is used
         uint16_t size;
         union ptr {
           void* data;  // ptr to raw data
@@ -154,24 +171,26 @@ class qCommand {
   private:
       Stream* binaryStream;
       cw_pack_context pc;
-      
       char readBinaryInt(void);
       char readBinaryInt2(void);
-      template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
+      //template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
       void addCommandInternal(const char* command, 
-                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
-                              DataType* var, 
-                              SmartData<DataType>* object = NULL);
-    
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, const char* command, Types types, void* ptr), 
+                              Types types, 
+                              void* object = NULL);
+
+    void addCommandInternal(const char *command, Types types, void* object);
+
+    /*
       template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
       void addCommandInternal(const char* command, 
-                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, DataType* variable, const char* command, SmartData<DataType>* object), 
+                              void (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, const char* command, uint8_t ptr_type, void* ptr), 
                               DataType* var, 
                               SmartData<DataType>* object = NULL);
 
-      
-      void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
-      
+      */
+      //void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
+      void reportString(qCommand& qC, Stream& S, const char* command, uint8_t ptr_type,void* ptr);
       void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
