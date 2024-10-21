@@ -281,7 +281,8 @@ typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::val
   qCommand::assignVariable(const char* command, T* variable) {
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
       Serial.printf("Adding %s for SD pointer\n", command);
-      uint16_t size = variable->size();
+      typename std::decay<T>::type *sd = static_cast<typename std::decay<T>::type*> (variable);
+      uint16_t size = sd->size();
     addCommandInternal(command, types, variable,size);
     }
 

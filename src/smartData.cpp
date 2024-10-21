@@ -257,10 +257,7 @@ void Base::please(void) {
 }
 
 
-uint16_t Base::size(void) {
-  #warning "This needs real value";
-  return 12;
-}
+
 
 
 /*

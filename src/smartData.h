@@ -89,7 +89,7 @@ class Base {
     uint16_t size(void);
   protected:
     cw_pack_context* pc;
-    UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function    
+    UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function        
     friend class qCommand;    
 };
 
@@ -132,7 +132,7 @@ class AllSmartDataPtr: public Base {
     //virtual void sendIfNeedValue(void);
     //virtual void setNeedToSend(void);
     virtual void resetCurrentElement(void);    
-    //uint16_t size(void);
+    uint16_t size(void);
 };
 
 
@@ -151,13 +151,17 @@ class SmartData<DataType, true>: public AllSmartDataPtr {
     void _set(void* data);     
     //void setNeedToSend(void);
     void resetUpdateState(void);
-    //uint16_t size(void);
+    
         
     void setNext(baseType);
     size_t getTotalElements(void) {
       return totalElements;
     };
     
+    uint16_t size(void) {
+      return totalElements * sizeof(DataType);
+    }
+
     size_t getCurrentElement(void) {
        return currentElement;
     };
@@ -195,9 +199,13 @@ class SmartData<DataType, false>: public Base {
     void sendValue(void);
     void _get(void* data); 
     void _set(void* data);
-    //uint16_t size(void);
+    
     //void setNeedToSend(void);
     void resetUpdateState(void);
+
+    uint16_t size(void) {
+      return sizeof(DataType);
+    }
 
 private:
     DataType value;
