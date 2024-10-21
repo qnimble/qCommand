@@ -748,7 +748,7 @@ void qCommand::reportData(qCommand& qC, Stream& inputStream, const char* command
  * buffer for a prefix command, and calls handlers setup by addCommand() member
  */
 void qCommand::readSerial(Stream& inputStream) {
-    while (inputStream.available() > 0) {
+  while (inputStream.available() > 0) {
     char inChar = inputStream.read();   // Read single available character, there may be more waiting
     #ifdef SERIALCOMMAND_DEBUG
       Serial.print(inChar);   // Echo back to serial stream
@@ -760,9 +760,9 @@ void qCommand::readSerial(Stream& inputStream) {
         Serial.println(buffer);
       #endif
 
-        if (!caseSensitive) {
-		  strlwr(buffer);
-        }
+      if (!caseSensitive) {
+          strlwr(buffer);
+      }
       char *command = strtok_r(buffer, delim, &last);   // Search for command at start of buffer
       if (command != NULL) {
         boolean matched = false;
@@ -777,55 +777,30 @@ void qCommand::readSerial(Stream& inputStream) {
 
           // Compare the found command against the list of known commands for a match
           if (strncmp(command, commandList[i].command, STREAMCOMMAND_MAXCOMMANDLENGTH) == 0) {
+            matched = true;
             //Serial.printf("Found match on command %s\n",command);
-            reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);
-            return;
+            if (commandList[i].types.ptr_type == PTR_QC_CALLBACK) {
+              (commandList[i].ptr.f1)(*this,inputStream);
+            } else if (commandList[i].types.ptr_type == PTR_NULL) {
+              inputStream.printf("Error: command %s has null pointer\n",command);
+            } else {
+              //SD-Object or Raw PTR
+              reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);            
+            }            
             #ifdef SERIALCOMMAND_DEBUG
               Serial.print("Matched Command: ");
               Serial.println(command);
-            #endif
-            // Execute the stored handler function for the command
-            if (commandList[i].types.ptr_type == PTR_SD_OBJECT) {
-              Base* base = commandList[i].ptr.object;
-              //Serial.print("Running on object:\n");
-              reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);
-
-              //if (commandList[i].object != NULL) {
-              //only run object function if object is single and not array
-              #warning hard coding type size--bad
-              if  (commandList[i].size > 4 ) {
-                //#warning this is right
-                //Serial.print("Running on non array object:\n");
-                #warning ToDo find report command for SmartData object
-                //(this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command, commandList[i].object);
-                
-                
-                //base->please();
-              } else {
-                inputStream.println("Arrays do not support ASCII command line interaction, and must use binary command structure");                  
-                //Base* base = commandList[i].object;        
-                //Serial.printf("Cmd: %s, with data type: %u or 0x%02x and base of 0x%08x\n",commandList[i].command, commandList[i].data_type, commandList[i].data_type, base);
-              }
-            } else if (commandList[i].types.ptr_type == PTR_RAW_DATA) {
-              #warning ToDo find report command for RawData object
-                  //(*commandList[i].function.f1)(*this,inputStream);
-            } else if (commandList[i].types.ptr_type == PTR_QC_CALLBACK) {
-              //(*commandList[i].function.f1)(*this,inputStream);              
-              //(commandList[i].ptr.f1)(*this,inputStream,commandList[i].ptr,commandList[i].command, NULL);
-              (commandList[i].ptr.f1)(*this,inputStream);
-            }
-            
-            matched = true;
+            #endif          
             break;
           }
         }
         if (!matched) {
-        	if (defaultHandler != NULL) {
+          if (defaultHandler != NULL) {
                 (*defaultHandler)(command, *this, inputStream);
-        	} else {
-        		inputStream.print("Unknown command: ");
-        		inputStream.println(command);
-        	}
+          } else {
+            inputStream.print("Unknown command: ");
+            inputStream.println(command);
+          }
         }
       }
       bufPos = 0; //do not clear buffer to enter after command repeats it.
@@ -845,8 +820,6 @@ void qCommand::readSerial(Stream& inputStream) {
       }
     }
   }
-  // Serial.print("Time OUT: ");
-  // Serial.println(millis());
 }
 
 
