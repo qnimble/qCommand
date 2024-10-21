@@ -79,22 +79,22 @@ class qCommand {
 
     // Function for pointers
     template <typename T>
-    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     assignVariable(const char* command, T* variable);
     
     // Function for SmartData objects
     template <typename T>
-    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     assignVariable(const char* command, T* variable);
 
     // Function for by reference
     template <typename T>
-    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     assignVariable(const char* command, T& variable);
     
     // Function for SmartData by reference
     template <typename T>
-    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     assignVariable(const char* command, T& variable);
 
 
@@ -263,39 +263,45 @@ class qCommand {
 template <typename T, std::size_t N>
 void qCommand::assignVariable(const char* command, T (&variable)[N]) {    
     Types types = {type2int<SmartData<T>>::result, PTR_RAW_DATA};
+    Serial.printf("Adding %s for T, N array\n", command);
     addCommandInternal(command, types, variable, N*sizeof(T));
 }
 
 template <typename T>
-typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
 qCommand::assignVariable(const char* command, T* variable) {
   Types types = {type2int<T>::result, PTR_RAW_DATA};
+  Serial.printf("Adding %s for raw pointer\n", command);
   addCommandInternal(command, types, variable,sizeof(T));
 }
     
     // Function for SmartData objects
 template <typename T>
-typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
   qCommand::assignVariable(const char* command, T* variable) {
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
-    addCommandInternal(command, types, variable,variable.size());
+      Serial.printf("Adding %s for SD pointer\n", command);
+      uint16_t size = variable->size();
+    addCommandInternal(command, types, variable,size);
     }
 
     // Function for by reference
     template <typename T>
-    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     qCommand::assignVariable(const char* command, T& variable) {
       Types types = {type2int<T>::result, PTR_RAW_DATA};
       uint16_t size = sizeof(typename std::remove_reference<T>::type);
+      Serial.printf("Adding %s for reference data\n", command);
       addCommandInternal(command, types, &variable,size);
     }
     
     // Function for SmartData by reference
     template <typename T>
-    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
-    qCommand::assignVariable(const char* command, T& variable) {
+    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type    qCommand::assignVariable(const char* command, T& variable) {
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
-      addCommandInternal(command, types, variable,variable.size());
+      Serial.printf("Adding %s for reference SD Object\n", command);
+      uint16_t size = variable.size();
+      addCommandInternal(command, types, &variable,size);
     }
 
 /*

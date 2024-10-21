@@ -53,14 +53,16 @@ enum UpdateState {
     STATE_WAIT_ON_ACK_PLUS_QUEUE  // BC
 };
 
+
+
 template<typename T, typename Enable = void>
 struct TypeTraits {
-    static constexpr bool isArray = false;
+    static constexpr bool isArray = false;    
 };
 
 template<typename T>
 struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>>  {
-    static constexpr bool isArray = true;
+    static constexpr bool isArray = true;    
 };
 
 
@@ -118,6 +120,7 @@ class SmartData: public Base {
 public:    
     SmartData(DataType data);    
     DataType get(void);
+    //uint16_t size(void);
 };
 
 
@@ -129,6 +132,7 @@ class AllSmartDataPtr: public Base {
     //virtual void sendIfNeedValue(void);
     //virtual void setNeedToSend(void);
     virtual void resetCurrentElement(void);    
+    //uint16_t size(void);
 };
 
 
@@ -147,7 +151,7 @@ class SmartData<DataType, true>: public AllSmartDataPtr {
     void _set(void* data);     
     //void setNeedToSend(void);
     void resetUpdateState(void);
-    uint16_t size(void);
+    //uint16_t size(void);
         
     void setNext(baseType);
     size_t getTotalElements(void) {
@@ -191,7 +195,7 @@ class SmartData<DataType, false>: public Base {
     void sendValue(void);
     void _get(void* data); 
     void _set(void* data);
-    uint16_t size(void);
+    //uint16_t size(void);
     //void setNeedToSend(void);
     void resetUpdateState(void);
 

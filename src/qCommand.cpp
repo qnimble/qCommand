@@ -424,6 +424,7 @@ void qCommand::assignVariable(const char* command, bool& variable) {
 
 void qCommand::assignVariable(const char* command, SmartData<bool>* object) {
 	Types types = {type2int<SmartData<bool>>::result, PTR_SD_OBJECT};  
+  Serial.printf("Adding Bool SmartData wit %s\n",command);
   addCommandInternal(command,types, object, object->size());
 }
 
