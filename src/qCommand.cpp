@@ -258,9 +258,10 @@ void qCommand::addCommandInternal(const char *command, Types types, void* object
   Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x\n", types.data_type, types.ptr_type);
   commandList[commandCount].command = command;
   //commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
-  commandList[commandCount].types.ptr_type = types.ptr_type;
+  commandList[commandCount].types = types;
+
   //commandList[commandCount].size = sizeof(DataType);
-  if (commandList[commandCount].types.ptr_type == PTR_SD_OBJECT)  {
+  if (commandList[commandCount].types.ptr_type == PTR_SD_OBJECT)  {    
     //have SmartData object pointer
     //commandList[commandCount].types.ptr_type = PTR_SD_OBJECT;
     commandList[commandCount].ptr.object = object;
@@ -418,6 +419,8 @@ template <typename argUInt, std::enable_if_t<
   , uint> = 0>    
 void qCommand::assignVariable(const char* command, argUInt* variable) {
 	Types types = {type2int<SmartData<argUInt>>::result, PTR_RAW_DATA};
+  	Serial.printf("assignVariable on Pointer Uint with types %u and %u at %08x\n",type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT, variable);
+
   addCommandInternal(command,types, variable);  
 }
 
@@ -428,7 +431,10 @@ template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, ulong>::value
   , uint> = 0>    
 void qCommand::assignVariable(const char* command, SmartData<argUInt>* object) {
-	Types types = {type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT};
+	Serial.printf("assignVariable on SD Uint with types %u and %u\n",type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT);
+  Types types = {type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT};
+  Serial.printf("assignVariable on SD Uint with types %u and %u\n",types.data_type, types.ptr_type);
+
   addCommandInternal(command,types, object);
 }
 
@@ -567,7 +573,8 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 
 template <class argUInt>
 void qCommand::reportUInt(qCommand& qC, Stream& S, const char* command, Types types, argUInt* ptr) {
-	setDebugWord(0x12344489);  
+	Serial.printf("reportUInt called with with ptr at 0x%08x and value of %u\n",ptr,* (uint8_t*) ptr);
+  setDebugWord(0x12344489);  
   unsigned long temp;
   argUInt newValue;
   setDebugWord(0x01010001);
@@ -590,7 +597,7 @@ void qCommand::reportUInt(qCommand& qC, Stream& S, const char* command, Types ty
 		}
     setDebugWord(0x01010010);
     newValue = temp;
-    if (types.ptr_type != PTR_SD_OBJECT) {
+    if (types.ptr_type == PTR_SD_OBJECT) {
       SmartData<argUInt>* object = (SmartData<argUInt>*) ptr;
       setDebugWord(0x01010011);
       object->set(newValue);
@@ -601,8 +608,8 @@ void qCommand::reportUInt(qCommand& qC, Stream& S, const char* command, Types ty
       setDebugWord(0x01010014);
     }
   }
-setDebugWord(0x01010015);
-  if (types.ptr_type != PTR_SD_OBJECT) {
+  setDebugWord(0x01010015);
+  if (types.ptr_type == PTR_SD_OBJECT) {
     SmartData<argUInt>* object = (SmartData<argUInt>*) ptr;
     setDebugWord(0x01010016);
     newValue = object->get();
@@ -610,6 +617,7 @@ setDebugWord(0x01010015);
   } else {
     setDebugWord(0x01010018);
     newValue = *ptr;
+    Serial.printf("And now newValue is %u but ptr deref is %u\n",newValue,* (uint8_t*) ptr);
     setDebugWord(0x01010019);
   }
   setDebugWord(0x12344480);
@@ -628,14 +636,14 @@ void qCommand::reportInt(qCommand& qC, Stream& S, const char* command, Types typ
 			temp = std::numeric_limits<argInt>::max();
 		} 
     
-    if (types.ptr_type != PTR_SD_OBJECT) {
+    if (types.ptr_type == PTR_SD_OBJECT) {
       SmartData<argInt>* object = (SmartData<argInt>*) ptr;
       object->set(temp);
     } else {
       *ptr = temp;
     }
 	}
-  if (types.ptr_type != PTR_SD_OBJECT) {
+  if (types.ptr_type == PTR_SD_OBJECT) {
     SmartData<argInt>* object = (SmartData<argInt>*) ptr;
     temp = object->get();
   } else {
@@ -710,7 +718,7 @@ void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& stream
 }
 
 void qCommand::reportData(qCommand& qC, Stream& inputStream, const char* command, Types types, void* ptr) {
-  inputStream.printf("Command: %s and datda_type is %u\n",command, types.data_type);  
+  inputStream.printf("Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n",command, types.data_type, types.ptr_type,ptr);  
   switch(types.data_type) {
     case 4:                  
       reportString(*this,inputStream, command,types.ptr_type, static_cast<SmartData<String>*>(ptr));
