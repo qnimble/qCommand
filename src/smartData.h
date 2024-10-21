@@ -84,6 +84,7 @@ class Base {
     void please();
     virtual void _get(void* data); // pure virtual function
     void resetUpdateState(void);
+    uint16_t size(void);
   protected:
     cw_pack_context* pc;
     UpdateState updates_needed = STATE_IDLE;    //virtual void* _get(void) = 0; // pure virtual function    
@@ -146,6 +147,7 @@ class SmartData<DataType, true>: public AllSmartDataPtr {
     void _set(void* data);     
     //void setNeedToSend(void);
     void resetUpdateState(void);
+    uint16_t size(void);
         
     void setNext(baseType);
     size_t getTotalElements(void) {
@@ -188,7 +190,8 @@ class SmartData<DataType, false>: public Base {
     void please(void);
     void sendValue(void);
     void _get(void* data); 
-    void _set(void* data);     
+    void _set(void* data);
+    uint16_t size(void);
     //void setNeedToSend(void);
     void resetUpdateState(void);
 
@@ -259,18 +262,30 @@ struct type2int
    // enum { result = 0 }; // do this if you want a fallback value, empty to force a definition
 };
 
+template<> struct type2int<char> { enum { result = 4 }; };
 template<> struct type2int<SmartData<String>> { enum { result = 4 }; };
 template<> struct type2int<SmartData<bool>> { enum { result = 6 }; };
 template<> struct type2int<SmartData<uint8_t>> { enum { result = 6}; };
+template<> struct type2int<uint8_t> { enum { result = 6}; };
 template<> struct type2int<SmartData<uint16_t>> { enum { result = 8 }; };
+template<> struct type2int<uint16_t> { enum { result = 8 }; };
 template<> struct type2int<SmartData<uint>> { enum { result = 10 }; };
+template<> struct type2int<uint> { enum { result = 10 }; };
 template<> struct type2int<SmartData<ulong>> { enum { result = 10 }; };
+template<> struct type2int<ulong> { enum { result = 10 }; };
 template<> struct type2int<SmartData<int8_t>> { enum { result = 5 }; };
+template<> struct type2int<int8_t> { enum { result = 5 }; };
 template<> struct type2int<SmartData<int16_t>> { enum { result = 7 }; };
+template<> struct type2int<int16_t> { enum { result = 7 }; };
 template<> struct type2int<SmartData<int>> { enum { result = 9 }; };
+template<> struct type2int<int> { enum { result = 9 }; };
 template<> struct type2int<SmartData<long>> { enum { result = 9 }; };
+template<> struct type2int<long> { enum { result = 9 }; };
 template<> struct type2int<SmartData<float>> { enum { result = 11 }; };
+template<> struct type2int<float> { enum { result = 11 }; };
 template<> struct type2int<SmartData<double>> { enum { result = 12 }; };
+template<> struct type2int<double> { enum { result = 12 }; };
+
     
 //template<> struct type2int<SmartDataPtr<float*>> { enum { result = TYPE2INFO_ARRAY + TYPE2INFO_4BYTE +  TYPE2INFO_FLOAT }; };    
 template<> struct type2int<SmartData<float*>> { enum { result = 11 }; };    

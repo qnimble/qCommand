@@ -256,6 +256,13 @@ void Base::please(void) {
   Serial.printf("Please called on SmartData with updates_needed state %u\n",updates_needed);
 }
 
+
+uint16_t Base::size(void) {
+  #warning "This needs real value";
+  return 12;
+}
+
+
 /*
 template <typename DataType>
 typename std::enable_if<TypeTraits<DataType>::isArray, size_t>::type

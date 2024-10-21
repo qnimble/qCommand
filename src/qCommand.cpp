@@ -242,7 +242,7 @@ void qCommand::addCommand(const char *command, void (*function)(qCommand& stream
 
 
 //template <typename DataType, typename std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
-void qCommand::addCommandInternal(const char *command, Types types, void* object)  {
+void qCommand::addCommandInternal(const char *command, Types types, void* object, uint16_t size)  {
   #ifdef SERIALCOMMAND_DEBUG
     Serial.print(" - Adding Assign Variable Command (");
     Serial.print(commandCount);
@@ -259,6 +259,7 @@ void qCommand::addCommandInternal(const char *command, Types types, void* object
   commandList[commandCount].command = command;
   //commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
   commandList[commandCount].types = types;
+    commandList[commandCount].size = size;
 
   //commandList[commandCount].size = sizeof(DataType);
   if (commandList[commandCount].types.ptr_type == PTR_SD_OBJECT)  {    
@@ -357,6 +358,13 @@ void qCommand::assignVariable(const char* command, uint8_t ptr_type, void* objec
 
 }
 */
+
+
+
+
+template void qCommand::assignVariable(const char* command, unsigned char* object);
+
+/*
 template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
 void qCommand::assignVariable(const char* command, SmartData<DataType>* object) {
   Serial.printf("Trying to assign array to command %s\n",command);
@@ -364,7 +372,7 @@ void qCommand::assignVariable(const char* command, SmartData<DataType>* object) 
   Types types = {type2int<SmartData<DataType>>::result, PTR_SD_OBJECT};
   addCommandInternal(command, types, object);
 }
-
+*/
 template void qCommand::assignVariable(const char* command, SmartData<float*>* object);
 template void qCommand::assignVariable(const char* command, SmartData<double*>* object);
 
@@ -381,35 +389,48 @@ template void qCommand::assignVariable(const char* command, SmartDataPtr<float*>
 
 
 //Assign variable to command list for string. Takes pointer to either data or DataObject.
+/*
 void qCommand::assignVariable(const char* command, String* variable) {  
   Types types = {type2int<SmartData<String>>::result, PTR_RAW_DATA};
-  addCommandInternal(command,types, variable);
+  addCommandInternal(command,types, variable, sizeof(String));
 }
 
 void qCommand::assignVariable(const char* command, SmartData<String>* object) {
 	Serial.printf("Trying to assign object to command %s\n",command);
   Types types = {type2int<SmartData<String>>::result, PTR_SD_OBJECT};
-  addCommandInternal(command,types, object);
+  addCommandInternal(command,types, object, object->size());
 }
 
+*/
 
-
-
+/*
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.
-void qCommand::assignVariable(const char* command, bool* variable) {
-	Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};
-  addCommandInternal(command,types, variable);
+template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
+void qCommand::assignVariable(const char* command, bool& variable) {
+  uint16_t size = arraySize(variable);
+  Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};  
+  //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>) {
+  addCommandInternal(command,types, variable, size);
 }
+template <typename DataType, typename std::enable_if<std::is_same<DataType, bool>::value, int>::type = 0>
+void qCommand::assignVariable(const char* command, bool& variable) {
+  uint16_t size = sizeof(DataType);
+  Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};  
+  //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>) {
+  addCommandInternal(command,types, variable, size);
+}
+*/
+
 
 void qCommand::assignVariable(const char* command, SmartData<bool>* object) {
-	Types types = {type2int<SmartData<bool>>::result, PTR_SD_OBJECT};
-  addCommandInternal(command,types, object);
+	Types types = {type2int<SmartData<bool>>::result, PTR_SD_OBJECT};  
+  addCommandInternal(command,types, object, object->size());
 }
 
 //void qCommand::assignVariable(const char* command, argUInt* variable, size_t elements) {
 //  addCommandInternal(command,NULL, variable, (SmartData<argUInt>*) NULL);
 //}
-
+/*
 //Assign variable to command list for unsigned ints (calls ReportUInt). Takes pointer to either data or DataObject.
 template <typename argUInt, std::enable_if_t<
   std::is_same<argUInt, uint8_t>::value ||
@@ -437,7 +458,7 @@ void qCommand::assignVariable(const char* command, SmartData<argUInt>* object) {
 
   addCommandInternal(command,types, object);
 }
-
+*/
 //Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char* command, SmartData<uint8_t>* object);
 template void qCommand::assignVariable(const char* command, SmartData<uint16_t>* object);
@@ -449,7 +470,7 @@ template void qCommand::assignVariable(const char* command, uint* variable);
 template void qCommand::assignVariable(const char* command, ulong* variable);
 
 
-
+/*
 //Assign variable to command list for signed ints (calls ReportInt). Takes pointer to either data or DataObject.
 template <typename argInt, std::enable_if_t<
   std::is_same<argInt,int8_t>::value || 
@@ -472,7 +493,7 @@ void qCommand::assignVariable(const char* command, SmartData<argInt>* object) {
 	Types types = {type2int<SmartData<argInt>>::result, PTR_SD_OBJECT};
   addCommandInternal(command ,types, object);
 }
-
+*/
 
 //Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char* command, SmartData<int8_t>* object);
@@ -484,7 +505,7 @@ template void qCommand::assignVariable(const char* command, int16_t* variable);
 template void qCommand::assignVariable(const char* command, int* variable);
 template void qCommand::assignVariable(const char* command, long* variable);
 
-
+/*
 //Assign variable to command list for floating point numbers (calls ReportFloat). Takes pointer to either data or DataObject.
 template <typename argFloat, std::enable_if_t<      
   std::is_floating_point<argFloat>::value
@@ -501,7 +522,7 @@ void qCommand::assignVariable(const char* command, SmartData<argFloat>* object) 
   Types types = {type2int<SmartData<argFloat>>::result, PTR_SD_OBJECT};
   addCommandInternal(command,types, object);
 }
-
+*/
 //Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char* command, float* variable);
 template void qCommand::assignVariable(const char* command, double* variable);

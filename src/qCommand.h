@@ -71,12 +71,28 @@ class qCommand {
     void printAvailableCommands(Stream& outputStream); //Could be useful for a help menu type list
     
     // Assign Variable function for booleans: pointer to direct data or DataObject class
-    void assignVariable(const char* command, uint8_t ptr_type, void* object); 
+    //void assignVariable(const char* command, uint8_t ptr_type, void* object); 
 
-    void assignVariable(const char* command, bool* variable);
+    template <typename T>
+    void assignVariable(const char* command, T (&variable));
+
+    template <typename T, std::size_t N>
+    void assignVariable(const char* command, T (&variable)[N]);
+ 
+    template <typename T>
+    void assignVariable(const char* command, T* variable);
+
+    
+    //template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
+    //void assignVariable(const char* command, bool& variable);
+
+    //template <typename DataType, typename std::enable_if<std::is_same<DataType, bool>::value, int>::type = 0>
+    //void assignVariable(const char* command, bool& variable);
+
+
     void assignVariable(const char* command, SmartData<bool>* object);
 
-    void assignVariable(const char* command, String* variable);
+//    void assignVariable(const char* command, String* variable);
     void assignVariable(const char* command, SmartData<String>* object) ;
     
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
@@ -92,7 +108,7 @@ class qCommand {
     template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value, uint> = 0>    
     void assignVariable(const char* command, SmartDataPtr<argArray>* object);
 */
-
+/*
   //void qCommand::assignVariable(const char* command, argUInt* variable, size_t elements);
     // Assign Variable function for unsigned ints: pointer to direct data or DataObject class
     template <typename argUInt, std::enable_if_t<
@@ -142,7 +158,7 @@ class qCommand {
 
     
 
-  
+  */
 
 
     #warning move back to private after testing
@@ -179,7 +195,7 @@ class qCommand {
                               Types types, 
                               void* object = NULL);
 
-    void addCommandInternal(const char *command, Types types, void* object);
+       void addCommandInternal(const char *command, Types types, void* object, uint16_t size) ;
 
     /*
       template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
@@ -227,5 +243,26 @@ class qCommand {
       byte bufPos;                        // Current position in the buffer
       bool binaryConnected;
 };
+
+template <typename T, std::size_t N>
+void qCommand::assignVariable(const char* command, T (&variable)[N]) {    
+    Types types = {type2int<SmartData<T>>::result, PTR_RAW_DATA};
+    addCommandInternal(command, types, variable, N*sizeof(T));
+}
+
+
+template <typename T>
+void qCommand::assignVariable(const char* command, T (&variable)) {    
+    Types types = {type2int<T>::result, PTR_RAW_DATA};
+    addCommandInternal(command, types, &variable, sizeof(T));
+}
+
+template <typename T>
+void qCommand::assignVariable(const char* command, T* variable) {    
+    Types types = {type2int<T>::result, PTR_RAW_DATA};
+    addCommandInternal(command, types, variable, sizeof(T));
+}
+
+
 
 #endif //QCOMMAND_h
