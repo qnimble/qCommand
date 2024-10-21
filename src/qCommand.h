@@ -200,6 +200,9 @@ class qCommand {
       void reportUInt(qCommand& qC, Stream& S, const char* command, Types types, argUInt* ptr);
       
       template <class argFloating>
+      void reportFloat(qCommand& qC,Stream &S, const char* command, Types types, argFloating* ptr);
+      
+      template <class argFloating>
       void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;
           
       void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);

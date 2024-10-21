@@ -655,11 +655,12 @@ void qCommand::reportInt(qCommand& qC, Stream& S, const char* command, Types typ
 
 
 template <class argFloating>
-void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) {	
+void qCommand::reportFloat(qCommand& qC, Stream& S, const char* command, Types types, argFloating* ptr) {	
   argFloating newValue;
   if ( qC.next() != NULL) {
 		newValue = atof(qC.current());        
-    if (object != NULL) {
+    if (types.ptr_type == PTR_SD_OBJECT) {
+        SmartData<argFloating>* object = (SmartData<argFloating>*) ptr;
         object->set(newValue);
     } else {
 		  if ( sizeof(argFloating) >  4 ) { //make setting variable atomic for doubles or anything greater than 32bits.
@@ -672,7 +673,8 @@ void qCommand::reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char
     }
 	}
 
-  if (object != NULL) {
+  if (types.ptr_type == PTR_SD_OBJECT) {
+    SmartData<argFloating>* object = (SmartData<argFloating>*) ptr;
     newValue = object->get();
   } else {
     newValue = *ptr;
@@ -740,6 +742,12 @@ void qCommand::reportData(qCommand& qC, Stream& inputStream, const char* command
       break;
     case 9:
       reportInt(*this,inputStream, command, types, static_cast<int32_t*>(ptr));
+      break;
+    case 11:
+      reportFloat(*this,inputStream, command, types, static_cast<float*>(ptr));
+      break;
+    case 12:
+      reportFloat(*this,inputStream, command, types, static_cast<double*>(ptr));
       break;
     default:
       inputStream.printf("Unknown data type %u\n",types.data_type);
