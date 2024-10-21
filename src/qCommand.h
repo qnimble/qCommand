@@ -194,10 +194,10 @@ class qCommand {
       void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
-      void reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) ;
+      void reportInt(qCommand& qC, Stream& S, const char* command, Types types, argInt* ptr);
       
-      template <class argUInt>
-      void reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) ;
+      template <class argUInt>      
+      void reportUInt(qCommand& qC, Stream& S, const char* command, Types types, argUInt* ptr);
       
       template <class argFloating>
       void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;

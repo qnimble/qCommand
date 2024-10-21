@@ -14,19 +14,6 @@
 // last bit (7) is TBD / future-proofing.
 
 
-#define TYPE2INFO_ARRAY (1)
-#define TYPE2INFO_1BYTE (0<<1)
-#define TYPE2INFO_2BYTE (1<<1)
-#define TYPE2INFO_4BYTE (2<<1)
-#define TYPE2INFO_8BYTE (3<<1)
-#define TYPE2INFO_BOOL  (0<<3)
-#define TYPE2INFO_FLOAT (1<<3)
-#define TYPE2INFO_UINT  (2<<3)
-#define TYPE2INFO_INT  (3<<3)
-#define TYPE2INFO_STRING (4<<3)
-#define TYPE2INFO_EMPTY (5<<3)
-#define TYPE2INFO_READONLY (1<<6)
-
 //extern cw_pack_context pc;
 extern char buffer[];
 #define DEFAULT_PACK_BUFFER_SIZE 500

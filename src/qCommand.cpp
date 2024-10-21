@@ -153,408 +153,6 @@ char qCommand::readBinaryInt2(void){
 
 
 
-char qCommand::readBinaryInt(void) {
-  PT_FUNC_START(pt);  
-/*
-  #warning hard coding binary Stream as Serial3 here..do not know how to avoid..
-  while(true){
-    if (Serial2) {
-      Serial.printf("Got Serial2\n");
-      break;
-    }
-    PT_SLEEP(pt, 1000);
-    Serial.printf("No Serial2\n");
-  }
-  */
-  //PT_WAIT_UNTIL(pt, Serial3);
-  /*
-  if (!Serial3) {
-    //Serial.println("No Serial3");
-    return 0;
-  }
-  */
-  /*
-  if (!binaryConnected) {
-    if ( binaryStream->availableForWrite() > 0 ) {    
-      Serial.printf("** Binary Stream connected\n");
-      binaryConnected = true;
-    } else {
-      Serial.println("Bad, Serial3 exists but not available for write");
-      return 0;
-    }
-  } else {
-    if ( binaryStream->availableForWrite() == 0) {
-      Serial.printf("** Binary Stream NOT connected\n");
-      binaryConnected = false;
-      return 0;
-    }
-  }
-*/
-  //PT_YIELD_UNTIL(pt, binaryStream);
-
-  for(uint8_t i=0; i<commandCount; i++) {
-      if (commandList[i].types.ptr_type == PTR_QC_CALLBACK) {
-        //no need to check if ptr is null if ptr_type is set
-        //if ( commandList[i].object != NULL) {
-        Base *ptr = static_cast<Base*>(commandList[i].ptr.object);
-        if (ptr->updates_needed == STATE_NEED_TOSEND) {
-          //if ( ( commandList[i].ptr.object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
-            //Serial.printf("Sending an sendValue on a Float Arraay!\n");
-          //}
-          Serial.printf("Sending an sendValue on type %s where ptr base is 0x%08x\n", commandList->command, ptr);
-          ptr->sendValue();
-          ptr->updates_needed = STATE_WAIT_ON_ACK;
-        }
-      }      
-      /*
-      if ( ( commandList[i].object != NULL) && ( (commandList[i].data_type & 0x03) == TYPE2INFO_ARRAY)) {
-        //array
-        //AllSmartDataPtr *ptr = (AllSmartDataPtr*) commandList[i].object;
-        //SmartDataPtr<float*> *ptr = (void*) commandList[i].object;        
-        AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[i].object);
-        ptr->sendIfNeedValue();
-        //ptr->please();
-      }*/
-
-  }
-
-
-  setDebugWord(0xbbbb0001);
-  //static uint8_t* data_ptr = 0;
-  const uint16_t buffer_size_default = 4;
-
-  static stream_unpack_context suc;
-  static cw_unpack_context* uc = (cw_unpack_context*) &suc; //uc can point to suc but not visa versa since suc is uc + more in struct  
-  int dataReady = binaryStream->available();
-  if (dataReady != 0) {
-    Serial.printf("Got %u bytes available... (next is 0x%02x\n", dataReady, binaryStream->peek());
-  }
-
-  setDebugWord(0xbbbb0002);
-  int ri;
-  float rf;
-  dataReady = min(dataReady,buffer_size_default); //only read 4k at a time for reduced memory allocation  
-  setDebugWord(0xbbbc0000 + dataReady);
-  if (dataReady != 0) {
-    setDebugWord(0xbbbd0000 + dataReady);
-    //binaryStream->readBytes(uc->start,dataReady);
-    setDebugWord(0xbbbe0000 + dataReady);
-    init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
-    
-    //Serial.printf("Got %d bytes to process. start=0x%08x, cur=0x%08x, end=0x%08x\n",dataReady, uc->start, uc->current, uc->end);
-    //Serial.printf("Starting errors: %d %d\n", uc->return_code, uc->err_no  );
-    
-    //Serial.printf("Read %u bytes\n", dataReady);
-    //uint8_t* temp = uc->current;
-    //Serial.printf("Data: 0x%02x %02x %02x %02x\n", temp[0], temp[1], temp[2], temp[3]);
-    //for (int i=0;i<dataReady;i++) {
-    //    Serial.printf("0x%02x ", temp[i]);
-    //}
-    //Serial.println();
-    //Serial.printf("Start: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
-    uint itemsTotal = cw_unpack_next_array_size(uc);
-    setDebugWord(0xbbbf0000 + dataReady);
-    uint itemsReceived = 0;
-    uint index = 0;
-    Commands command = Commands::ListCommands;
-    //cw_unpack_next(uc);
-    //Serial.printf("1: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
-    if (uc->return_code != CWP_RC_OK)  {
-      Serial.printf("Error parsing array size, error is %d with Items=%u and type = %u\n",uc->return_code, itemsTotal, uc->item.type);
-      goto error;
-    } 
-    //Serial.printf("Error: %d %d\n", uc->return_code, uc->err_no  );
-    index = cw_unpack_next_unsigned8(uc);
-    itemsReceived++;  
-    setDebugWord(0xbbc10000 + dataReady);
-    //Serial.printf("New Command: index %u\n",index);
-    
-    
-    command = static_cast<Commands>(cw_unpack_next_unsigned8(uc));
-    itemsReceived++;
-    //Serial.printf("Item = %u, Command=%u (total=%u\n", index, command, itemsTotal);
-    setDebugWord(0xbbc20000 + dataReady);
-    //uint command;
-    switch (index) {
-      case 0:
-        //internal command
-        if (command == Commands::ListCommands && itemsTotal == 2) {          
-          setDebugWord(0xbbc30000 + dataReady);
-          reset();
-          binaryConnected = true;
-          sendBinaryCommands();
-        } else if (command == Commands::Disconnect && itemsTotal == 2) {
-          Serial.println("Resetting all objects and disconnecting");
-          binaryConnected = false;
-          reset();          
-        } else {
-          Serial.println("Error parsing internal command");
-          goto error;
-        }
-        break;
-      default:
-        if (index > commandCount) {
-          Serial.println("Error: Command index out of range");
-          goto error;
-          break;
-        }
-        setDebugWord(0xbbc40000 + dataReady);          
-        //Serial.printf("About to run command %u (%s)\n",command, commandList[index-1].command);
-        switch (command) {          
-          case Commands::Get:
-            if (commandList[index-1].types.ptr_type == PTR_RAW_DATA) {
-              #warning todo: respond to GET on raw data object
-            } else if (commandList[index-1].types.ptr_type == PTR_SD_OBJECT) {
-              setDebugWord(0x4432abab);
-              commandList[index-1].ptr.object->resetUpdateState(); //if get requested, we should reset and send update
-              commandList[index-1].ptr.object->setNeedToSend();                            
-            } else {
-              Serial.println("Error: object not found Get command without object");
-              goto error;
-            }
-            break;
-          case Commands::ACK:
-            Serial.printf("Command ID %u is ACKd and object ptr is 0x%08x\n", index, commandList[index-1].ptr.object);
-            if (commandList[index-1].types.ptr_type == PTR_SD_OBJECT) {
-              Base *ptr = static_cast<Base*>(commandList[index-1].ptr.object);
-              if (ptr->updates_needed == STATE_WAIT_ON_ACK) {
-                ptr->updates_needed = STATE_IDLE;
-              } else if (ptr->updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
-                ptr->updates_needed = STATE_NEED_TOSEND;
-              } else {
-                Serial.printf("Unexpected ACK on Command ID %u -- state was %u\n", index, ptr->updates_needed);
-              }
-
-              //If array, reset data
-              Serial.printf("ACK on %u (%s), with data_type = %u\n", index-1, commandList[index-1].command, commandList[index-1].types.data_type);
-
-              if ( (commandList[index-1].types.data_type & 0x03 ) == TYPE2INFO_ARRAY ) {
-                //SmartDataPtr<float*> *ptr = (void*) commandList[index-1].object;
-                AllSmartDataPtr *ptr = static_cast<AllSmartDataPtr*>(commandList[index-1].ptr.object);
-                ptr->resetCurrentElement();
-                Serial.printf("Resetting current element for %s\n", commandList[index-1].command);
-                //ptr->sendIfNeedValue();
-                //ptr->please();
-              }
-            } else {
-              Serial.println("Error: object not found ACK command without object");
-            }
-            break;
-          case Commands::Set:              
-            setDebugWord(0xbbe41000 + dataReady);
-            if (commandList[index-1].types.ptr_type != PTR_SD_OBJECT) {
-                //cannot update object that isn't of type SmartData                
-                goto cleanup;
-            }
-            {
-              Base *ptr = static_cast<Base*>(commandList[index-1].ptr.object);
-              ptr->updates_needed = STATE_IDLE; //clear state if we get an update
-            
-              if (uc->return_code != CWP_RC_OK) {
-                Serial.printf("Error parsing next from set, error is %d\n",uc->return_code);
-                goto error;                 
-              }
-            
-              Serial.printf("Got new data (%s) for type: 0x%02x\n",commandList[index-1].command, commandList[index-1].types.data_type);
-              setDebugWord(0xbbc50000 + dataReady);
-              switch(commandList[index-1].types.data_type & 0x3E) {
-                case TYPE2INFO_1BYTE + TYPE2INFO_BOOL:{
-                  //bool 
-                  //bool res = cw_unpack_next_boolean(uc);
-                  cw_unpack_next(uc);
-                  itemsReceived++;
-                  commandList[index-1].ptr.object->_set(&(uc->item.as));
-                  break;
-                }
-                case TYPE2INFO_1BYTE + TYPE2INFO_UINT:{
-                  //uint8_t
-                  uint8_t res = cw_unpack_next_unsigned8(uc);
-                  itemsReceived++;
-                  if ( uc->return_code == CWP_RC_COERCED_VALUE) {
-                    //do not care about coerced values
-                    uc->return_code = CWP_RC_OK;
-                  }
-
-                  if (uc->return_code == CWP_RC_OK)  {
-                    ptr->_set(&res);
-                  } else {
-                    Serial.printf("Error parsing uint8_t (will setNeedtoSend), error is %d\n",uc->return_code);
-                    //didn't set value, but we should send it since original value may not be expected
-                    
-  
-                    ptr->setNeedToSend();
-                    //commandList[index-1].object->sendValue();
-                  }
-                  break;}
-                case TYPE2INFO_2BYTE + TYPE2INFO_UINT:{
-                  //uint16_t
-                  uint16_t res = cw_unpack_next_unsigned16(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                case TYPE2INFO_4BYTE + TYPE2INFO_UINT:{
-                  //uint32_t
-                  uint32_t res = cw_unpack_next_unsigned32(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                case TYPE2INFO_1BYTE + TYPE2INFO_INT:{
-                  //uint8_t
-                  int8_t res = cw_unpack_next_signed8(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                case TYPE2INFO_2BYTE + TYPE2INFO_INT:{
-                  //uint16_t
-                  int16_t res = cw_unpack_next_signed16(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                case TYPE2INFO_4BYTE + TYPE2INFO_INT:{
-                  //uint32_t
-                  int32_t res = cw_unpack_next_signed32(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                case TYPE2INFO_4BYTE + TYPE2INFO_FLOAT:{
-                  //float
-                  float res = cw_unpack_next_float(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  //Serial.printf("Got float %f\n",res);
-                  break;}
-                case TYPE2INFO_8BYTE + TYPE2INFO_FLOAT: {
-                  //float
-                  double res = cw_unpack_next_double(uc);
-                  itemsReceived++;
-                  ptr->_set(&res);
-                  break;}
-                default:
-                  Serial.printf("Unknown type: 0x02x\n",commandList[index-1].types.data_type);
-                break;
-              }
-
-
-              if (commandList[index-1].types.ptr_type == PTR_SD_OBJECT) {
-                  setDebugWord(0x4432abdd);
-                  //commandList[index-1].object->sendValue();
-                  setDebugWord(0x4432abff);
-                  //Serial.println("Shold run sendValue here for ");
-                  //Serial.print(commandList[index-1].command);
-                  //Serial.println();
-              } else {
-                Serial.println("Error: object not found Set command without object");
-              }
-            }
-            break;
-            
-            case Commands::Request:
-              //Serial.printf("Command is request and object ptr is 0x%08x\n", commandList[index-1].object);
-              //if ( (commandList[index-1].object != NULL) && ( (commandList[index-1].data_type & 0x03 )== TYPE2INFO_ARRAY ) ) {
-              if ( commandList[index-1].types.ptr_type == PTR_SD_OBJECT) { 
-                //Got SmartDataPtr object
-                commandList[index-1].ptr.object->_get(NULL);            
-                //Base* base = commandList[index-1].object;
-                //Serial.printf("Now running please on base object 0x%08x with data=%u\n", base,commandList[index-1].data_type);
-                
-                
-                //base->please();
-                //setDebugWord(0x4432abcc);
-              
-            } else {
-              Serial.println("Error: SmartDataPtr object not found for Request command");
-              goto error;
-            }
-
-            default:
-              Serial.printf("Unknown command: %u, index: %u\n",command, index);
-              goto error;
-              break;        
-        }
-        
-        //Serial.println("Uknown command");
-        break;
-     
-    }
-    
-    //uint junk = cw_unpack_next_unsigned32(uc);
-    //setDebugWord(0xbbcf0000 + dataReady);
-    //Serial.printf("Got here: items got: %u and expected %u\n", itemsReceived, itemsTotal);
-    //delayMicroseconds(10000);
-  cleanup:
-  //clear out the data
-  while (itemsReceived < itemsTotal) {
-    setDebugWord(0xabcf0000 + itemsReceived);          
-    cw_unpack_next(uc);
-    itemsReceived++;
-  }
-  //PT_FUNC_END(pt);
-  //PT_RESTART(pt);
-  //Serial.printf("About to run termination. uc Start is 0x%08x\n", suc.uc.start);
-  //delayMicroseconds(10000);
-  terminate_stream_unpack_context(&suc);
-  //free(suc.uc.start);
-  //Serial.printf("Terminate Done\n");
-  //delayMicroseconds(10000);
-  return 0;
-
-  error:
-  Serial.printf("Start of Error: start=0x%08x, cur=0x%08x, end=0x%08x\n", uc->start, uc->current, uc->end);
-  size_t inQueue = binaryStream->available();
-  //Serial.println("Todo: got error, need to test reset parsing");
-  //Serial.printf("Bytes avail: %u\n", inQueue );
-  //delayMicroseconds(10000);
-  binaryStream->flush();
-  
-  if ( suc.uc.return_code != CWP_RC_MALLOC_ERROR ) {
-  
-    suc.uc.return_code = CWP_RC_OK;
-    suc.uc.current = suc.uc.start;
-    //suc.uc.end = suc.uc.start;
-    suc.uc.err_no = 0;  
-    inQueue = binaryStream->available();
-    Serial.printf("Bytes avail2: %u\n", inQueue );
-    if (inQueue > 0) {
-      //delayMicroseconds(10000);
-      char* ptr = new char[inQueue];
-      binaryStream->readBytes(ptr, inQueue);
-      delete[] (ptr);      
-    }
-    
-    //Serial.printf("Got to here, about totry to run terminate on address 0x%08x\n", suc.uc.start);
-    //delayMicroseconds(10000);
-    terminate_stream_unpack_context(&suc);
-    //init_stream_unpack_context(&suc, buffer_size_default, binaryStream);
-  }
-  return 0;
-
-
-  //Serial.printf("4: 0x%08x, current: 0x%08x, end:0x%08x\n",uc->start, uc->current, uc->end);
-  //Serial.printf("Third item has id: %u\n", junk);
-
-    //if ((uc->return_code == 0) && (itemsTotal == 2)) {
-    //  Serial.println("Got a full packet with 2 items and we have their values");
-    //  return 0;
-    //}
-
-    setDebugWord(0xdea12410);
-    return 1;
-    uint8_t* data = new uint8_t[dataReady];
-    if (data) {
-      //bool result = unpacker.feed(data,dataReady);
-      bool result = false;
-      if (result) {
-        Serial.printf("Got success on feed with size %u\n", dataReady);
-        //unpacker.deserialize(ri,rf);
-        Serial.printf("Got data: %d, %f\n",ri,rf);
-      }
-    }
-  }  
-  return 0;
-
-
-  PT_FUNC_END(pt);
-}
 
 void qCommand::sendBinaryCommands(void) {
   //packer.clear();
@@ -657,6 +255,7 @@ void qCommand::addCommandInternal(const char *command, Types types, void* object
   Serial.printf("commandList starts at 0x%08x\n", commandList);
   //Serial.printf("Setting commandCount in eui to %u", commandCount+1);
   Serial.printf("Command addr is 0x%08x\n", command);
+  Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x\n", types.data_type, types.ptr_type);
   commandList[commandCount].command = command;
   //commandList[commandCount].data_type = type2int<SmartData<DataType>>::result;
   commandList[commandCount].types.ptr_type = types.ptr_type;
@@ -672,18 +271,16 @@ void qCommand::addCommandInternal(const char *command, Types types, void* object
     //commandList[commandCount].ptr = NULL;    
     //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
     #warning do I need to set private info?
-    //ptr->_setPrivateInfo(commandCount+1, binaryStream, &pc);
-    
-    Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x\n", commandList[commandCount].types.data_type, PTR_SD_OBJECT);
+    //ptr->_setPrivateInfo(commandCount+1, binaryStream, &pc);        
   } else {      
     if ( object == NULL) {
 		  //catch NULL pointer and trap with function that can handle it
 		  //commandList[commandCount].ptr.f1 =  &qCommand::invalidAddress;
 		  commandList[commandCount].types.ptr_type = PTR_NULL;
 	  } else {
-		  //commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;
 		  commandList[commandCount].ptr.data = (void*) object;
-      commandList[commandCount].types.ptr_type = PTR_RAW_DATA;
+      commandList[commandCount].types.ptr_type = types.ptr_type;
+      commandList[commandCount].types.data_type = types.data_type;
     }
     Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x and size=%u\n", commandList[commandCount].types.data_type, commandList[commandCount].types.ptr_type, commandList[commandCount].size);
     
@@ -969,8 +566,8 @@ void qCommand::reportBool(qCommand& qC, Stream& S, bool* ptr, const char* comman
 
 
 template <class argUInt>
-void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* command, SmartData<argUInt>* object) {
-	setDebugWord(0x12344489);
+void qCommand::reportUInt(qCommand& qC, Stream& S, const char* command, Types types, argUInt* ptr) {
+	setDebugWord(0x12344489);  
   unsigned long temp;
   argUInt newValue;
   setDebugWord(0x01010001);
@@ -993,7 +590,8 @@ void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* com
 		}
     setDebugWord(0x01010010);
     newValue = temp;
-    if (object != NULL) {
+    if (types.ptr_type != PTR_SD_OBJECT) {
+      SmartData<argUInt>* object = (SmartData<argUInt>*) ptr;
       setDebugWord(0x01010011);
       object->set(newValue);
       setDebugWord(0x01010012);
@@ -1004,7 +602,8 @@ void qCommand::reportUInt(qCommand& qC, Stream& S, argUInt* ptr, const char* com
     }
   }
 setDebugWord(0x01010015);
-  if (object != NULL) {  
+  if (types.ptr_type != PTR_SD_OBJECT) {
+    SmartData<argUInt>* object = (SmartData<argUInt>*) ptr;
     setDebugWord(0x01010016);
     newValue = object->get();
     setDebugWord(0x01010017);
@@ -1019,7 +618,7 @@ setDebugWord(0x01010015);
 
 
 template <class argInt>
-void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* command, SmartData<argInt>* object) {
+void qCommand::reportInt(qCommand& qC, Stream& S, const char* command, Types types, argInt* ptr) {
 	int temp;
   if ( qC.next() != NULL) {
 		temp = atoi(qC.current());
@@ -1028,13 +627,16 @@ void qCommand::reportInt(qCommand& qC, Stream& S, argInt* ptr, const char* comma
 		} else if ( temp > std::numeric_limits<argInt>::max()) {
 			temp = std::numeric_limits<argInt>::max();
 		} 
-    if (object != NULL) {
+    
+    if (types.ptr_type != PTR_SD_OBJECT) {
+      SmartData<argInt>* object = (SmartData<argInt>*) ptr;
       object->set(temp);
     } else {
       *ptr = temp;
     }
 	}
-	 if (object != NULL) {  
+  if (types.ptr_type != PTR_SD_OBJECT) {
+    SmartData<argInt>* object = (SmartData<argInt>*) ptr;
     temp = object->get();
   } else {
     temp = *ptr;
@@ -1108,37 +710,34 @@ void qCommand::setDefaultHandler(void (*function)(const char *, qCommand& stream
 }
 
 void qCommand::reportData(qCommand& qC, Stream& inputStream, const char* command, Types types, void* ptr) {
-  /*
+  inputStream.printf("Command: %s and datda_type is %u\n",command, types.data_type);  
   switch(types.data_type) {
     case 4:                  
       reportString(*this,inputStream, command,types.ptr_type, static_cast<SmartData<String>*>(ptr));
       break;
     case 6:
-      reportUInt(*this,inputStream, static_cast<uint8_t*>(ptr),command, static_cast<SmartData<uint8_t>*>(ptr));
+      reportUInt(*this,inputStream, command, types, static_cast<uint8_t*>(ptr));
       break;
     case 8:
-      reportUInt(*this,inputStream, static_cast<uint16_t*>(ptr),command, static_cast<SmartData<uint16_t>*>(commandList[i].ptr.object));
+      reportUInt(*this,inputStream, command, types, static_cast<uint16_t*>(ptr)); 
       break;
     case 10:
-      reportUInt(*this,inputStream, static_cast<uint32_t*>(ptr),command, static_cast<SmartData<uint32_t>*>(commandList[i].ptr.object));
+      reportUInt(*this,inputStream, command, types, static_cast<uint32_t*>(ptr));
       break;
     case 5:
-      reportInt(*this,inputStream, static_cast<int8_t*>(ptr),command, static_cast<SmartData<int8_t>*>(commandList[i].ptr.object));
+      reportInt(*this,inputStream, command, types, static_cast<int8_t*>(ptr));
       break;
     case 7:
-      reportInt(*this,inputStream, static_cast<int16_t*>(ptr),command, static_cast<SmartData<int16_t>*>(commandList[i].ptr.object));
+      reportInt(*this,inputStream, command, types, static_cast<int16_t*>(ptr));
       break;
     case 9:
-      reportInt(*this,inputStream, static_cast<int32_t*>(ptr),command, static_cast<SmartData<int32_t>*>(commandList[i].ptr.object));
+      reportInt(*this,inputStream, command, types, static_cast<int32_t*>(ptr));
       break;
     default:
-      inputStream.printf("Unknown data type %u\n",data_type);
-      break;
-      */
+      inputStream.printf("Unknown data type %u\n",types.data_type);
+      break;      
   }
-    
-
-
+}
 
 
 
@@ -1178,8 +777,9 @@ void qCommand::readSerial(Stream& inputStream) {
 
           // Compare the found command against the list of known commands for a match
           if (strncmp(command, commandList[i].command, STREAMCOMMAND_MAXCOMMANDLENGTH) == 0) {
-            Serial.printf("Found match on command %s\n",command);
+            //Serial.printf("Found match on command %s\n",command);
             reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);
+            return;
             #ifdef SERIALCOMMAND_DEBUG
               Serial.print("Matched Command: ");
               Serial.println(command);
@@ -1187,36 +787,15 @@ void qCommand::readSerial(Stream& inputStream) {
             // Execute the stored handler function for the command
             if (commandList[i].types.ptr_type == PTR_SD_OBJECT) {
               Base* base = commandList[i].ptr.object;
-              Serial.print("Running on object:\n");
-              switch(commandList[i].types.data_type) {
-                case 4:                  
-                  reportString(*this,inputStream, command, static_cast<String*>(nullptr), static_cast<SmartData<String>*>(commandList[i].ptr.object));
-                  break;
-                case 6:
-                 reportUInt(*this,inputStream, static_cast<uint8_t*>(nullptr),command, static_cast<SmartData<uint8_t>*>(commandList[i].ptr.object));
-                  break;
-                case 8:
-                  reportUInt(*this,inputStream, static_cast<uint16_t*>(nullptr),command, static_cast<SmartData<uint16_t>*>(commandList[i].ptr.object));
-                  break;
-                case 10:
-                  reportUInt(*this,inputStream, static_cast<uint32_t*>(nullptr),command, static_cast<SmartData<uint32_t>*>(commandList[i].ptr.object));
-                  break;
-                case 5:
-                  reportInt(*this,inputStream, static_cast<int8_t*>(nullptr),command, static_cast<SmartData<int8_t>*>(commandList[i].ptr.object));
-                  break;
-                case 7:
-                  reportInt(*this,inputStream, static_cast<int16_t*>(nullptr),command, static_cast<SmartData<int16_t>*>(commandList[i].ptr.object));
-                  break;
-                case 9:
-                  reportInt(*this,inputStream, static_cast<int32_t*>(nullptr),command, static_cast<SmartData<int32_t>*>(commandList[i].ptr.object));
-                  break;
-              }
+              //Serial.print("Running on object:\n");
+              reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);
 
               //if (commandList[i].object != NULL) {
               //only run object function if object is single and not array
-              if ( (commandList[i].types.data_type & 0x01 ) != TYPE2INFO_ARRAY ) {
+              #warning hard coding type size--bad
+              if  (commandList[i].size > 4 ) {
                 //#warning this is right
-                Serial.print("Running on non array object:\n");
+                //Serial.print("Running on non array object:\n");
                 #warning ToDo find report command for SmartData object
                 //(this->*commandList[i].function.f2)(*this,inputStream,commandList[i].ptr,commandList[i].command, commandList[i].object);
                 
