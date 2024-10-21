@@ -73,16 +73,32 @@ class qCommand {
     // Assign Variable function for booleans: pointer to direct data or DataObject class
     //void assignVariable(const char* command, uint8_t ptr_type, void* object); 
 
-    template <typename T>
-    void assignVariable(const char* command, T (&variable));
-
+    // Function for arrays
     template <typename T, std::size_t N>
     void assignVariable(const char* command, T (&variable)[N]);
- 
-    template <typename T>
-    void assignVariable(const char* command, T* variable);
 
+    // Function for pointers
+    template <typename T>
+    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    assignVariable(const char* command, T* variable);
     
+    // Function for SmartData objects
+    template <typename T>
+    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    assignVariable(const char* command, T* variable);
+
+    // Function for by reference
+    template <typename T>
+    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    assignVariable(const char* command, T& variable);
+    
+    // Function for SmartData by reference
+    template <typename T>
+    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    assignVariable(const char* command, T& variable);
+
+
+
     //template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
     //void assignVariable(const char* command, bool& variable);
 
@@ -250,6 +266,47 @@ void qCommand::assignVariable(const char* command, T (&variable)[N]) {
     addCommandInternal(command, types, variable, N*sizeof(T));
 }
 
+template <typename T>
+typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+qCommand::assignVariable(const char* command, T* variable) {
+  Types types = {type2int<T>::result, PTR_RAW_DATA};
+  addCommandInternal(command, types, variable,sizeof(T));
+}
+    
+    // Function for SmartData objects
+template <typename T>
+typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+  qCommand::assignVariable(const char* command, T* variable) {
+      Types types = {type2int<T>::result, PTR_SD_OBJECT};
+    addCommandInternal(command, types, variable,variable.size());
+    }
+
+    // Function for by reference
+    template <typename T>
+    typename std::enable_if<!std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    qCommand::assignVariable(const char* command, T& variable) {
+      Types types = {type2int<T>::result, PTR_RAW_DATA};
+      uint16_t size = sizeof(typename std::remove_reference<T>::type);
+      addCommandInternal(command, types, &variable,size);
+    }
+    
+    // Function for SmartData by reference
+    template <typename T>
+    typename std::enable_if<std::is_base_of<SmartData<typename std::remove_reference<T>::type>, T>::value>::type
+    qCommand::assignVariable(const char* command, T& variable) {
+      Types types = {type2int<T>::result, PTR_SD_OBJECT};
+      addCommandInternal(command, types, variable,variable.size());
+    }
+
+/*
+
+template <typename T>
+void qCommand::assignVariable(const char* command, SmartData<T> (&variable)) {    
+    Types types = {type2int<SmartData<T>>::result, PTR_SD_OBJECT};
+    addCommandInternal(command, types, &variable, sizeof(T));
+}
+
+
 
 template <typename T>
 void qCommand::assignVariable(const char* command, T (&variable)) {    
@@ -263,6 +320,6 @@ void qCommand::assignVariable(const char* command, T* variable) {
     addCommandInternal(command, types, variable, sizeof(T));
 }
 
-
+*/
 
 #endif //QCOMMAND_h
