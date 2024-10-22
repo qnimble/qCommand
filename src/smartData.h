@@ -57,12 +57,43 @@ enum UpdateState {
 
 template<typename T, typename Enable = void>
 struct TypeTraits {
-    static constexpr bool isArray = false;    
+    static constexpr bool isArray = false;
+    static constexpr bool isPointer = false;
+    static constexpr bool isReference = false;
+};
+/*
+template<typename T>
+struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>>  {
+    static constexpr bool isArray = true;
 };
 
 template<typename T>
+struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value>>  {
+    static constexpr bool isArray = true;
+};
+*/
+
+template<typename T>
 struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>>  {
-    static constexpr bool isArray = true;    
+    static constexpr bool isPointer = true;
+    static constexpr bool isReference = false;
+    static constexpr bool isArray = true;
+};
+
+// Specialization for reference types
+template<typename T>
+struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value && ! std::is_array<std::remove_reference_t<T>>::value>>  {
+    static constexpr bool isPointer = false;
+    static constexpr bool isReference = true;
+    static constexpr bool isArray = false;
+};
+
+// Specialization for references to arrays
+template<typename T>
+struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value && std::is_array<std::remove_reference_t<T>>::value>>  {
+    static constexpr bool isPointer = false;
+    static constexpr bool isReference = true;
+    static constexpr bool isArray = true;
 };
 
 
@@ -118,7 +149,7 @@ struct GetHelper;
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData: public Base {
 public:    
-    SmartData(DataType data);    
+    SmartData(DataType data){Serial.printf("!!!! isArray=%d\n", isArray);};    
     DataType get(void);
     //uint16_t size(void);
 };
@@ -140,8 +171,8 @@ class AllSmartDataPtr: public Base {
 //For arrays!
 template <class DataType>
 class SmartData<DataType, true>: public AllSmartDataPtr {    
-  public:    
-    SmartData(DataType data, size_t size): value(data), totalElements(size), id(0), stream(0) {};    
+  public:        
+    SmartData(DataType data, size_t size): value(data), totalElements(size), id(0), stream(0) {Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n", data[0],size,totalElements);};    
     using baseType = typename std::remove_pointer<DataType>::type;
     baseType get(void);
     void set(DataType);
@@ -159,7 +190,7 @@ class SmartData<DataType, true>: public AllSmartDataPtr {
     };
     
     uint16_t size(void) {
-      return totalElements * sizeof(DataType);
+      return totalElements * sizeof(typename std::remove_pointer<DataType>::type);
     }
 
     size_t getCurrentElement(void) {
@@ -192,7 +223,7 @@ private:
 template <class DataType>
 class SmartData<DataType, false>: public Base {    
   public:    
-    SmartData(DataType data): value(data), id(0), stream(0) {};    
+    SmartData(DataType data): value(data), id(0), stream(0) {Serial.printf("!! Non Arrays\n");};    
     DataType get(void);
     void set(DataType);
     void please(void);
@@ -277,9 +308,11 @@ struct type2int
 template<> struct type2int<char> { enum { result = 4 }; };
 template<> struct type2int<SmartData<String>> { enum { result = 4 }; };
 template<> struct type2int<SmartData<bool>> { enum { result = 6 }; };
+template<> struct type2int<SmartData<bool*>> { enum { result = 6 }; };
 template<> struct type2int<SmartData<uint8_t>> { enum { result = 6}; };
 template<> struct type2int<uint8_t> { enum { result = 6}; };
 template<> struct type2int<SmartData<uint16_t>> { enum { result = 8 }; };
+template<> struct type2int<SmartData<uint16_t*>> { enum { result = 8 }; };
 template<> struct type2int<uint16_t> { enum { result = 8 }; };
 template<> struct type2int<SmartData<uint>> { enum { result = 10 }; };
 template<> struct type2int<uint> { enum { result = 10 }; };
@@ -294,7 +327,9 @@ template<> struct type2int<int> { enum { result = 9 }; };
 template<> struct type2int<SmartData<long>> { enum { result = 9 }; };
 template<> struct type2int<long> { enum { result = 9 }; };
 template<> struct type2int<SmartData<float>> { enum { result = 11 }; };
+
 template<> struct type2int<float> { enum { result = 11 }; };
+
 template<> struct type2int<SmartData<double>> { enum { result = 12 }; };
 template<> struct type2int<double> { enum { result = 12 }; };
 
