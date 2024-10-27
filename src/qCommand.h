@@ -13,7 +13,19 @@
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 25 //8
 
-void serial_write( uint8_t *data, uint16_t len );
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void serial3_write( uint8_t *data, uint16_t len );
+void serial2_write( uint8_t *data, uint16_t len );
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
 // #define SERIALCOMMAND_DEBUG
@@ -202,6 +214,7 @@ class qCommand {
 
   private:
       Stream* binaryStream;
+      Stream* debugStream;
       cw_pack_context pc;
       char readBinaryInt(void);
       char readBinaryInt2(void);
@@ -283,7 +296,7 @@ typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::val
       Serial.printf("Adding %s for SD pointer\n", command);
       typename std::decay<T>::type *sd = static_cast<typename std::decay<T>::type*> (variable);
       uint16_t size = sd->size();
-    addCommandInternal(command, types, variable,size);
+    addCommandInternal(command, types, &(sd->value),size);
     }
 
     // Function for by reference
@@ -302,7 +315,7 @@ typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::val
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
       Serial.printf("Adding %s for reference SD Object\n", command);
       uint16_t size = variable.size();
-      addCommandInternal(command, types, &variable,size);
+      addCommandInternal(command, types, &(variable.value),size);
     }
 
 /*

@@ -11,7 +11,8 @@
 #include "electricui.h"
 #include "eui_binary_transport.h"
 
-static eui_interface_t serial_comms = EUI_INTERFACE( &serial_write ); 
+static eui_interface_t serial_comms = EUI_INTERFACE( &serial2_write ); 
+//static eui_interface_t serial_comms2 = EUI_INTERFACE( &serial2_write ); 
 
 
 /**
@@ -20,7 +21,8 @@ static eui_interface_t serial_comms = EUI_INTERFACE( &serial_write );
 qCommand::qCommand(bool caseSensitive) :
   commandList(NULL),
   commandCount(0),
-  binaryStream(&Serial2), //should be Serial2  
+  binaryStream(&Serial3), //should be Serial2
+  debugStream(&Serial),  
   defaultHandler(NULL),
   term('\n'),           // default terminator for commands, newline character
   caseSensitive(caseSensitive),
@@ -41,13 +43,20 @@ qCommand::qCommand(bool caseSensitive) :
   uint32_t uuid = 0x13572468;  
   eui_setup_identifier((char*) uuid, sizeof(uuid));  // set EUI unique ID based on hardware UUID
 #endif
-eui_setup_interfaces(&serial_comms,1);
+
+  if (binaryStream == &Serial3) {
+    serial_comms.output_cb = &serial3_write; 
+  } else {    
+    serial_comms.output_cb = &serial2_write;
+  }
+  eui_setup_interfaces(&serial_comms,1);
 }
+
 
 #warning Debuggin only, remove when done
 void qCommand::printTable(void) {
   for (uint8_t i=0; i<commandCount; i++) {
-    Serial.printf("Command %u: %s (type=%u, size=%u, ptr_type=%u)\n",i,commandList[i].command, commandList[i].types.data_type, commandList[i].size, commandList[i].types.ptr_type);
+    debugStream->printf("Command %u: %s (type=%u, size=%u, ptr_type=%u)\n",i,commandList[i].command, commandList[i].types.data_type, commandList[i].size, commandList[i].types.ptr_type);
   }
 }
 
@@ -70,7 +79,19 @@ void qCommand::readBinary(void) {
 }
 
 
-void serial_write( uint8_t *data, uint16_t len )
+void serial3_write( uint8_t *data, uint16_t len )
+{
+  Serial3.write( data, len ); //output on the main serial port
+  
+  Serial.printf("\nSending %u bytes: 0x  ",len);
+  len = min(len,16);
+  for (uint8_t i = 0; i < len; i++) {
+    Serial.printf("%02x",data[i]);
+  }
+  Serial.println();
+}
+
+void serial2_write( uint8_t *data, uint16_t len )
 {
   Serial2.write( data, len ); //output on the main serial port
   
@@ -80,9 +101,10 @@ void serial_write( uint8_t *data, uint16_t len )
     Serial.printf("%02x",data[i]);
   }
   Serial.println();
-
-  
 }
+
+
+
 
 extern "C" {
   void desc(const char* msg, uint16_t value) ;
@@ -107,22 +129,23 @@ void descs(const char* msg, const char* info) {
 char qCommand::readBinaryInt2(void){  
   PT_FUNC_START(pt);  
   
-  eui_interface_t *p_link = &serial_comms;  
+  eui_interface_t *p_link = &serial_comms;
+  
   
   static int dataReady;
   static uint8_t count = 0;  
   
   dataReady = binaryStream->available();  
   if (dataReady != 0) {
-    Serial.printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
+    debugStream->printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
   } else {
     PT_RESTART(pt);
     return PT_YIELDED;
   }
   for (count = 0; count < dataReady; count++) {
-    uint8_t inbound_byte = binaryStream->read();
+    uint8_t inbound_byte = binaryStream->read();    
     if (inbound_byte == 0) {
-      Serial.println("");
+      debugStream->println("");
     /* if ( count > 0) {
       Serial.printf("Received Packet: ");
       for (uint8_t i=0; i < count; i++) {
@@ -133,7 +156,7 @@ char qCommand::readBinaryInt2(void){
     }      */
     } else {
       //store[count++] = inbound_byte;
-      Serial.printf("%02x", inbound_byte);
+      debugStream->printf("%02x", inbound_byte);
     }
     
     //eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
@@ -174,8 +197,8 @@ void qCommand::sendBinaryCommands(void) {
   cw_pack_unsigned(&pc,0); // set ID = 0 for internal
   cw_pack_unsigned(&pc,static_cast<uint8_t>(Commands::ListCommands));
   cw_pack_array_size(&pc,elements);
-  Serial.printf("Start Binary Command send with %u elements (error=%d)\n",elements,pc.return_code);
-  Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
+  debugStream->printf("Start Binary Command send with %u elements (error=%d)\n",elements,pc.return_code);
+  debugStream->printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n", pc.start, pc.current, pc.end  );
   for (uint8_t i=0; i < commandCount; i++) {    
     if ( commandList[i].ptr.object != NULL) {               
       cw_pack_array_size(&pc,3);
@@ -192,7 +215,7 @@ void qCommand::sendBinaryCommands(void) {
       //Serial.printf("So far, binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
     }
   }
-  Serial.printf("Send binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
+  debugStream->printf("Send binary data of size %u (error=%d)\n",pc.current - pc.start, pc.return_code );
   binaryStream->write(pc.start,pc.current - pc.start);  
   pc.current = pc.start;
   

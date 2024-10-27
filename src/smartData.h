@@ -172,7 +172,12 @@ class AllSmartDataPtr: public Base {
 template <class DataType>
 class SmartData<DataType, true>: public AllSmartDataPtr {    
   public:        
+    template <typename U = DataType, typename std::enable_if<!std::is_array<U>::value, int>::type = 0>
     SmartData(DataType data, size_t size): value(data), totalElements(size), id(0), stream(0) {Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n", data[0],size,totalElements);};    
+    
+    template <typename U = DataType, typename std::enable_if<std::is_array<U>::value, int>::type = 0>
+    SmartData(DataType& data): value(data), totalElements(arraySize(data)), id(0), stream(0) {Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n", sizeof(data),arraySize(data),totalElements);};    
+    
     using baseType = typename std::remove_pointer<DataType>::type;
     baseType get(void);
     void set(DataType);
@@ -221,6 +226,7 @@ private:
 
 //For non-arrays
 template <class DataType>
+//class SmartData<DataType, typename std::enable_if<!std::is_array<DataType>::value>::type>: public Base {
 class SmartData<DataType, false>: public Base {    
   public:    
     SmartData(DataType data): value(data), id(0), stream(0) {Serial.printf("!! Non Arrays\n");};    
