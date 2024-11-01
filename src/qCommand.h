@@ -208,11 +208,12 @@ class qCommand {
         } ptr;
       };                                    // Data structure to hold Command/Handler function key-value pairs
 
-    StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
-    uint8_t commandCount;
+      StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
+      uint8_t commandCount;
     
 
   private:
+      
       Stream* binaryStream;
       Stream* debugStream;
       cw_pack_context pc;
@@ -293,10 +294,11 @@ template <typename T>
 typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
   qCommand::assignVariable(const char* command, T* variable) {
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
-      Serial.printf("Adding %s for SD pointer\n", command);
+      Serial.printf("Adding %s for SD pointer at 0x%08x\n", command,variable);
       typename std::decay<T>::type *sd = static_cast<typename std::decay<T>::type*> (variable);
       uint16_t size = sd->size();
-    addCommandInternal(command, types, &(sd->value),size);
+      //addCommandInternal(command, types, &(sd->value),size);
+      addCommandInternal(command, types, sd,size);
     }
 
     // Function for by reference
@@ -315,7 +317,7 @@ typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::val
       Types types = {type2int<T>::result, PTR_SD_OBJECT};
       Serial.printf("Adding %s for reference SD Object\n", command);
       uint16_t size = variable.size();
-      addCommandInternal(command, types, &(variable.value),size);
+      addCommandInternal(command, types, &(variable),size);
     }
 
 /*

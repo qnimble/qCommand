@@ -72,6 +72,7 @@ void cw_pack(cw_pack_context* cw, argFloat value) {
 
 template <class SmartDataGeneric>
 SmartDataGeneric SmartData<SmartDataGeneric,false>::get(void) {
+    Serial.printf("Get called on SmartData (not array) with %u and address 0x%08x\n",value,this);
     setDebugWord(0x12344488);
     return value;
 }
@@ -79,6 +80,7 @@ SmartDataGeneric SmartData<SmartDataGeneric,false>::get(void) {
 template <class DataType>
 typename SmartData<DataType,true>::baseType SmartData<DataType,true>::get(void) {
   setDebugWord(0x4234448c);
+  Serial.printf("Get called on SmartData (array)\n");
   return value[currentElement];        
 }
 
