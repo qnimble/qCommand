@@ -79,30 +79,156 @@ void qCommand::readBinary(void)
   // readBinaryInt();
 }
 
+#include <cstddef> // For offsetof
+
+
+/*
+void* dataPtr(const void* SD_ptr, uint8_t type) {
+  qCommand::Types types;
+  types.data_type = type & 0x0F;
+  types.ptr_type = (type >> 4) & 0x0F;
+  if (types.ptr_type == qCommand::PTR_SD_OBJECT) {
+    switch (types.data_type) {
+      case 4:
+        //SmartData<String> *ptr4 = (SmartData<String>*) SD_ptr;
+        //return &(ptr4->value);
+        break;
+      case 6: { //uint8_t
+        // Compute the offset of 'value' within 'SmartData<uint8_t>'
+        const size_t valueOffset = offsetof(SmartData<uint8_t>, value);
+        return SD_ptr - valueOffset;
+      }
+      default:
+        return NULL;
+    }
+  } else {
+    return SD_ptr;
+  }
+}
+*/
+
+uint16_t sizeOfType(qCommand::Types type) {
+  switch (type.data_type) {
+    case 3: //byte
+    case 4: // string
+    case 5: //int8
+    case 6: //uint8
+      return 1;
+    case 7: //int16
+    case 8: //uint16
+      return 2;
+    case 9: //int32
+    case 10: //uint32
+    case 11: //float
+      return 4;
+    case 12: //double
+      return 8;
+    default:
+      return 0;
+  }
+}
+
+size_t qCommand::getOffset(Types type, uint16_t size) {
+  uintptr_t stop_ptr = 0;
+
+  if ( size == sizeOfType(type) ) {
+    // Not an array
+    switch(type.data_type) {
+      case 4: {
+        SmartData<String> *ptrS = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptrS->value));
+        }
+        break;
+      case 5: {
+        SmartData<int8_t> *ptri8 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptri8->value));
+        }
+        break;
+      case 6: {
+        SmartData<uint8_t> *ptru8 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptru8->value));
+        }
+        break;
+      case 7: {
+        SmartData<int16_t> *ptri16 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptri16->value));
+        }
+        break;
+      case 8: {
+        SmartData<uint16_t> *ptru16 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptru16->value));
+        }
+        break;
+      case 9: {
+        SmartData<int32_t> *ptri32 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptri32->value));
+        }
+        break;
+      case 10: {
+        SmartData<uint32_t> *ptru32 = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptru32->value));
+        }
+        break;
+      case 11: {
+        SmartData<float> *ptrf = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptrf->value));
+        }
+        break;
+
+      case 12: {
+        SmartData<double> *ptrd = NULL;
+        stop_ptr = reinterpret_cast<uintptr_t>(&(ptrd->value));
+        }
+        break;
+      default:
+        stop_ptr = 0;
+    }
+    return stop_ptr;
+  } else {
+    return -1;
+  }
+}
+
+
+void* data_ptr_from_object(void* ptr, uint8_t raw_type, uint16_t size) {
+  qCommand::Types type;
+  type.data_type =  raw_type & 0x0F;
+  type.ptr_type = static_cast<qCommand::PtrType>((raw_type >> 4) & 0x0F);
+  size_t offset = qCommand::getOffset(type, size);
+  return static_cast<void*>(static_cast<uint8_t*>(ptr) + offset);
+}
+
+void ack_object(void* ptr) {
+  //Serial.printf("Acking ptr at 0x%08x\n",ptr);
+  Base *ptrBase = static_cast<Base *>(ptr);
+  ptrBase->resetUpdateState();
+
+}
+
 void serial3_write(uint8_t *data, uint16_t len)
 {
   Serial3.write(data, len); // output on the main serial port
   // Serial3.println("Was there data???123456");
-  Serial.printf("\nSending (3) %u bytes: 0x  ", len);
+  //Serial.printf("\nSending (3) %u bytes: 0x  ", len);
   len = min(len, 16);
   for (uint8_t i = 0; i < len; i++)
   {
-    Serial.printf("%02x", data[i]);
+    //Serial.printf("%02x", data[i]);
   }
-  Serial.println();
+  //Serial.println();
 }
 
 void serial2_write(uint8_t *data, uint16_t len)
 {
   Serial2.write(data, len); // output on the main serial port
 
-  Serial.printf("\nSending (2) %u bytes: 0x  ", len);
+  //Serial.printf("\nSending (2) %u bytes: 0x  ", len);
   len = min(len, 16);
   for (uint8_t i = 0; i < len; i++)
   {
-    Serial.printf("%02x", data[i]);
+    //Serial.printf("%02x", data[i]);
   }
-  Serial.println();
+  //Serial.println();
 }
 
 extern "C"
@@ -114,15 +240,15 @@ extern "C"
 
 void desc(const char *msg, uint16_t value)
 {
-  Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
+  //Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
 }
 void descl(const char *msg, uint32_t value)
 {
-  // Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
+   //Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
 }
 void descs(const char *msg, const char *info)
 {
-  // Serial.printf("%s: %s\n", msg, info);
+   //Serial.printf("%s: %s\n", msg, info);
 }
 
 char qCommand::readBinaryInt2(void)
@@ -137,13 +263,13 @@ char qCommand::readBinaryInt2(void)
   dataReady = binaryStream->available();
   if (dataReady != 0)
   {
-    debugStream->printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
+    //debugStream->printf("Got %u bytes available... (next is 0x%02x)\n", dataReady, binaryStream->peek());
     for (count = 0; count < dataReady; count++)
     {
       uint8_t inbound_byte = binaryStream->read();
       if (inbound_byte == 0)
       {
-        debugStream->println("");
+        //debugStream->println("");
         /* if ( count > 0) {
           Serial.printf("Received Packet: ");
           for (uint8_t i=0; i < count; i++) {
@@ -156,7 +282,7 @@ char qCommand::readBinaryInt2(void)
       else
       {
         // store[count++] = inbound_byte;
-        debugStream->printf("%02x", inbound_byte);
+        //debugStream->printf("%02x", inbound_byte);
       }
 
       // eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
@@ -173,8 +299,8 @@ char qCommand::readBinaryInt2(void)
       Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
       if (ptr->updates_needed == STATE_NEED_TOSEND)
       {
-        debugStream->printf("Sending tracked variable %u\n", i);
-        send_tracked_variable(i);
+        //debugStream->printf("Sending tracked variable %u\n", i);
+        send_update_on_tracked_variable(i);
         ptr->updates_needed = STATE_WAIT_ON_ACK;
       }
     }
@@ -304,8 +430,9 @@ void qCommand::addCommandInternal(const char *command, Types types, void *object
   {
     // have SmartData object pointer
     // commandList[commandCount].types.ptr_type = PTR_SD_OBJECT;
+    //Base *ptr = static_cast<Base *>(object);
     commandList[commandCount].ptr.object = object;
-    Base *ptr = static_cast<Base *>(object);
+
 #warning hardcoding array size to 7, BAD!!
 // commandList[commandCount].size = 7;
 // commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand& streamCommandParser, Stream& stream, void* ptr, const char* command, void* object)) function;

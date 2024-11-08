@@ -207,8 +207,10 @@ class SmartData<DataType, true>: public AllSmartDataPtr {
       dataRequested = true;
     };
 
-private:
+  protected:
     DataType value;
+
+  private:
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
 
@@ -244,8 +246,10 @@ class SmartData<DataType, false>: public Base {
       return sizeof(DataType);
     }
 
-private:
+  protected:
     DataType value;
+
+  private:
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
     cw_pack_context* pc;
     

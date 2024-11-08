@@ -21,27 +21,9 @@ extern "C" {
 void serial3_write( uint8_t *data, uint16_t len );
 void serial2_write( uint8_t *data, uint16_t len );
 
-
 #ifdef __cplusplus
 }
 #endif
-
-
-// Uncomment the next line to run the library in debug mode (verbose messages)
-// #define SERIALCOMMAND_DEBUG
-eui_message_t* find_message_object( const char * search_id, uint8_t is_internal );
-uint8_t handle_packet_action(   eui_interface_t *valid_packet,
-                        eui_header_t    *header,
-                        eui_message_t   *p_msg_obj );
-
-uint8_t handle_packet_ack(  eui_interface_t *valid_packet,
-                   eui_header_t    *header,
-                    eui_message_t   *p_msg_obj );
-
-uint8_t handle_packet_query(    eui_interface_t *valid_packet,
-                       eui_header_t    *header,
-                        eui_message_t   *p_msg_obj );
-
 
 class qCommand {
   public:
@@ -84,7 +66,7 @@ class qCommand {
     
     // Assign Variable function for booleans: pointer to direct data or DataObject class
     //void assignVariable(const char* command, uint8_t ptr_type, void* object); 
-
+    static size_t getOffset(Types type, uint16_t size);
     // Function for arrays
     template <typename T, std::size_t N>
     void assignVariable(const char* command, T (&variable)[N]);
@@ -319,6 +301,9 @@ typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::val
       uint16_t size = variable.size();
       addCommandInternal(command, types, &(variable),size);
     }
+
+uint16_t sizeOfType(qCommand::Types type);
+
 
 /*
 
