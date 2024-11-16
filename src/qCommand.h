@@ -41,10 +41,19 @@ class qCommand {
     PTR_RAW_DATA = 0, //default for data
     PTR_QC_CALLBACK = 4,
     PTR_SD_OBJECT = 6,  
-    PTR_NULL = 15, //maybe this should never happen  
+    PTR_NULL = 7, //maybe this should never happen  
   };
 
-  struct Types {
+typedef union {
+  uint8_t raw;
+  struct {
+    uint8_t data : 4; //4 bits to match eui_header type
+    PtrType ptr : 3; //4 bits to set what ptr type is used}
+    bool read_only : 1; //1 bit to set if read only
+  } sub_types;
+} Types;
+
+  struct TypesOld {
     uint8_t data_type : 4; //4 bits to match eui_header type
     PtrType ptr_type : 4; //4 bits to set what ptr type is used}
   } ;
@@ -74,39 +83,43 @@ class qCommand {
     // Function for pointers
     template <typename T>
     typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char* command, T* variable);
+    assignVariable(const char* command, T* variable, bool read_only = false);
     
     // Function for SmartData objects
     template <typename T>
-    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char* command, T* variable);
+    typename std::enable_if<std::is_base_of<Base, T>::value>::type
+    //typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
+    assignVariable(const char* command, T* variable, bool read_only = false);
 
     // Function for by reference
     template <typename T>
     typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char* command, T& variable);
+    assignVariable(const char* command, T& variable, bool read_only = false);
     
     // Function for SmartData by reference
     template <typename T>
     typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char* command, T& variable);
-
-
+    assignVariable(const char* command, T& variable, bool read_only = false);
 
     //template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
-    //void assignVariable(const char* command, bool& variable);
+    
+    //needed for non-template definitions
+    void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
 
     //template <typename DataType, typename std::enable_if<std::is_same<DataType, bool>::value, int>::type = 0>
     //void assignVariable(const char* command, bool& variable);
 
 
-    void assignVariable(const char* command, SmartData<bool>* object);
+
+
+
+    //void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
 
 //    void assignVariable(const char* command, String* variable);
-    void assignVariable(const char* command, SmartData<String>* object) ;
+    //void assignVariable(const char* command, SmartData<String>* object, bool read_only = false);
     
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
-    void assignVariable(const char* command, SmartData<DataType>* object);
+    void assignVariable(const char* command, SmartData<DataType>* object, bool read_only = false);
 
     //template <typename T>
     //void reportData(qCommand& qC, Stream& inputStream, const char* command, SmartData<T>* baseObject);    
@@ -255,50 +268,69 @@ class qCommand {
       byte bufPos;                        // Current position in the buffer
       bool binaryConnected;
 };
-
+/*
 template <typename T, std::size_t N>
 void qCommand::assignVariable(const char* command, T (&variable)[N]) {    
     Types types = {type2int<SmartData<T>>::result, PTR_RAW_DATA};
     Serial.printf("Adding %s for T, N array\n", command);
     addCommandInternal(command, types, variable, N*sizeof(T));
 }
+*/
 
 template <typename T>
 typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-qCommand::assignVariable(const char* command, T* variable) {
-  Types types = {type2int<T>::result, PTR_RAW_DATA};
-  Serial.printf("Adding %s for raw pointer\n", command);
+qCommand::assignVariable(const char* command, T* variable, bool read_only) {
+  Types types;
+  types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
+  if (read_only)  {
+    types.sub_types.read_only = true;
+  }
+  Serial.printf("Adding %s for raw pointer (types:0x%02x)\n", command,types);
   addCommandInternal(command, types, variable,sizeof(T));
 }
     
     // Function for SmartData objects
 template <typename T>
-typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-  qCommand::assignVariable(const char* command, T* variable) {
-      Types types = {type2int<T>::result, PTR_SD_OBJECT};
-      Serial.printf("Adding %s for SD pointer at 0x%08x\n", command,variable);
+typename std::enable_if<std::is_base_of<Base, T>::value>::type
+  qCommand::assignVariable(const char* command, T* variable, bool read_only) {
+      Types types;
+      types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
+      if (read_only)  {
+        types.sub_types.read_only = true;
+      }
       typename std::decay<T>::type *sd = static_cast<typename std::decay<T>::type*> (variable);
       uint16_t size = sd->size();
-      //addCommandInternal(command, types, &(sd->value),size);
-      addCommandInternal(command, types, sd,size);
+      Serial.printf("Adding %s for smartData (types:0x%02x)\n", command,types);
+      addCommandInternal(command, types, sd,size);      
     }
 
+ 
+    
     // Function for by reference
     template <typename T>
     typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    qCommand::assignVariable(const char* command, T& variable) {
+    qCommand::assignVariable(const char* command, T& variable, bool read_only) {
       Types types = {type2int<T>::result, PTR_RAW_DATA};
+      if (read_only)  {
+        types.sub_types.read_only = true;
+      }
       uint16_t size = sizeof(typename std::remove_reference<T>::type);
-      Serial.printf("Adding %s for reference data\n", command);
+      Serial.printf("Adding %s for reference data (types: 0x%02x\n", command, types);
       addCommandInternal(command, types, &variable,size);
     }
     
     // Function for SmartData by reference
     template <typename T>
-    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type    qCommand::assignVariable(const char* command, T& variable) {
-      Types types = {type2int<T>::result, PTR_SD_OBJECT};
-      Serial.printf("Adding %s for reference SD Object\n", command);
+    typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type    
+    qCommand::assignVariable(const char* command, T& variable, bool read_only) {
+      Types types;
+      types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
+      if (read_only)  {
+        types.sub_types.read_only = true;
+      }
+      //Serial.printf("Adding %s for reference SD Object\n", command);
       uint16_t size = variable.size();
+      Serial.printf("Adding %s for SD reference data (types: 0x%02x)\n", command, types);
       addCommandInternal(command, types, &(variable),size);
     }
 

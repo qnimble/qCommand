@@ -96,6 +96,29 @@ struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value && std::is_arr
     static constexpr bool isArray = true;
 };
 
+template<>
+struct TypeTraits<String> {
+    static constexpr bool isPointer = false;
+    static constexpr bool isReference = false;
+    static constexpr bool isArray = false;
+};
+
+// Specialization for const char*
+template<>
+struct TypeTraits<const char*> {
+    static constexpr bool isPointer = true;
+    static constexpr bool isReference = false;
+    static constexpr bool isArray = false;
+};
+
+// Specialization for char*
+template<>
+struct TypeTraits<char*> {
+    static constexpr bool isPointer = true;
+    static constexpr bool isReference = false;
+    static constexpr bool isArray = false;
+};
+
 
 static_assert(!TypeTraits<int>::isArray, "int should not be considered an array");
 static_assert(TypeTraits<float*>::isArray, "float* should be considered an array");
@@ -149,7 +172,7 @@ struct GetHelper;
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData: public Base {
 public:    
-    SmartData(DataType data){Serial.printf("!!!! isArray=%d\n", isArray);};    
+    SmartData(DataType data);    
     DataType get(void);
     //uint16_t size(void);
 };
@@ -231,7 +254,7 @@ template <class DataType>
 //class SmartData<DataType, typename std::enable_if<!std::is_array<DataType>::value>::type>: public Base {
 class SmartData<DataType, false>: public Base {    
   public:    
-    SmartData(DataType data): value(data), id(0), stream(0) {Serial.printf("!! Non Arrays\n");};    
+    SmartData(DataType data): value(data), id(0), stream(0) {};    
     DataType get(void);
     void set(DataType);
     void please(void);
