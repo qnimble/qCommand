@@ -190,11 +190,40 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
 }
 
 
-void* data_ptr_from_object(void* ptr, uint8_t raw_type, uint16_t size) {
+extern "C"
+{
+  void desc(const char *msg, uint16_t value);
+  void descs(const char *msg, const char *info);
+  void descl(const char *msg, uint32_t value);
+}
+
+void desc(const char *msg, uint16_t value)
+{
+  Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
+}
+void descl(const char *msg, uint32_t value)
+{
+   Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
+}
+void descs(const char *msg, const char *info)
+{
+   Serial.printf("%s: %s\n", msg, info);
+}
+
+
+const void* ptr_settings_from_object(eui_message_t *p_msg_obj) {
   qCommand::Types type;
-  type.raw = raw_type;
-  size_t offset = qCommand::getOffset(type, size);
-  return static_cast<void*>(static_cast<uint8_t*>(ptr) + offset);
+  type.raw = p_msg_obj->type;
+  if (type.sub_types.data == 4 )  {
+    //String pointer
+    SmartData<String> *SD_String = static_cast<SmartData<String>*>(p_msg_obj->ptr.data);
+    p_msg_obj->size = SD_String->get().length()+1;
+    return static_cast<const void*>(SD_String->get().c_str());
+  } else {
+    size_t offset = qCommand::getOffset(type, p_msg_obj->size);
+    return static_cast<const void*>(static_cast<uint8_t*>(p_msg_obj->ptr.data) + offset);
+  }
+
 }
 
 void ack_object(void* ptr) {
@@ -228,26 +257,6 @@ void serial2_write(uint8_t *data, uint16_t len)
     //Serial.printf("%02x", data[i]);
   }
   //Serial.println();
-}
-
-extern "C"
-{
-  void desc(const char *msg, uint16_t value);
-  void descs(const char *msg, const char *info);
-  void descl(const char *msg, uint32_t value);
-}
-
-void desc(const char *msg, uint16_t value)
-{
-  Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
-}
-void descl(const char *msg, uint32_t value)
-{
-   Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
-}
-void descs(const char *msg, const char *info)
-{
-   Serial.printf("%s: %s\n", msg, info);
 }
 
 char qCommand::readBinaryInt2(void)

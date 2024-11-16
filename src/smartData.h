@@ -255,7 +255,26 @@ template <class DataType>
 class SmartData<DataType, false>: public Base {    
   public:    
     SmartData(DataType data): value(data), id(0), stream(0) {};    
-    DataType get(void);
+
+    // For fundamental types like int, float, bool
+    template<typename T = DataType>
+    typename std::enable_if<
+        std::is_fundamental<typename std::remove_pointer<T>::type>::value,
+        T>::type
+    get() const {
+        return value;
+    }
+
+    // For complex types like String
+    template<typename T = DataType>
+    typename std::enable_if<
+        !std::is_fundamental<typename std::remove_pointer<T>::type>::value,
+        T&>::type
+    get() {
+        return value;
+    }
+    
+
     void set(DataType);
     void please(void);
     void sendValue(void);
@@ -268,9 +287,10 @@ class SmartData<DataType, false>: public Base {
     uint16_t size(void) {
       return sizeof(DataType);
     }
-
+  DataType value;
+#warning move back value to protected after testing
   protected:
-    DataType value;
+    //DataType value;
 
   private:
     void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
