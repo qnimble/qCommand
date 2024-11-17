@@ -20,6 +20,8 @@ extern "C" {
 
 void serial3_write( uint8_t *data, uint16_t len );
 void serial2_write( uint8_t *data, uint16_t len );
+const void* ptr_settings_from_object(eui_message_t *p_msg_obj);
+
 
 #ifdef __cplusplus
 }
@@ -103,8 +105,8 @@ typedef union {
 
     //template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
     
-    //needed for non-template definitions
-    void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
+    //needed for non-template instantiation
+    //void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
 
     //template <typename DataType, typename std::enable_if<std::is_same<DataType, bool>::value, int>::type = 0>
     //void assignVariable(const char* command, bool& variable);
@@ -112,8 +114,8 @@ typedef union {
 
 
 
-
-    //void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
+    void assignVariable(const char* command, bool& variable, bool read_only = false);
+    void assignVariable(const char* command, SmartData<bool>* object, bool read_only = false);
 
 //    void assignVariable(const char* command, String* variable);
     //void assignVariable(const char* command, SmartData<String>* object, bool read_only = false);
@@ -310,7 +312,8 @@ typename std::enable_if<std::is_base_of<Base, T>::value>::type
     template <typename T>
     typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
     qCommand::assignVariable(const char* command, T& variable, bool read_only) {
-      Types types = {type2int<T>::result, PTR_RAW_DATA};
+      Types types;
+      types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
       if (read_only)  {
         types.sub_types.read_only = true;
       }

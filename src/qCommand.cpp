@@ -579,16 +579,22 @@ void qCommand::assignVariable(const char* command, SmartData<String>* object) {
 /*
 //Assign variable to command list for booleans. Takes pointer to either data or DataObject.
 template <typename DataType, typename std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value && std::is_array<DataType>::value, int>::type = 0>
-void qCommand::assignVariable(const char* command, bool& variable) {
+void qCommand::assignVariable(const char* command, bool& variable, bool read_only) {
   uint16_t size = arraySize(variable);
   Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};
+  if (read_only) {
+    types.read_only = true;
+  }
   //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>) {
   addCommandInternal(command,types, variable, size);
 }
 template <typename DataType, typename std::enable_if<std::is_same<DataType, bool>::value, int>::type = 0>
-void qCommand::assignVariable(const char* command, bool& variable) {
+void qCommand::assignVariable(const char* command, bool& variable, bool read_only) {
   uint16_t size = sizeof(DataType);
   Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};
+  if (read_only) {
+    types.read_only = true;
+  }
   //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>) {
   addCommandInternal(command,types, variable, size);
 }
