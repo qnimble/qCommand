@@ -122,11 +122,8 @@ typedef union {
     
     template <typename DataType, typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
     void assignVariable(const char* command, SmartData<DataType>* object, bool read_only = false);
-
     //template <typename T>
     //void reportData(qCommand& qC, Stream& inputStream, const char* command, SmartData<T>* baseObject);    
-    //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
-    void reportData(qCommand& qC, Stream& inputStream, const char* command, Types types, void* ptr);
     //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
     
 /*
@@ -207,7 +204,9 @@ typedef union {
 
       StreamCommandParserCallback *commandList;   // Actual definition for command/handler array
       uint8_t commandCount;
-    
+
+    //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+    void reportData(qCommand &qC, Stream &inputStream, const char *command, Types types, void *ptr, StreamCommandParserCallback* commandList = NULL);
 
   private:
       
@@ -233,7 +232,8 @@ typedef union {
 
       */
       //void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
-      void reportString(qCommand& qC, Stream& S, const char* command, uint8_t ptr_type,void* ptr);
+      //void reportString(qCommand& qC, Stream& S, const char* command, uint8_t ptr_type,void* ptr);
+      void reportString(qCommand &qC, Stream &S, const char *command, uint8_t ptr_type, void *ptr, StreamCommandParserCallback* CommandList);
       void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
@@ -248,7 +248,8 @@ typedef union {
       template <class argFloating>
       void reportFloat(qCommand& qC, Stream& S, argFloating* ptr, const char* command, SmartData<argFloating>* object) ;
           
-      void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+      //void reportData(qCommand& qC, Stream& inputStream, const char* command, Base* baseObject);
+      //void reportData(qCommand &qC, Stream &inputStream, const char *command, Types types, void *ptr, StreamCommandParserCallback* commandList = NULL);
       void invalidAddress(qCommand& qC, Stream& S, void* ptr, const char* command, void* object) ;
 
       

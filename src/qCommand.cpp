@@ -218,6 +218,7 @@ const void* ptr_settings_from_object(eui_message_t *p_msg_obj) {
     //String pointer
     SmartData<String> *SD_String = static_cast<SmartData<String>*>(p_msg_obj->ptr.data);
     p_msg_obj->size = SD_String->get().length()+1;
+    //Serial.printf("Get Smart String: length set to %u\n",p_msg_obj->size);
     return static_cast<const void*>(SD_String->get().c_str());
   } else {
     size_t offset = qCommand::getOffset(type, p_msg_obj->size);
@@ -743,7 +744,7 @@ bool qCommand::str2Bool(const char *string)
   return result;
 }
 
-void qCommand::reportString(qCommand &qC, Stream &S, const char *command, uint8_t ptr_type, void *ptr)
+void qCommand::reportString(qCommand &qC, Stream &S, const char *command, uint8_t ptr_type, void *ptr, StreamCommandParserCallback* CommandList)
 {
   if (ptr_type == PTR_SD_OBJECT)
   {
@@ -751,6 +752,10 @@ void qCommand::reportString(qCommand &qC, Stream &S, const char *command, uint8_
     if (qC.next() != NULL)
     {
       object->set(qC.current());
+      if ( CommandList != nullptr) {
+        CommandList->size = object->value.length();
+      }
+
     }
     S.printf("%s is %s\n", command, object->get().c_str());
   }
@@ -760,6 +765,9 @@ void qCommand::reportString(qCommand &qC, Stream &S, const char *command, uint8_
     if (qC.next() != NULL)
     {
       *object = qC.current();
+      if ( CommandList != nullptr) {
+        CommandList->size = object->length();
+      }
     }
     S.printf("%s is %s\n", command, object->c_str());
   }
@@ -978,13 +986,13 @@ void qCommand::setDefaultHandler(void (*function)(const char *, qCommand &stream
   defaultHandler = function;
 }
 
-void qCommand::reportData(qCommand &qC, Stream &inputStream, const char *command, Types types, void *ptr)
+void qCommand::reportData(qCommand &qC, Stream &inputStream, const char *command, Types types, void *ptr, StreamCommandParserCallback* commandList)
 {
   inputStream.printf("Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n", command, types.sub_types.data, types.sub_types.ptr, ptr);
   switch (types.sub_types.data)
   {
   case 4:
-    reportString(*this, inputStream, command, types.sub_types.ptr, static_cast<SmartData<String> *>(ptr));
+    reportString(*this, inputStream, command, types.sub_types.ptr, static_cast<SmartData<String> *>(ptr),commandList);
     break;
   case 6: 
     reportUInt(*this, inputStream, command, types, static_cast<uint8_t *>(ptr));
@@ -1071,7 +1079,7 @@ void qCommand::readSerial(Stream &inputStream)
             else
             {
               // SD-Object or Raw PTR
-              reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object);
+              reportData(*this, inputStream, command, commandList[i].types, commandList[i].ptr.object, &commandList[i]);
               //Send update on tracked variable if its RAW_DATA as SmartData will flag need to send
               Serial.printf("Send reportData on SD or Raw (0x%02x)\n", commandList[i].types.sub_types.ptr);
               if (commandList[i].types.sub_types.ptr == PTR_RAW_DATA) {
