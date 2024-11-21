@@ -11,16 +11,14 @@
 #include "electricui.h"
 #include "eui_binary_transport.h"
 
-static eui_interface_t serial_comms = EUI_INTERFACE(&serial2_write);
-// static eui_interface_t serial_comms2 = EUI_INTERFACE( &serial2_write );
+static eui_interface_t serial_comms;
 
 /**
  * Constructor
  */
 qCommand::qCommand(bool caseSensitive)
-    : commandList(NULL), commandCount(0),
-      binaryStream(&Serial3), // should be Serial2
-      debugStream(&Serial), defaultHandler(NULL),
+    : commandList(NULL), commandCount(0), binaryStream(&Serial3),
+      debugStream(&Serial2), defaultHandler(NULL),
       term('\n'), // default terminator for commands, newline character
       caseSensitive(caseSensitive), cur(NULL), last(NULL), bufPos(0),
       binaryConnected(false) {
@@ -42,10 +40,11 @@ qCommand::qCommand(bool caseSensitive)
 
     if (binaryStream == &Serial3) {
         serial_comms.output_cb = &serial3_write;
-    } else {
+        eui_setup_interfaces(&serial_comms, 1);
+    } else if (binaryStream == &Serial2) {
         serial_comms.output_cb = &serial2_write;
+        eui_setup_interfaces(&serial_comms, 1);
     }
-    eui_setup_interfaces(&serial_comms, 1);
 }
 
 #warning Debuggin only, remove when done
@@ -72,7 +71,7 @@ void qCommand::readBinary(void) {
     // readBinaryInt();
 }
 
-#include <cstddef> // For offsetof
+// #include <cstddef> // For offsetof
 
 /*
 void* dataPtr(const void* SD_ptr, uint8_t type) {
@@ -102,7 +101,7 @@ void* dataPtr(const void* SD_ptr, uint8_t type) {
 uint16_t sizeOfType(qCommand::Types type) {
     switch (type.sub_types.data) {
     case 3: // byte
-    case 4: // string
+    case 4: // char / string
     case 5: // int8
     case 6: // uint8
         return 1;
@@ -172,6 +171,7 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
     }
 }
 
+#warning debugging only functions
 extern "C" {
 void desc(const char *msg, uint16_t value);
 void descs(const char *msg, const char *info);
@@ -179,13 +179,13 @@ void descl(const char *msg, uint32_t value);
 }
 
 void desc(const char *msg, uint16_t value) {
-    Serial.printf("%s: %u (0x%04x)\n", msg, value, value);
+    Serial2.printf("%s: %u (0x%04x)\n", msg, value, value);
 }
 void descl(const char *msg, uint32_t value) {
-    Serial.printf("%s: %u (0x%08x)\n", msg, value, value);
+    Serial2.printf("%s: %u (0x%08x)\n", msg, value, value);
 }
 void descs(const char *msg, const char *info) {
-    Serial.printf("%s: %s\n", msg, info);
+    Serial2.printf("%s: %s\n", msg, info);
 }
 
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
@@ -197,8 +197,8 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
             static_cast<SmartData<String> *>(p_msg_obj->ptr.data);
         // p_msg_obj->size = SD_String->get().length()+1;
         p_msg_obj->size = strlen(SD_String->get().c_str()) + 1;
-        Serial.printf("Get Smart String: length set to %u with content %s\n",
-                      p_msg_obj->size, SD_String->get().c_str());
+        // Serial.printf("Get Smart String: length set to %u with content %s\n",
+        //             p_msg_obj->size, SD_String->get().c_str());
         return static_cast<const void *>(SD_String->get().c_str());
     } else {
         size_t offset = qCommand::getOffset(type, p_msg_obj->size);
