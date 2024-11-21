@@ -94,9 +94,9 @@ typedef union {
     assignVariable(const char* command, T* variable, bool read_only = false);
 
     // Function for by reference
-    template <typename T>
-    typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char* command, T& variable, bool read_only = false);
+    //template <typename T>
+    //typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
+    //assignVariable(const char* command, T& variable, bool read_only = false);
     
     // Function for SmartData by reference
     template <typename T>
@@ -233,7 +233,7 @@ typedef union {
       */
       //void reportString(qCommand& qC, Stream& S, String* ptr, const char* command, SmartData<String>* object) ;
       //void reportString(qCommand& qC, Stream& S, const char* command, uint8_t ptr_type,void* ptr);
-      void reportString(qCommand &qC, Stream &S, const char *command, uint8_t ptr_type, void *ptr, StreamCommandParserCallback* CommandList);
+      void reportString(qCommand &qC, Stream &S, const char *command, uint8_t ptr_type, char* ptr, StreamCommandParserCallback* CommandList);
       void reportBool(qCommand& qC, Stream& S, bool* ptr, const char* command, SmartData<bool>* object) ;
       
       template <class argInt>
@@ -308,7 +308,7 @@ typename std::enable_if<std::is_base_of<Base, T>::value>::type
     }
 
  
-    
+    /*
     // Function for by reference
     template <typename T>
     typename std::enable_if<!std::is_base_of<Base, typename std::decay<T>::type>::value>::type
@@ -322,7 +322,8 @@ typename std::enable_if<std::is_base_of<Base, T>::value>::type
       Serial.printf("Adding %s for reference data (types: 0x%02x\n", command, types);
       addCommandInternal(command, types, &variable,size);
     }
-    
+    */
+
     // Function for SmartData by reference
     template <typename T>
     typename std::enable_if<std::is_base_of<Base, typename std::decay<T>::type>::value>::type    

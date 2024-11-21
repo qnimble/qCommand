@@ -358,7 +358,8 @@ struct type2int
    // enum { result = 0 }; // do this if you want a fallback value, empty to force a definition
 };
 
-template<> struct type2int<char> { enum { result = 4 }; };
+//template<> struct type2int<char*> { enum { result = 4 }; };
+template<std::size_t N> struct type2int<char[N]> { enum { result = 4 }; };
 template<> struct type2int<SmartData<String>> { enum { result = 4 }; };
 template<> struct type2int<SmartData<bool>> { enum { result = 6 }; };
 template<> struct type2int<SmartData<bool*>> { enum { result = 6 }; };
