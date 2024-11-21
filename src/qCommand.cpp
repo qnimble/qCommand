@@ -779,7 +779,7 @@ void qCommand::reportString(qCommand &qC, Stream &S, const char *command, uint8_
       object->set(qC.current());
       if (CommandList != nullptr)
       {
-        CommandList->size = object->value.length();
+        //CommandList->size = object->value.length();
       }
     }
     S.printf("%s is %s\n", command, object->get().c_str());

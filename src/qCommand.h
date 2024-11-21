@@ -303,8 +303,12 @@ typename std::enable_if<std::is_base_of<Base, T>::value>::type
       }
       typename std::decay<T>::type *sd = static_cast<typename std::decay<T>::type*> (variable);
       uint16_t size = sd->size();
-      Serial.printf("Adding %s for smartData (types:0x%02x)\n", command,types);
-      addCommandInternal(command, types, sd,size);      
+      if (types.sub_types.data == 4) {
+        //String subtype, max size is large
+        size = 255;
+      }
+      Serial.printf("Adding %s for smartData (types:0x%02x, size=%u)\n", command,types,size);
+      addCommandInternal(command, types, sd,size);
     }
 
  
