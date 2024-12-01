@@ -80,7 +80,7 @@ struct TypeTraits<
                         !std::is_array<std::remove_reference_t<T>>::value>> {
     static constexpr bool isPointer = false;
     static constexpr bool isReference = true;
-    static constexpr bool isArray = false;
+    static constexpr bool isArray = true;
 };
 
 // Specialization for references to arrays
@@ -119,6 +119,9 @@ static_assert(TypeTraits<float *>::isArray,
               "float* should be considered an array");
 static_assert(TypeTraits<double *>::isArray,
               "double* should be considered an array");
+static_assert(TypeTraits<double&>::isReference,
+              "double* should be considered an array");
+
 
 template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
     return N;
@@ -166,9 +169,9 @@ template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData : public Base {
   public:
     SmartData(DataType data);
-    DataType get(void);
-    // uint16_t size(void);
+    DataType get(void);    
 };
+
 
 class AllSmartDataPtr : public Base {
   public:
@@ -184,14 +187,29 @@ class AllSmartDataPtr : public Base {
 template <class DataType>
 class SmartData<DataType, true> : public AllSmartDataPtr {
   public:
-    template <typename U = DataType,
-              typename std::enable_if<!std::is_array<U>::value, int>::type = 0>
+    // For pointer arrays with explicitly set size    
     SmartData(DataType data, size_t size)
+        requires (TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
         : value(data), totalElements(size), id(0), stream(0) {
-        Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n",
-                      data[0], size, totalElements);
+        Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
+                      data, size, totalElements);
     };
 
+    //For Reference to arrays
+    template <size_t N>
+     SmartData(typename std::remove_reference<DataType>::type (&data)[N])
+        requires (TypeTraits<DataType>::isReference)
+        : value(data[0]), 
+        totalElements(N), 
+        id(0), 
+        stream(0) {
+        Serial.printf("Reference Array: %u with Size = %u and now totalElements=%u\n",
+                      data[0], N, N);
+    };
+
+  
+
+/*
     template <typename U = DataType,
               typename std::enable_if<std::is_array<U>::value, int>::type = 0>
     SmartData(DataType &data)
@@ -199,8 +217,32 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n",
                       sizeof(data), arraySize(data), totalElements);
     };
+*/
+    // Specialization for array references
 
-    using baseType = typename std::remove_pointer<DataType>::type;
+  template<typename T>
+  struct ref_of_array_to_pointer {
+    using type = T;
+  };
+
+  template<typename T, size_t N>
+  struct ref_of_array_to_pointer<T(&)[N]> {
+    using type = T*;
+  };
+    
+  // Add: For basic references
+  template<typename T>
+  struct ref_of_array_to_pointer<T&> {
+      using type = T*;
+  };
+
+    
+  using storage_type = typename std::conditional<
+      TypeTraits<DataType>::isReference,
+        typename ref_of_array_to_pointer<DataType>::type,
+        DataType
+    >::type;
+    using baseType = typename std::remove_pointer< typename std::remove_reference<storage_type>::type>::type;
     baseType get(void);
     void set(DataType);
     void please(void);
@@ -226,7 +268,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     };
 
   protected:
-    DataType value;
+    storage_type value;
 
   private:
     void _setPrivateInfo(uint8_t id, Stream *stream, cw_pack_context *pc);
@@ -358,10 +400,18 @@ template <> struct type2int<char*> {
 template <> struct type2int<SmartData<String>> {
     enum { result = 4 };
 };
+template <> struct type2int<bool> {
+    enum { result = 6 };
+};
+
+template <> struct type2int<bool*> {
+    enum { result = 6 };
+};
 template <> struct type2int<SmartData<bool>> {
     enum { result = 6 };
 };
-template <> struct type2int<SmartData<bool *>> {
+
+template <> struct type2int<SmartData<bool*>> {
     enum { result = 6 };
 };
 template <> struct type2int<SmartData<uint8_t>> {

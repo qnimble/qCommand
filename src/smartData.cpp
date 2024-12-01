@@ -350,6 +350,7 @@ void SmartData<SmartDataGeneric, false>::set(SmartDataGeneric newValue) {
 template <class DataType>
 void SmartData<DataType, true>::setNext(
     typename SmartData<DataType, true>::baseType data) {
+    value = 'asdf';//just to learn
     if (dataRequested) {
         if (currentElement < totalElements) {
             value[currentElement] = data;
@@ -442,6 +443,8 @@ template class SmartData<uint8_t *>;
 
 template class SmartData<uint16_t>;
 template class SmartData<uint16_t *>;
+template class SmartData<uint16_t (&)[50]>;
+template class SmartData<uint16_t (&),true>;
 
 template class SmartData<uint>;
 template class SmartData<uint *>;
