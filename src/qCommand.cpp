@@ -407,7 +407,8 @@ void qCommand::addCommandInternal(const char *command, Types types,
     Serial.print("): ");
     Serial.println(command);
 #endif
-
+    Serial.printf("Adding %s with types 0x%02x and size=%u\n", command,
+                  types.sub_types.data, size);
     commandList = (StreamCommandParserCallback *)realloc(
         commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
     // strncpy(commandList[commandCount].command, command,
@@ -448,10 +449,10 @@ void qCommand::addCommandInternal(const char *command, Types types,
             commandList[commandCount].types.sub_types.data =
                 types.sub_types.data;
         }
-        Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x and size=%u\n",
-                      commandList[commandCount].types.sub_types.data,
-                      commandList[commandCount].types.sub_types.ptr,
-                      commandList[commandCount].size);
+        //Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x and size=%u\n",
+        //              commandList[commandCount].types.sub_types.data,
+        //              commandList[commandCount].types.sub_types.ptr,
+        //              commandList[commandCount].size);
     }
 
 #warning skipping case sensitive stuff

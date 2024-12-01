@@ -352,6 +352,9 @@ template <typename T> struct type2int {
 template <std::size_t N> struct type2int<char[N]> {
     enum { result = 4 };
 };
+template <> struct type2int<char*> {
+    enum { result = 4 };
+};
 template <> struct type2int<SmartData<String>> {
     enum { result = 4 };
 };

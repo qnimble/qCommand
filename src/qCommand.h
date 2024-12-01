@@ -86,15 +86,33 @@ class qCommand {
     // DataObject class
     // void assignVariable(const char* command, uint8_t ptr_type, void* object);
     static size_t getOffset(Types type, uint16_t size);
-    // Function for arrays
+    
+    // Function for arrays with size  
+    template <typename T, std::size_t N>
+    typename std::enable_if<      
+      !std::is_base_of<Base, T>::value>::type
+    assignVariable(const char* command, T (&variable)[N], bool read_only = false);
+
+
+
+
+    // Specialization for arrays without size
+    template <typename T>
+    typename std::enable_if<    
+    std::is_pointer<T*>::value &&
+    !std::is_base_of<Base, T>::value>::type
+    assignVariable(const char* command, T* variable, bool read_only = false);
+
+    
+
     template <typename T, std::size_t N>
     void assignVariable(const char *command, T (&variable)[N]);
 
     // Function for pointers
-    template <typename T>
-    typename std::enable_if<
-        !std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char *command, T *variable, bool read_only = false);
+    //template <typename T>
+    //typename std::enable_if<
+    //    !std::is_base_of<Base, typename std::decay<T>::type>::value>::type
+    //assignVariable(const char *command, T *variable, bool read_only = false);
 
     // Function for SmartData objects
     template <typename T>
@@ -317,6 +335,39 @@ void qCommand::assignVariable(const char* command, T (&variable)[N]) {
 }
 */
 
+
+// Base template for fixed-size arrays
+template <typename T, std::size_t N>
+typename std::enable_if<    
+    !std::is_base_of<Base, T>::value>::type
+qCommand::assignVariable(const char* command, T (&variable)[N], bool read_only) {
+    Types types;
+    types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+    Serial.printf("Adding %s for fixed array size %zu\n", command, N);
+    addCommandInternal(command, types, variable, N * sizeof(T));
+}
+
+// Specialization for arrays without size
+template <typename T>
+typename std::enable_if<    
+    std::is_pointer<T*>::value &&
+    !std::is_base_of<Base, T>::value>::type    
+qCommand::assignVariable(const char* command, T* variable, bool read_only) {
+    Types types;
+    types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+    Serial.printf("Adding %s for pointer to array (no size)\n", command);
+    addCommandInternal(command, types, variable, sizeof(T));
+}
+
+
+/*
+
 template <typename T>
 typename std::enable_if<
     !std::is_base_of<Base, typename std::decay<T>::type>::value>::type
@@ -326,9 +377,11 @@ qCommand::assignVariable(const char *command, T *variable, bool read_only) {
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    Serial.printf("Adding %s for raw pointer (types:0x%02x)\n", command, types);
+    Serial.printf("Adding %s for raw pointer (types:0x%02x)\n", command, types.raw);
     addCommandInternal(command, types, variable, sizeof(T));
 }
+*/
+
 
 // Function for SmartData objects
 template <typename T>
@@ -347,7 +400,7 @@ qCommand::assignVariable(const char *command, T *variable, bool read_only) {
         size = 255;
     }
     Serial.printf("Adding %s for smartData (types:0x%02x, size=%u)\n", command,
-                  types, size);
+                  types.raw, size);
     addCommandInternal(command, types, sd, size);
 }
 
