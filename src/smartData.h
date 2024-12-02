@@ -187,8 +187,34 @@ class AllSmartDataPtr : public Base {
 template <class DataType>
 class SmartData<DataType, true> : public AllSmartDataPtr {
   public:
+    template<typename T>
+    struct ref_of_array_to_pointer {
+      using type = T;
+    };
+
+  template<typename T, size_t N>
+  struct ref_of_array_to_pointer<T(&)[N]> {
+    using type = T*;
+  };
+    
+  // Add: For basic references
+  template<typename T>
+  struct ref_of_array_to_pointer<T&> {
+      using type = T*;
+  };
+
+    
+  using storage_type = typename std::conditional<
+      TypeTraits<DataType>::isReference,
+        typename ref_of_array_to_pointer<DataType>::type,
+        DataType
+    >::type;
+    using baseType = typename std::remove_pointer< typename std::remove_reference<storage_type>::type>::type;
+
+
+
     // For pointer arrays with explicitly set size    
-    SmartData(DataType data, size_t size)
+    SmartData(storage_type data, size_t size)
         requires (TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
         : value(data), totalElements(size), id(0), stream(0) {
         Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
@@ -199,7 +225,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     template <size_t N>
      SmartData(typename std::remove_reference<DataType>::type (&data)[N])
         requires (TypeTraits<DataType>::isReference)
-        : value(data[0]), 
+        : value(&data[0]), 
         totalElements(N), 
         id(0), 
         stream(0) {
@@ -220,29 +246,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 */
     // Specialization for array references
 
-  template<typename T>
-  struct ref_of_array_to_pointer {
-    using type = T;
-  };
-
-  template<typename T, size_t N>
-  struct ref_of_array_to_pointer<T(&)[N]> {
-    using type = T*;
-  };
-    
-  // Add: For basic references
-  template<typename T>
-  struct ref_of_array_to_pointer<T&> {
-      using type = T*;
-  };
-
-    
-  using storage_type = typename std::conditional<
-      TypeTraits<DataType>::isReference,
-        typename ref_of_array_to_pointer<DataType>::type,
-        DataType
-    >::type;
-    using baseType = typename std::remove_pointer< typename std::remove_reference<storage_type>::type>::type;
+ 
     baseType get(void);
     void set(DataType);
     void please(void);
@@ -397,6 +401,14 @@ template <std::size_t N> struct type2int<char[N]> {
 template <> struct type2int<char*> {
     enum { result = 4 };
 };
+template <> struct type2int<char> {
+    enum { result = 4 };
+};
+
+template <> struct type2int<String> {
+    enum { result = 4 };
+};
+
 template <> struct type2int<SmartData<String>> {
     enum { result = 4 };
 };
@@ -429,6 +441,10 @@ template <> struct type2int<SmartData<uint16_t *>> {
 template <> struct type2int<uint16_t> {
     enum { result = 8 };
 };
+template <> struct type2int<uint16_t&> {
+    enum { result = 8 };
+};
+
 template <> struct type2int<SmartData<uint>> {
     enum { result = 10 };
 };

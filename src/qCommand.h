@@ -93,20 +93,34 @@ class qCommand {
       !std::is_base_of<Base, T>::value>::type
     assignVariable(const char* command, T (&variable)[N], bool read_only = false);
 
+    
+    //template <typename T>
+    //template <typename T>
+    //void assignVariable(char const *command, SmartData<T,TypeTraits<T, void>::isArray> *object, bool read_only = false);
 
+    template <typename T>
+    void assignVariable(char const *command, SmartData<T> *object, bool read_only = false);
 
 
     // Specialization for arrays without size
     template <typename T>
     typename std::enable_if<    
-    std::is_pointer<T*>::value &&
+    std::is_pointer<T>::value &&
     !std::is_base_of<Base, T>::value>::type
-    assignVariable(const char* command, T* variable, bool read_only = false);
+    assignVariable(const char* command, T variable, bool read_only = false);
 
-    
+    // Arrays with size
+    template <typename T>
+    typename std::enable_if<    
+    !std::is_pointer<T>::value &&
+    std::is_array<T>::value &&
+    !std::is_base_of<Base, T>::value>::type    
+    assignVariable(const char* command, T variable, bool read_only = false);
 
-    template <typename T, std::size_t N>
-    void assignVariable(const char *command, T (&variable)[N]);
+
+    // Arrays passed bt reference
+    //template <typename T, std::size_t N>
+    //void assignVariable(const char *command, T (&variable)[N], bool read_only = false);
 
     // Function for pointers
     //template <typename T>
@@ -115,11 +129,11 @@ class qCommand {
     //assignVariable(const char *command, T *variable, bool read_only = false);
 
     // Function for SmartData objects
-    template <typename T>
-    typename std::enable_if<std::is_base_of<Base, T>::value>::type
+    //template <typename T>
+    //typename std::enable_if<std::is_base_of<Base, T>::value>::type
     // typename std::enable_if<std::is_base_of<Base, typename
     // std::decay<T>::type>::value>::type
-    assignVariable(const char *command, T *variable, bool read_only = false);
+    //void assignVariable(const char *command, SmartData<T> *variable, bool read_only = false);
 
     // Function for by reference
     // template <typename T>
@@ -153,12 +167,15 @@ class qCommand {
     //    void assignVariable(const char* command, String* variable);
     // void assignVariable(const char* command, SmartData<String>* object, bool
     // read_only = false);
-
+/*
     template <
         typename DataType,
-        typename std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
+        typename std::enable_if<TypeTraits<DataType>::isArray || TypeTraits<DataType>::isReference
+        , int>::type = 0>
     void assignVariable(const char *command, SmartData<DataType> *object,
                         bool read_only = false);
+
+*/
     // template <typename T>
     // void reportData(qCommand& qC, Stream& inputStream, const char* command,
     // SmartData<T>* baseObject); void reportData(qCommand& qC, Stream&
@@ -326,6 +343,7 @@ class qCommand {
     byte bufPos;                           // Current position in the buffer
     bool binaryConnected;
 };
+
 /*
 template <typename T, std::size_t N>
 void qCommand::assignVariable(const char* command, T (&variable)[N]) {
@@ -350,20 +368,41 @@ qCommand::assignVariable(const char* command, T (&variable)[N], bool read_only) 
     addCommandInternal(command, types, variable, N * sizeof(T));
 }
 
+
 // Specialization for arrays without size
 template <typename T>
 typename std::enable_if<    
-    std::is_pointer<T*>::value &&
+    std::is_pointer<T>::value &&
     !std::is_base_of<Base, T>::value>::type    
-qCommand::assignVariable(const char* command, T* variable, bool read_only) {
+qCommand::assignVariable(const char* command, T variable, bool read_only) {
+    using base_type = typename std::remove_pointer<T>::type;  // G
     Types types;
-    types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
+    types.sub_types = {type2int<base_type>::result, PTR_RAW_DATA};
     if (read_only) {
         types.sub_types.read_only = true;
     }
     Serial.printf("Adding %s for pointer to array (no size)\n", command);
-    addCommandInternal(command, types, variable, sizeof(T));
+    addCommandInternal(command, types, variable, sizeof(base_type));
 }
+
+// Specialization for arrays without size
+template <typename T>
+typename std::enable_if<    
+    !std::is_pointer<T>::value &&
+    std::is_array<T>::value &&
+    !std::is_base_of<Base, T>::value>::type    
+qCommand::assignVariable(const char* command, T variable, bool read_only) {
+    using base_type = typename std::remove_pointer<T>::type;  // G
+    Types types;
+    types.sub_types = {type2int<base_type>::result, PTR_RAW_DATA};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+    Serial.printf("Adding %s for pointer to array (no size)\n", command);
+    addCommandInternal(command, types, variable, sizeof(T) );
+}
+
+
 
 
 /*
@@ -382,27 +421,6 @@ qCommand::assignVariable(const char *command, T *variable, bool read_only) {
 }
 */
 
-
-// Function for SmartData objects
-template <typename T>
-typename std::enable_if<std::is_base_of<Base, T>::value>::type
-qCommand::assignVariable(const char *command, T *variable, bool read_only) {
-    Types types;
-    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-    typename std::decay<T>::type *sd =
-        static_cast<typename std::decay<T>::type *>(variable);
-    uint16_t size = sd->size();
-    if (types.sub_types.data == 4) {
-        // String subtype, max size is large
-        size = 255;
-    }
-    Serial.printf("Adding %s for smartData (types:0x%02x, size=%u)\n", command,
-                  types.raw, size);
-    addCommandInternal(command, types, sd, size);
-}
 
 /*
 // Function for by reference
@@ -437,6 +455,23 @@ qCommand::assignVariable(const char *command, T &variable, bool read_only) {
 }
 
 uint16_t sizeOfType(qCommand::Types type);
+
+/*
+// Function for SmartData by pointer
+template <typename T>
+void qCommand::assignVariable(char const *command, SmartData<T, TypeTraits<T, void>::isArray> *object, bool read_only) {
+    Types types;
+    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+    // Serial.printf("Adding %s for reference SD Object\n", command);
+    uint16_t size = object->size();
+    Serial.printf("Adding %s for SD reference data (types: 0x%02x)\n", command,
+                  types);
+    addCommandInternal(command, types, object, size);
+}
+*/
 
 /*
 

@@ -350,6 +350,33 @@ void qCommand::sendBinaryCommands(void) {
     pc.current = pc.start;
 }
 
+
+
+
+
+// Function for SmartData objects
+template <typename T>
+//typename std::enable_if<std::is_base_of<Base, T>::value>::type
+//void qCommand::assignVariable(char const *command, SmartData<T, TypeTraits<T, void>::isArray> *object, bool read_only) {
+void qCommand::assignVariable(char const *command, SmartData<T> *object, bool read_only) {
+    Types types;
+    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+    //typename std::decay<T>::type *sd =
+    //    static_cast<typename std::decay<T>::type *>(object);
+    uint16_t size = object->size();
+    if (types.sub_types.data == 4) {
+        // String subtype, max size is large
+        size = 255;
+    }
+    Serial.printf("Adding %s for smartData (types:0x%02x, size=%u)\n", command,
+                  types.raw, size);
+    addCommandInternal(command, types, object, size);
+}
+
+
 /**
  * Adds a "command" and a handler function to the list of available commands.
  * This is used for matching a found token in the buffer, and gives the pointer
@@ -538,6 +565,8 @@ object) {
 template void qCommand::assignVariable(const char *command,
                                        unsigned char *object, bool read_only);
 
+template void qCommand::assignVariable<uint16_t&>(const char *command, SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool read_only);
+//template void qCommand::assignVariable<unsigned short&,0>(char const* command, SmartData<unsigned short&, TypeTraits<unsigned short&, void>::isArray> *object, bool read_only);
 /*
 template <typename DataType, typename
 std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0> void
@@ -679,6 +708,9 @@ template void qCommand::assignVariable(const char *command,
 template void qCommand::assignVariable(const char *command,
                                        SmartData<String, false> *object,
                                        bool read_only);
+template void qCommand::assignVariable(const char *command, SmartData<uint16_t(&)> *object, bool read_only);
+
+
 // template void qCommand::assignVariable(const char *command,
 // SmartData<String,true> *object, bool read_only);
 
@@ -723,6 +755,8 @@ template void qCommand::assignVariable(const char *command, int *variable,
                                        bool read_only);
 template void qCommand::assignVariable(const char *command, long *variable,
                                        bool read_only);
+
+template void qCommand::assignVariable(const char*, char*, bool);
 
 /*
 //Assign variable to command list for floating point numbers (calls
@@ -1183,3 +1217,13 @@ char *qCommand::current() { return cur; }
 // void qCommand::addCommandInternal(const char *command, void
 // (qCommand::*function)(qCommand& streamCommandParser, Stream& stream,
 // DataType* variable, const char* command), DataType* var) {
+
+/*
+#warning ugly testing only
+uint16_t badsdata[67];
+SmartData<uint16_t&> badsplot(badsdata);
+qCommand qC2(true);
+void something(void) {
+  qC2.assignVariable("plot", &badsplot);
+}
+*/

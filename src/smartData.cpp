@@ -349,8 +349,7 @@ void SmartData<SmartDataGeneric, false>::set(SmartDataGeneric newValue) {
 // std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0>
 template <class DataType>
 void SmartData<DataType, true>::setNext(
-    typename SmartData<DataType, true>::baseType data) {
-    value = 'asdf';//just to learn
+    typename SmartData<DataType, true>::baseType data) {    
     if (dataRequested) {
         if (currentElement < totalElements) {
             value[currentElement] = data;
