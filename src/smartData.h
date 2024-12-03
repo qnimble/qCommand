@@ -140,10 +140,13 @@ class Base {
     void resetUpdateState(void);
     uint16_t size(void);
 
+#warning move back to protected when done debug
+UpdateState updates_needed =
+        STATE_IDLE; // virtual void* _get(void) = 0; // pure virtual function
+
   protected:
     cw_pack_context *pc;
-    UpdateState updates_needed =
-        STATE_IDLE; // virtual void* _get(void) = 0; // pure virtual function
+    
     friend class qCommand;
 };
 
@@ -271,8 +274,10 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         dataRequested = true;
     };
 
-  protected:
+  #warning move to protected
     storage_type value;
+  protected:
+    
 
   private:
     void _setPrivateInfo(uint8_t id, Stream *stream, cw_pack_context *pc);

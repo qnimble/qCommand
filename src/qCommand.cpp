@@ -18,7 +18,7 @@ static eui_interface_t serial_comms;
  */
 qCommand::qCommand(bool caseSensitive)
     : commandList(NULL), commandCount(0), binaryStream(&Serial3),
-      debugStream(&Serial2), defaultHandler(NULL),
+      debugStream(&Serial), defaultHandler(NULL),
       term('\n'), // default terminator for commands, newline character
       caseSensitive(caseSensitive), cur(NULL), last(NULL), bufPos(0),
       binaryConnected(false) {
@@ -120,7 +120,7 @@ uint16_t sizeOfType(qCommand::Types type) {
 }
 
 size_t qCommand::getOffset(Types type, uint16_t size) {
-    uintptr_t stop_ptr = 0;
+    uintptr_t stop_ptr = 0;    
 
     if (size == sizeOfType(type)) {
         // Not an array
@@ -165,10 +165,21 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
         default:
             stop_ptr = 0;
         }
-        return stop_ptr;
     } else {
-        return -1;
-    }
+      switch (type.sub_types.data) {
+        case 8: {
+            SmartData<uint16_t*> *ptru16 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptru16->value));
+        } 
+        break;
+        default:
+            stop_ptr = 1000;
+        }
+      }
+      Serial2.printf("Got array with sub_type %u and returning 0x%08x\n", type.sub_types.data, stop_ptr);
+
+    return stop_ptr;
+
 }
 
 #warning debugging only functions
@@ -191,6 +202,7 @@ void descs(const char *msg, const char *info) {
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     qCommand::Types type;
     type.raw = p_msg_obj->type;
+    Serial2.printf("Command is %s with type=0x%02x and size=%u and ptr to 0x%08x\n",p_msg_obj->id, p_msg_obj->type, p_msg_obj->size, p_msg_obj->ptr.data);
     if (type.sub_types.data == 4) {
         // String pointer
         SmartData<String> *SD_String =
@@ -202,15 +214,27 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
         return static_cast<const void *>(SD_String->get().c_str());
     } else {
         size_t offset = qCommand::getOffset(type, p_msg_obj->size);
-        return static_cast<const void *>(
-            static_cast<uint8_t *>(p_msg_obj->ptr.data) + offset);
+        uint8_t* data = (static_cast<uint8_t *>(p_msg_obj->ptr.data) + offset);
+        Serial2.printf("Offset is 0x%08x and data is 0x%08x and *data is 0x%08x\n", offset, data, * ((uint32_t*) data));
+        if ( p_msg_obj->size > sizeOfType(type) ) {
+            // Array of data
+            void* final_ptr = (const void*) (* (uint32_t*) data);
+            Serial2.printf("Returning 0x%08x\n", final_ptr);
+            return final_ptr;
+            return (const void*) (* (uint32_t*) data);
+        } else {
+          return static_cast<const void *>(data);
+        }
+        
     }
 }
 
 void ack_object(void *ptr) {
-    Serial.printf("Acking ptr at 0x%08x\n", ptr);
+    
     Base *ptrBase = static_cast<Base *>(ptr);
+    Serial.printf("Acking ptr at 0x%08x (was = %u)\n", ptr, ptrBase->updates_needed);
     ptrBase->resetUpdateState();
+    Serial.printf("Acking ptr at 0x%08x (now = %u)\n", ptr, ptrBase->updates_needed);
 }
 
 void serial3_write(uint8_t *data, uint16_t len) {
