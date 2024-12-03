@@ -376,8 +376,9 @@ typename std::enable_if<
     !std::is_base_of<Base, T>::value>::type    
 qCommand::assignVariable(const char* command, T variable, bool read_only) {
     using base_type = typename std::remove_pointer<T>::type;  // G
+    using array_type = typename std::remove_extent<base_type>::type;  // G
     Types types;
-    types.sub_types = {type2int<base_type>::result, PTR_RAW_DATA};
+    types.sub_types = {type2int<array_type>::result, PTR_RAW_DATA};
     if (read_only) {
         types.sub_types.read_only = true;
     }
