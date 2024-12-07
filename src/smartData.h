@@ -2,46 +2,8 @@
 #define SMARTDATA_h
 
 #include <Arduino.h>
-// #include <MsgPack.h>
-//#include "cwpack.h"
 
-// First bit (0) is the array flag. 0 is not an array, 1 is an array
-// Bits 1 and 2 are the type size: 1bytes, 2 bytes, 4bytes or 8 bytes.
-// Bits 3 - 5  set the type: bool, float, uint, int, string, and future options
-// Bit 6 is the read-only flag. 0 is read/write, 1 is read only
-// last bit (7) is TBD / future-proofing.
 
-// extern cw_pack_context pc;
-extern char buffer[];
-#define DEFAULT_PACK_BUFFER_SIZE 500
-
-//void cw_pack(cw_pack_context *cw, bool value);
-// void cw_pack(cw_pack_context* cw, unsigned char value);
-//void cw_pack(cw_pack_context *cw, String value);
-/*
-template <
-    typename argUInt,
-    std::enable_if_t<std::is_same<argUInt, unsigned char>::value ||
-                         std::is_same<argUInt, uint8_t>::value ||
-                         std::is_same<argUInt, uint16_t>::value ||
-                         std::is_same<argUInt, short unsigned int>::value ||
-                         std::is_same<argUInt, uint>::value ||
-                         std::is_same<argUInt, ulong>::value,
-                     uint> = 0>
-void cw_pack(cw_pack_context *cw, argUInt value);
-
-template <typename argInt,
-          std::enable_if_t<std::is_same<argInt, int8_t>::value ||
-                               std::is_same<argInt, int16_t>::value ||
-                               std::is_same<argInt, int>::value ||
-                               std::is_same<argInt, long>::value,
-                           int> = 0>
-void cw_pack(cw_pack_context *cw, argInt value);
-
-template <typename argFloat,
-          std::enable_if_t<std::is_floating_point<argFloat>::value, int> = 0>
-void cw_pack(cw_pack_context *cw, argFloat value);
-*/
 enum UpdateState {
     STATE_IDLE,                  // A
     STATE_NEED_TOSEND,           // B
@@ -49,23 +11,14 @@ enum UpdateState {
     STATE_WAIT_ON_ACK_PLUS_QUEUE // BC
 };
 
+//Set Default values for TypeTraits
 template <typename T, typename Enable = void> struct TypeTraits {
     static constexpr bool isArray = false;
     static constexpr bool isPointer = false;
     static constexpr bool isReference = false;
 };
-/*
-template<typename T>
-struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>>  {
-    static constexpr bool isArray = true;
-};
 
-template<typename T>
-struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value>>  {
-    static constexpr bool isArray = true;
-};
-*/
-
+// Specialization for pointer types (treated as pointers to arrays)
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>> {
     static constexpr bool isPointer = true;
@@ -73,14 +26,13 @@ struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>> {
     static constexpr bool isArray = true;
 };
 
-// Specialization for reference types
+// Specialization for reference types that are not arrays
 template <typename T>
-struct TypeTraits<
-    T, std::enable_if_t<std::is_reference<T>::value &&
-                        !std::is_array<std::remove_reference_t<T>>::value>> {
+struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value &&
+                    !std::is_array<std::remove_reference_t<T>>::value>> {
     static constexpr bool isPointer = false;
     static constexpr bool isReference = true;
-    static constexpr bool isArray = true;
+    static constexpr bool isArray = false;
 };
 
 // Specialization for references to arrays
@@ -120,12 +72,16 @@ static_assert(TypeTraits<float *>::isArray,
 static_assert(TypeTraits<double *>::isArray,
               "double* should be considered an array");
 static_assert(TypeTraits<double&>::isReference,
-              "double* should be considered an array");
+              "double& should be considered a reference");
+static_assert(!TypeTraits<double&>::isArray,
+              "double& should be considered a reference");
+static_assert(TypeTraits<double(&)[50]>::isArray,
+              "double& should be considered a reference");
 
-
+/*
 template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
     return N;
-}
+}*/
 
 #warning move these to private when done with debug
 class Base {
@@ -133,125 +89,81 @@ class Base {
     // virtual void _get(void* data); // pure virtual function
     virtual void _set(void *data); // pure virtual function
     void setNeedToSend(void); // set states as if set ran, even though it didn't.
-    virtual void sendValue(void);
-    void please();
+    virtual void sendValue(void);    
     virtual void _get(void *data); // pure virtual function
     void resetUpdateState(void);
     uint16_t size(void);
 
-#warning move back to protected when done debug
-UpdateState updates_needed =
-        STATE_IDLE; // virtual void* _get(void) = 0; // pure virtual function
-
   protected:
-    //cw_pack_context *pc;
-    
+    UpdateState updates_needed = STATE_IDLE;   
     friend class qCommand;
 };
 
-template <typename DataType, bool Enable> class OnlyForArrays {
-  public:
-    void resetCurrentElement(void);
-};
-
-template <typename DataType> class OnlyForArrays<DataType, true> {
-  public:
-    using baseType = typename std::remove_pointer<DataType>::type;
-    void setNext(baseType);
-
-  protected:
-    // OnlyForArrays<DataType, true>(size_t totalElements) :
-    // totalElements(totalElements) {}
-};
-
-template <class SmartDataGeneric, bool HackIsArray> struct GetHelper;
-
-// template <class DataType>
+//generic SmartData for single values and arrays
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData : public Base {
   public:
-    SmartData(DataType data);
-    DataType get(void);
+    SmartData(DataType data);    
 };
 
-
+// Class for common elements in SmartData for arrays
 class AllSmartDataPtr : public Base {
   public:
+    AllSmartDataPtr(size_t size) : totalElements(size) {};
     virtual size_t getCurrentElement(void);
     virtual size_t getTotalElements(void);
-    // virtual void sendIfNeedValue(void);
-    // virtual void setNeedToSend(void);
     virtual void resetCurrentElement(void);
-    uint16_t size(void);
+    size_t size(void);
+    const size_t totalElements;
 };
 
-// For arrays!
+// Specialization of SmartData for arrays!
 template <class DataType>
 class SmartData<DataType, true> : public AllSmartDataPtr {
   public:
+    //struct ref_of_array_to_pointer is underlying data type of array. 
+    //DataType cannot be used directly as it may be a reference.
     template<typename T>
-    struct ref_of_array_to_pointer {
+    struct storage_type_specialization {
       using type = T;
     };
 
-  template<typename T, size_t N>
-  struct ref_of_array_to_pointer<T(&)[N]> {
-    using type = T*;
-  };
-    
-  // Add: For basic references
-  template<typename T>
-  struct ref_of_array_to_pointer<T&> {
+    template<typename T, size_t N>
+    struct storage_type_specialization<T(&)[N]> {
       using type = T*;
-  };
-
+    };
     
-  using storage_type = typename std::conditional<
-      TypeTraits<DataType>::isReference,
-        typename ref_of_array_to_pointer<DataType>::type,
-        DataType
-    >::type;
+    // Add: For basic references
+    template<typename T>
+    struct storage_type_specialization<T&> {
+      using type = T*;
+    };
+    
+    using storage_type = typename storage_type_specialization<DataType>::type;        
     using baseType = typename std::remove_pointer< typename std::remove_reference<storage_type>::type>::type;
-
 
 
     // For pointer arrays with explicitly set size    
     SmartData(storage_type data, size_t size)
         requires (TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
-        : value(data), totalElements(size), id(0), stream(0) {
+        : AllSmartDataPtr(size / sizeof(baseType)), value(data) , id(0), stream(0) {
         Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
                       data, size, totalElements);
     };
 
     //For Reference to arrays
     template <size_t N>
-     SmartData(typename std::remove_reference<DataType>::type (&data)[N])
+    SmartData(typename std::remove_reference<DataType>::type (&data)[N])
         requires (TypeTraits<DataType>::isReference)
-        : value(&data[0]), 
-        totalElements(N), 
+        : AllSmartDataPtr(N / sizeof(baseType)),
+        value(&data[0]), 
         id(0), 
         stream(0) {
-        Serial.printf("Reference Array: %u with Size = %u and now totalElements=%u\n",
-                      data[0], N, N);
+        Serial.printf("Reference Array: %u with size=%u and totalElements=%u\n",
+                      data[0], N, totalElements);
     };
 
-  
-
-/*
-    template <typename U = DataType,
-              typename std::enable_if<std::is_array<U>::value, int>::type = 0>
-    SmartData(DataType &data)
-        : value(data), totalElements(arraySize(data)), id(0), stream(0) {
-        Serial.printf("!! Arrays: %u with Size = %u and now totalElements=%u\n",
-                      sizeof(data), arraySize(data), totalElements);
-    };
-*/
-    // Specialization for array references
-
- 
-    //baseType get(size_t element);
     void set(DataType);
-    void please(void);
     void sendValue(void);
     void _get(void *data);
     void _set(void *data);
@@ -288,7 +200,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     void _setPrivateInfo(uint8_t id, Stream *stream);
     //cw_pack_context *pc;
 
-    const size_t totalElements;
+    
     size_t currentElement;
     bool dataRequested = false;
 

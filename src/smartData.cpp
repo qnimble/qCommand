@@ -228,10 +228,6 @@ void SmartDataPtr<SmartDataGeneric>::sendIfNeedValue(void) {
 }
 */
 
-void Base::please(void) {
-    Serial.printf("Please called on SmartData with updates_needed state %u\n",
-                  updates_needed);
-}
 
 /*
 template <typename DataType>
