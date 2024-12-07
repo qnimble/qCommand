@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 // #include <MsgPack.h>
-#include "cwpack.h"
+//#include "cwpack.h"
 
 // First bit (0) is the array flag. 0 is not an array, 1 is an array
 // Bits 1 and 2 are the type size: 1bytes, 2 bytes, 4bytes or 8 bytes.
@@ -15,10 +15,10 @@
 extern char buffer[];
 #define DEFAULT_PACK_BUFFER_SIZE 500
 
-void cw_pack(cw_pack_context *cw, bool value);
+//void cw_pack(cw_pack_context *cw, bool value);
 // void cw_pack(cw_pack_context* cw, unsigned char value);
-void cw_pack(cw_pack_context *cw, String value);
-
+//void cw_pack(cw_pack_context *cw, String value);
+/*
 template <
     typename argUInt,
     std::enable_if_t<std::is_same<argUInt, unsigned char>::value ||
@@ -41,7 +41,7 @@ void cw_pack(cw_pack_context *cw, argInt value);
 template <typename argFloat,
           std::enable_if_t<std::is_floating_point<argFloat>::value, int> = 0>
 void cw_pack(cw_pack_context *cw, argFloat value);
-
+*/
 enum UpdateState {
     STATE_IDLE,                  // A
     STATE_NEED_TOSEND,           // B
@@ -132,8 +132,7 @@ class Base {
   public:
     // virtual void _get(void* data); // pure virtual function
     virtual void _set(void *data); // pure virtual function
-    void
-    setNeedToSend(void); // set states as if set ran, even though it didn't.
+    void setNeedToSend(void); // set states as if set ran, even though it didn't.
     virtual void sendValue(void);
     void please();
     virtual void _get(void *data); // pure virtual function
@@ -145,7 +144,7 @@ UpdateState updates_needed =
         STATE_IDLE; // virtual void* _get(void) = 0; // pure virtual function
 
   protected:
-    cw_pack_context *pc;
+    //cw_pack_context *pc;
     
     friend class qCommand;
 };
@@ -172,7 +171,7 @@ template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData : public Base {
   public:
     SmartData(DataType data);
-    DataType get(void);    
+    DataType get(void);
 };
 
 
@@ -250,7 +249,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     // Specialization for array references
 
  
-    baseType get(void);
+    //baseType get(size_t element);
     void set(DataType);
     void please(void);
     void sendValue(void);
@@ -267,6 +266,12 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
                sizeof(typename std::remove_pointer<DataType>::type);
     }
 
+    baseType get(size_t element) {
+        return value[element];
+    }
+
+
+
     size_t getCurrentElement(void) { return currentElement; };
 
     void resetCurrentElement(void) {
@@ -280,8 +285,8 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     
 
   private:
-    void _setPrivateInfo(uint8_t id, Stream *stream, cw_pack_context *pc);
-    cw_pack_context *pc;
+    void _setPrivateInfo(uint8_t id, Stream *stream);
+    //cw_pack_context *pc;
 
     const size_t totalElements;
     size_t currentElement;
@@ -336,8 +341,8 @@ class SmartData<DataType, false> : public Base {
     // DataType value;
 
   private:
-    void _setPrivateInfo(uint8_t id, Stream *stream, cw_pack_context *pc);
-    cw_pack_context *pc;
+    void _setPrivateInfo(uint8_t id, Stream *stream);
+    //cw_pack_context *pc;
 
     bool dataRequested = false;
 
@@ -493,6 +498,11 @@ template <> struct type2int<SmartData<float>> {
 template <> struct type2int<float> {
     enum { result = 11 };
 };
+template <> struct type2int<float*> {
+    enum { result = 11 };
+};
+
+
 
 template <> struct type2int<SmartData<double>> {
     enum { result = 12 };

@@ -1,9 +1,9 @@
 #include "qCommand.h"
 #include <limits>
 
-#include "basic_contexts.h"
-#include "cwpack.h"
-#include "cwpack_utils.h"
+//#include "basic_contexts.h"
+//#include "cwpack.h"
+//#include "cwpack_utils.h"
 
 #include "protothreads.h"
 #include "pt.h"
@@ -337,6 +337,7 @@ void qCommand::sendBinaryCommands(void) {
         }
     }
     // packer.serialize(MsgPack::arr_size_t(elements));
+/*
     cw_pack_array_size(
         &pc, 3); // three elements, first is id = 0 for internal. Second is the
                  // command (list Commands). Third is the data
@@ -372,6 +373,7 @@ void qCommand::sendBinaryCommands(void) {
                         pc.current - pc.start, pc.return_code);
     binaryStream->write(pc.start, pc.current - pc.start);
     pc.current = pc.start;
+    */
 }
 
 
@@ -590,6 +592,11 @@ template void qCommand::assignVariable(const char *command,
                                        unsigned char *object, bool read_only);
 
 template void qCommand::assignVariable<uint16_t&>(const char *command, SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool read_only);
+
+template void qCommand::assignVariable<float*>(const char*, SmartData<float*, TypeTraits<float*, void>::isArray>*,bool);
+
+
+
 //template void qCommand::assignVariable<unsigned short&,0>(char const* command, SmartData<unsigned short&, TypeTraits<unsigned short&, void>::isArray> *object, bool read_only);
 /*
 template <typename DataType, typename

@@ -1,22 +1,23 @@
 #include "smartData.h"
 
 // #include <MsgPack.h>
-#include <FastCRC.h>
+//#include <FastCRC.h>
 
 // MsgPack::Packer packer;
-static FastCRC16 CRC16;
+//static FastCRC16 CRC16;
 
-#include "basic_contexts.h"
-#include "cwpack.h"
+//#include "basic_contexts.h"
+//#include "cwpack.h"
 #warning No need for this afger debugging
 #include "quarto_wdog.h"
 
+/*
 void cw_pack(cw_pack_context *cw, String value) {
     cw_pack_str(cw, value.c_str(), value.length());
 }
 
 void cw_pack(cw_pack_context *cw, bool value) { cw_pack_boolean(cw, value); }
-
+*/
 /*
 //No idea why I need this as it should be built from the template, but for some
 reason it isn't. void cw_pack(cw_pack_context* cw, unsigned char value){
@@ -34,7 +35,7 @@ void cw_pack(cw_pack_context* cw, argChar value){
   cw_pack_bin(cw,&value, 1);
 }
 */
-
+/*
 template <
     typename argUInt,
     std::enable_if_t<std::is_same<argUInt, unsigned char>::value ||
@@ -64,7 +65,7 @@ template <typename argFloat,
 void cw_pack(cw_pack_context *cw, argFloat value) {
     cw_pack_float(cw, value);
 }
-
+*/
 template <class DataType> void SmartData<DataType, false>::_get(void *data) {
     DataType *ptr = static_cast<DataType *>(data);
     *ptr = value;
@@ -140,6 +141,7 @@ void SmartData<SmartDataGeneric, false>::sendValue(void) {
     Serial.printf("Sending Data (sendValue non array) for %u\n", this->id);
     setDebugWord(0x3310010);
     if (stream) {
+        /*
         setDebugWord(0x3310011);
         uint16_t crc = CRC16.ccitt((uint8_t *)&value, sizeof(value));
         setDebugWord(0x3310012);
@@ -173,6 +175,7 @@ void SmartData<SmartDataGeneric, false>::sendValue(void) {
         // packer->clear();
         // packer->to_array(id,value, crc );
         // stream->write(packer->data(),packer->size());
+        */
     }
 }
 
@@ -276,6 +279,7 @@ template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::sendValue(void) {
     Serial.printf("Sending Data (sendValue array) for %u\n", this->id);
     if (stream) {
+/*
         uint16_t crc = CRC16.ccitt((uint8_t *)value,
                                    totalElements * sizeof(SmartDataGeneric));
         cw_pack_array_size(pc, 4);
@@ -301,7 +305,7 @@ void SmartData<SmartDataGeneric, true>::sendValue(void) {
         // Serial.println();
         stream->write(pc->start, pc->current - pc->start);
         pc->current = pc->start; // reset for next one.
-
+*/
         // #warning maybe do not want to reset pointer send we send...
         // currentElement = 0;
         // dataRequested = false;
@@ -378,22 +382,22 @@ SmartDataPtr<SmartDataGeneric>::baseType data) { if (dataRequested) { if
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::_setPrivateInfo(uint8_t id,
-                                                        Stream *stream,
-                                                        cw_pack_context *pc) {
+                                                        Stream *stream
+                                                        ) {
     this->id = id;
     this->stream = stream;
-    this->pc = pc;
-    init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
+    //this->pc = pc;
+    //init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
 }
 
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, false>::_setPrivateInfo(uint8_t id,
-                                                         Stream *stream,
-                                                         cw_pack_context *pc) {
+                                                         Stream *stream
+                                                         ) {
     this->id = id;
     this->stream = stream;
-    this->pc = pc;
-    init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
+    //this->pc = pc;
+    //init_dynamic_memory_pack_context(pc, DEFAULT_PACK_BUFFER_SIZE);
 }
 
 /*
@@ -465,6 +469,11 @@ template class SmartData<long *>;
 
 template class SmartData<float>;
 template class SmartData<float *>;
+template class SmartData<float (&)[50]>;
+template class SmartData<float (&),true>;
+
+
+
 
 template class SmartData<double>;
 template class SmartData<double *>;
@@ -479,8 +488,8 @@ template class SmartData<String>;
 // template void SmartData<unsigned char>::cw_pack(cw_pack_context*, unsigned
 // char);
 
-void uglytest(cw_pack_context *cw) {
-    cw_pack<unsigned char>(cw, (unsigned char)50);
-}
+//void uglytest(cw_pack_context *cw) {
+//    cw_pack<unsigned char>(cw, (unsigned char)50);
+//}
 
-void uglytest2(cw_pack_context *cw) { cw_pack<uint16_t>(cw, (uint16_t)50); }
+//void uglytest2(cw_pack_context *cw) { cw_pack<uint16_t>(cw, (uint16_t)50); }

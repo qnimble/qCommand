@@ -272,7 +272,7 @@ class qCommand {
   private:
     Stream *binaryStream;
     Stream *debugStream;
-    cw_pack_context pc;
+    //cw_pack_context pc;
     char readBinaryInt(void);
     char readBinaryInt2(void);
     // template <typename DataType, typename
