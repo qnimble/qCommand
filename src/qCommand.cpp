@@ -390,7 +390,12 @@ template <typename T>
 //void qCommand::assignVariable(char const *command, SmartData<T, TypeTraits<T, void>::isArray> *object, bool read_only) {
 void qCommand::assignVariable(char const *command, SmartData<T> *object, bool read_only) {
     Types types;
-    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
+    using base_type = typename std::conditional<
+    std::is_reference<T>::value,
+    typename std::remove_reference<T>::type,
+    T>::type;
+
+    types.sub_types = {type2int<base_type>::result, PTR_SD_OBJECT};
     if (read_only) {
         types.sub_types.read_only = true;
     }
@@ -595,7 +600,7 @@ object) {
 template void qCommand::assignVariable(const char *command,
                                        unsigned char *object, bool read_only);
 
-template void qCommand::assignVariable<uint16_t&>(const char *command, SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool read_only);
+//template void qCommand::assignVariable<uint16_t&>(const char *command, SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool read_only);
 
 template void qCommand::assignVariable<float*>(const char*, SmartData<float*, TypeTraits<float*, void>::isArray>*,bool);
 
@@ -744,6 +749,7 @@ template void qCommand::assignVariable(const char *command,
                                        SmartData<String, false> *object,
                                        bool read_only);
 template void qCommand::assignVariable(const char *command, SmartData<uint16_t(&)> *object, bool read_only);
+
 
 
 // template void qCommand::assignVariable(const char *command,

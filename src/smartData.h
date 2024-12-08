@@ -85,11 +85,7 @@ template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
 class Base {
   public:
     Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
-    // virtual void _get(void* data); // pure virtual function
-    //virtual void _get(void *data); // pure virtual function
-    //virtual void _set(void *data); // pure virtual function
-    void setNeedToSend(void); // set states as if set ran, even though it didn't.
-    //virtual void sendValue2(void);
+    void setNeedToSend(void);
     void resetUpdateState(void);
     virtual uint16_t size(void);
     UpdateState getUpdateState(void) { return updates_needed; }
@@ -120,11 +116,11 @@ class AllSmartDataPtr : public Base {
         dataRequested = true;
     };
 
-    void _get(void *data, size_t element);
-    void _set(void *data, size_t element);    
+    //void _get(void *data, size_t element);
+    //void _set(void *data, size_t element);    
     void resetUpdateState(void);
 
-    const size_t totalElements; //protected because const to can be public
+    const size_t totalElements; //in public because protected by const flag
   protected:
     size_t currentElement;
     bool dataRequested = false;
@@ -282,6 +278,10 @@ template <> struct type2int<SmartData<uint8_t>> {
 template <> struct type2int<uint8_t> {
     enum { result = 6 };
 };
+//template <> struct type2int<uint8_t&> {
+//    enum { result = 6 };
+//};
+
 template <> struct type2int<SmartData<uint16_t>> {
     enum { result = 8 };
 };
@@ -291,9 +291,9 @@ template <> struct type2int<SmartData<uint16_t *>> {
 template <> struct type2int<uint16_t> {
     enum { result = 8 };
 };
-template <> struct type2int<uint16_t&> {
-    enum { result = 8 };
-};
+//template <> struct type2int<uint16_t&> {
+//    enum { result = 8 };
+//};
 
 template <> struct type2int<SmartData<uint>> {
     enum { result = 10 };
