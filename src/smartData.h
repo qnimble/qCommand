@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-
 enum UpdateState {
     STATE_IDLE,                  // A
     STATE_NEED_TOSEND,           // B
@@ -26,13 +25,13 @@ struct TypeTraits<T, std::enable_if_t<std::is_pointer<T>::value>> {
     static constexpr bool isArray = true;
 };
 
-// Specialization for reference types that are not arrays
+// Specialization for reference types that are not arrays. Set to arrays anyway.
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<std::is_reference<T>::value &&
                     !std::is_array<std::remove_reference_t<T>>::value>> {
     static constexpr bool isPointer = false;
     static constexpr bool isReference = true;
-    static constexpr bool isArray = false;
+    static constexpr bool isArray = true;
 };
 
 // Specialization for references to arrays
@@ -73,8 +72,8 @@ static_assert(TypeTraits<double *>::isArray,
               "double* should be considered an array");
 static_assert(TypeTraits<double&>::isReference,
               "double& should be considered a reference");
-static_assert(!TypeTraits<double&>::isArray,
-              "double& should be considered a reference");
+//static_assert(TypeTraits<double&>::isArray,
+              //"double& should be considered a reference");
 static_assert(TypeTraits<double(&)[50]>::isArray,
               "double& should be considered a reference");
 
@@ -83,27 +82,29 @@ template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
     return N;
 }*/
 
-#warning move these to private when done with debug
 class Base {
   public:
+    Base() : stream(0), id(0) {}
     // virtual void _get(void* data); // pure virtual function
+    virtual void _get(void *data); // pure virtual function
     virtual void _set(void *data); // pure virtual function
     void setNeedToSend(void); // set states as if set ran, even though it didn't.
-    virtual void sendValue(void);    
-    virtual void _get(void *data); // pure virtual function
+    virtual void sendValue(void);
     void resetUpdateState(void);
     uint16_t size(void);
 
   protected:
-    UpdateState updates_needed = STATE_IDLE;   
     friend class qCommand;
+    UpdateState updates_needed = STATE_IDLE;
+    Stream *stream;
+    uint8_t id;
 };
 
 //generic SmartData for single values and arrays
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
 class SmartData : public Base {
   public:
-    SmartData(DataType data);    
+    SmartData(DataType data);
 };
 
 // Class for common elements in SmartData for arrays
@@ -113,8 +114,16 @@ class AllSmartDataPtr : public Base {
     virtual size_t getCurrentElement(void);
     virtual size_t getTotalElements(void);
     virtual void resetCurrentElement(void);
-    size_t size(void);
-    const size_t totalElements;
+    
+    void sendValue(void);
+    void _get(void *data);
+    void _set(void *data);    
+    void resetUpdateState(void);
+
+    const size_t totalElements; //protected because const to can be public
+  protected:
+    size_t currentElement;
+    bool dataRequested = false;
 };
 
 // Specialization of SmartData for arrays!
@@ -146,43 +155,33 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     // For pointer arrays with explicitly set size    
     SmartData(storage_type data, size_t size)
         requires (TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
-        : AllSmartDataPtr(size / sizeof(baseType)), value(data) , id(0), stream(0) {
-        Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
-                      data, size, totalElements);
+        : AllSmartDataPtr(size / sizeof(baseType)), value(data) {
+        //Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
+          //            data, size, totalElements);
     };
 
     //For Reference to arrays
     template <size_t N>
     SmartData(typename std::remove_reference<DataType>::type (&data)[N])
         requires (TypeTraits<DataType>::isReference)
-        : AllSmartDataPtr(N / sizeof(baseType)),
-        value(&data[0]), 
-        id(0), 
-        stream(0) {
-        Serial.printf("Reference Array: %u with size=%u and totalElements=%u\n",
-                      data[0], N, totalElements);
+        : AllSmartDataPtr(N),
+        value(&data[0]) {
+        //Serial.printf("Reference Array: %u with size=%u and totalElements=%u\n",
+        //              data[0], totalElements * sizeof(baseType), totalElements);
     };
 
-    void set(DataType);
-    void sendValue(void);
-    void _get(void *data);
-    void _set(void *data);
-    // void setNeedToSend(void);
-    void resetUpdateState(void);
-
+    //void set(DataType);
+    
     void setNext(baseType);
     size_t getTotalElements(void) { return totalElements; };
 
     uint16_t size(void) {
-        return totalElements *
-               sizeof(typename std::remove_pointer<DataType>::type);
+        return totalElements * sizeof(baseType);
     }
 
     baseType get(size_t element) {
         return value[element];
     }
-
-
 
     size_t getCurrentElement(void) { return currentElement; };
 
@@ -190,35 +189,21 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         currentElement = 0;
         dataRequested = true;
     };
-
-  #warning move to protected
-    storage_type value;
-  protected:
     
-
   private:
     void _setPrivateInfo(uint8_t id, Stream *stream);
-    //cw_pack_context *pc;
-
-    
-    size_t currentElement;
-    bool dataRequested = false;
-
+    storage_type value;
     friend class qCommand;
+        
 
-    // private data that gets set by qC::addCommand
-    uint8_t id;
-    Stream *stream;
 };
 
 // For non-arrays
 template <class DataType>
-// class SmartData<DataType, typename
-// std::enable_if<!std::is_array<DataType>::value>::type>: public Base {
 class SmartData<DataType, false> : public Base {
   public:
-    SmartData(DataType data) : value(data), id(0), stream(0) {};
-
+    SmartData(DataType data) : value(data) {};
+    void sendValue(void);
     // For fundamental types like int, float, bool
     template <typename T = DataType>
     typename std::enable_if<
@@ -238,78 +223,23 @@ class SmartData<DataType, false> : public Base {
     }
 
     void set(DataType);
-    void please(void);
-    void sendValue(void);
+    
     void _get(void *data);
     void _set(void *data);
 
-    // void setNeedToSend(void);
     void resetUpdateState(void);
 
     uint16_t size(void) { return sizeof(DataType); }
-    DataType value;
-#warning move back value to protected after testing
-  protected:
-    // DataType value;
+    
 
   private:
     void _setPrivateInfo(uint8_t id, Stream *stream);
-    //cw_pack_context *pc;
-
-    bool dataRequested = false;
-
-    friend class qCommand;
-
-    // private data that gets set by qC::addCommand
-    uint8_t id;
-    Stream *stream;
-};
-
-/*
-template <class DataType>
-class SmartDataPtr: public AllSmartDataPtr  {
-//  class SmartData {
-public:
-    SmartDataPtr(DataType, size_t);
-    DataType get(size_t);
-    void get(void);
-    void set(DataType, size_t);
-    void set(DataType*, unsigned int);
-    void sendValue(void);
-    void _set(void* data);
-    void please(void);
-    void sendIfNeedValue(void);
-    void _get(void* data);
-    void setNeedToSend(void);
-    using baseType = typename std::remove_pointer<DataType>::type;
-
-    void setNext(baseType);
-    size_t getCurrentElement(void);
-    size_t getTotalElements(void);
-    void resetCurrentElement(void);
-    void resetUpdateState(void);
-
-private:
     DataType value;
-    const size_t totalElements;
-    size_t currentElement;
+
     bool dataRequested = false;
-    cw_pack_context* pc;
-    void _setPrivateInfo(uint8_t id, Stream* stream, cw_pack_context* pc);
 
-    //void _set(void* value) override;
-    //void* _get(void) override;
     friend class qCommand;
-
-    //private data that gets set by qC::addCommand
-    uint8_t id;
-    Stream* stream;
 };
-*/
-// template <class DataType>
-// using SmartDataNew = typename
-// std::conditional<std::is_pointer<DataType>::value, SmartDataPtr<DataType>,
-// SmartData<DataType>>::type;
 
 template <typename T> struct type2int {
     // enum { result = 0 }; // do this if you want a fallback value, empty to
@@ -432,13 +362,5 @@ template <> struct type2int<SmartData<double *>> {
     enum { result = 12 };
 };
 
-/*
-struct DataInfo {
-    char command[STREAMCOMMAND_MAXCOMMANDLENGTH + 1];
-    uint8_t dataType;
-    DataObject* ptr;
-};                                    // Data structure to hold Command/Handler
-function key-value pairs
-*/
 
 #endif // SMARTDATA_h

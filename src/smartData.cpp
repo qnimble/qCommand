@@ -71,10 +71,14 @@ template <class DataType> void SmartData<DataType, false>::_get(void *data) {
     *ptr = value;
 }
 
+void AllSmartDataPtr::_get(void *data) {
+    dataRequested = true;    
+}
+/*
 template <class DataType> void SmartData<DataType, true>::_get(void *data) {
     dataRequested = true;
 }
-
+*/
 /*
 template <class SmartDataGeneric, bool isArray>
 struct GetHelper<SmartData<SmartDataGeneric, isArray>,true> {
@@ -115,11 +119,19 @@ void SmartData<SmartDataGeneric, false>::_set(void *data) {
     }
 }
 
+
+
+void AllSmartDataPtr::_set(void *data) {
+    return; // not implemented for arrays
+}
+
+
+/*
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::_set(void *data) {
     return; // not implemented for arrays
 }
-
+*/
 void Base::resetUpdateState(void) { updates_needed = STATE_IDLE; }
 
 /*
@@ -136,8 +148,8 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 
 */
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric, false>::sendValue(void) {
+template <class DataType>
+void SmartData<DataType, false>::sendValue(void) {
     Serial.printf("Sending Data (sendValue non array) for %u\n", this->id);
     setDebugWord(0x3310010);
     if (stream) {
@@ -271,8 +283,9 @@ size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
 }
 */
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric, true>::sendValue(void) {
+//template <class SmartDataGeneric>
+//void SmartData<SmartDataGeneric, true>::sendValue(void) {
+void AllSmartDataPtr::sendValue() {
     Serial.printf("Sending Data (sendValue array) for %u\n", this->id);
     if (stream) {
 /*
