@@ -85,8 +85,8 @@ template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
 class Base {
   public:
     Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
-    void setNeedToSend(void);
-    void resetUpdateState(void);
+    void sendUpdate(void);
+    void resetUpdateState(void) { updates_needed = STATE_IDLE; };
     virtual uint16_t size(void);
     UpdateState getUpdateState(void) { return updates_needed; }
     
@@ -96,6 +96,11 @@ class Base {
     Stream *stream;
     uint8_t id;
     UpdateState updates_needed;
+    private:
+        void _setPrivateInfo(uint8_t id,Stream *stream) {
+            this->id = id;
+           this->stream = stream;
+     }
 };
 
 //generic SmartData for single values and arrays
@@ -185,7 +190,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
     
   private:
-    void _setPrivateInfo(uint8_t id, Stream *stream);
+    //void _setPrivateInfo(uint8_t id, Stream *stream);
     storage_type value;
     friend class qCommand;
         
@@ -227,7 +232,7 @@ class SmartData<DataType, false> : public Base {
     
 
   private:
-    void _setPrivateInfo(uint8_t id, Stream *stream);
+    //void _setPrivateInfo(uint8_t id, Stream *stream);
     DataType value;
 
     bool dataRequested = false;
