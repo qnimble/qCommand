@@ -299,8 +299,15 @@ char qCommand::readBinaryInt2(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
             Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
+/*
+            if (i==13){
+                Serial.printf("SD obj at %u / 0x%08x updates_needed=%u\n", i,ptr, ptr->getUpdateState());
+                delayMicroseconds(50000);
+            }            
+    */
             if (ptr->updates_needed == STATE_NEED_TOSEND) {
-                // debugStream->printf("Sending tracked variable %u\n", i);
+                //debugStream->printf("Sending tracked variable %u\n", i);
+                Serial.printf("Sending tracked variable %u\n", i);
                 send_update_on_tracked_variable(i);
                 ptr->updates_needed = STATE_WAIT_ON_ACK;
             }
@@ -394,8 +401,8 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object, bool re
         // String subtype, max size is large
         size = 255;
     }
-    Serial.printf("Adding %s for smartData (types:0x%02x, size=%u)\n", command,
-                  types.raw, size);
+    Serial.printf("Adding %s for smartData (types:0x%02x, size=%u) @0x%08x\n", command,
+                  types.raw, size, object);
     addCommandInternal(command, types, object, size);
 }
 

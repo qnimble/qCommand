@@ -450,8 +450,8 @@ qCommand::assignVariable(const char *command, T &variable, bool read_only) {
     }
     // Serial.printf("Adding %s for reference SD Object\n", command);
     uint16_t size = variable.size();
-    Serial.printf("Adding %s for SD reference data (types: 0x%02x)\n", command,
-                  types);
+    Serial.printf("Adding %s for SD reference data (types: 0x%02x) at 0x%08x\n", command,
+                  types, &variable);
     addCommandInternal(command, types, &(variable), size);
 }
 

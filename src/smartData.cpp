@@ -1,79 +1,18 @@
 #include "smartData.h"
 
-// #include <MsgPack.h>
-//#include <FastCRC.h>
-
-// MsgPack::Packer packer;
-//static FastCRC16 CRC16;
-
-//#include "basic_contexts.h"
-//#include "cwpack.h"
-#warning No need for this afger debugging
-#include "quarto_wdog.h"
+void Base::resetUpdateState(void) { updates_needed = STATE_IDLE; }
 
 /*
-void cw_pack(cw_pack_context *cw, String value) {
-    cw_pack_str(cw, value.c_str(), value.length());
-}
-
-void cw_pack(cw_pack_context *cw, bool value) { cw_pack_boolean(cw, value); }
-*/
-/*
-//No idea why I need this as it should be built from the template, but for some
-reason it isn't. void cw_pack(cw_pack_context* cw, unsigned char value){
-   Serial.printf("Running cw_pack with unsigned char as argument: %u\n",value);
-  cw_pack_unsigned(cw,value);
-}
-*/
-
-/*
-
-template <typename argChar, std::enable_if_t<
-  std::is_same<argChar, unsigned char>::value, char> = 0>
-void cw_pack(cw_pack_context* cw, argChar value){
-   Serial.printf("Running cw_pack_bin with start %02x\n",value);
-  cw_pack_bin(cw,&value, 1);
-}
-*/
-/*
-template <
-    typename argUInt,
-    std::enable_if_t<std::is_same<argUInt, unsigned char>::value ||
-                         std::is_same<argUInt, uint8_t>::value ||
-                         std::is_same<argUInt, uint16_t>::value ||
-                         std::is_same<argUInt, short unsigned int>::value ||
-                         std::is_same<argUInt, uint>::value ||
-                         std::is_same<argUInt, ulong>::value,
-                     uint> = 0>
-void cw_pack(cw_pack_context *cw, argUInt value) {
-    // Serial.printf("Running cw_pack_unsigned with %u\n",value);
-    cw_pack_unsigned(cw, value);
-}
-
-template <typename argInt,
-          std::enable_if_t<std::is_same<argInt, int8_t>::value ||
-                               std::is_same<argInt, int16_t>::value ||
-                               std::is_same<argInt, int>::value ||
-                               std::is_same<argInt, long>::value,
-                           int> = 0>
-void cw_pack(cw_pack_context *cw, argInt value) {
-    cw_pack_signed(cw, value);
-}
-
-template <typename argFloat,
-          std::enable_if_t<std::is_floating_point<argFloat>::value, int> = 0>
-void cw_pack(cw_pack_context *cw, argFloat value) {
-    cw_pack_float(cw, value);
-}
-*/
+//_get for non-array data
 template <class DataType> void SmartData<DataType, false>::_get(void *data) {
     DataType *ptr = static_cast<DataType *>(data);
     *ptr = value;
 }
 
-void AllSmartDataPtr::_get(void *data) {
+void AllSmartDataPtr::_get(void *data, size_t element) {
     dataRequested = true;    
 }
+*/
 /*
 template <class DataType> void SmartData<DataType, true>::_get(void *data) {
     dataRequested = true;
@@ -103,7 +42,7 @@ void SmartData<SmartDataGeneric,isArray>::_get(void* data) {
 
 
 */
-
+/*
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, false>::_set(void *data) {
     SmartDataGeneric *ptr = static_cast<SmartDataGeneric *>(data);
@@ -121,18 +60,19 @@ void SmartData<SmartDataGeneric, false>::_set(void *data) {
 
 
 
-void AllSmartDataPtr::_set(void *data) {
-    return; // not implemented for arrays
+void AllSmartDataPtr::_set(void *data, size_t element) {
+    data = &value[element];
+    return; 
 }
 
-
+*/
 /*
 template <class SmartDataGeneric>
 void SmartData<SmartDataGeneric, true>::_set(void *data) {
     return; // not implemented for arrays
 }
 */
-void Base::resetUpdateState(void) { updates_needed = STATE_IDLE; }
+
 
 /*
 template <class SmartDataGeneric>
@@ -147,50 +87,17 @@ void SmartDataPtr<SmartDataGeneric>::_set(void* data) {
 }
 
 */
-
+/*
 template <class DataType>
-void SmartData<DataType, false>::sendValue(void) {
-    Serial.printf("Sending Data (sendValue non array) for %u\n", this->id);
+void SmartData<DataType, false>::sendValue2(void) {
+    Serial2.printf("Sending Data (sendValue non array) for %u\n", this->id);
+    delayMicroseconds(100000);
     setDebugWord(0x3310010);
     if (stream) {
-        /*
-        setDebugWord(0x3310011);
-        uint16_t crc = CRC16.ccitt((uint8_t *)&value, sizeof(value));
-        setDebugWord(0x3310012);
-        cw_pack_array_size(pc, 4);
-        cw_pack_unsigned(pc, id);
-        cw_pack_unsigned(pc, 2); // command for set, maybe expose this enum
-                                 // instead of hard-coding
-        cw_pack(pc, value);
-        cw_pack_unsigned(pc, crc);
-        setDebugWord(0x3310013);
-        if (pc->return_code != CWP_RC_OK) {
-            Serial.printf("Error! Return Code %u\n", pc->return_code);
-            return;
-        }
-        setDebugWord(0x3310015);
-        // Serial.printf("0x%08x and 0x%08x\n", pc.start,*pc.start);
-        // Serial.printf("Length %u on id=%u\n", pc.start -pc.current, id);
-        // Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n",
-        // pc.start, pc.current, pc.end  );
-        setDebugWord(0x3310017);
-        uint16_t leng = pc->current - pc->start;
-        leng = min(leng, 16);
-        // Serial.print("Sent packet: ");
-        for (uint i = 0; i < leng; i++) {
-            // Serial.printf("0x%02x ",pc.start[i]);
-        }
-        // Serial.println();
-        stream->write(pc->start, pc->current - pc->start);
-        pc->current = pc->start; // reset for next one.
-        setDebugWord(0x3310019);
-        // packer->clear();
-        // packer->to_array(id,value, crc );
-        // stream->write(packer->data(),packer->size());
-        */
+        
     }
 }
-
+*/
 /*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::please(void) {
@@ -285,36 +192,12 @@ size_t SmartDataPtr<SmartDataGeneric>::getTotalElements(void) {
 
 //template <class SmartDataGeneric>
 //void SmartData<SmartDataGeneric, true>::sendValue(void) {
-void AllSmartDataPtr::sendValue() {
-    Serial.printf("Sending Data (sendValue array) for %u\n", this->id);
-    if (stream) {
 /*
-        uint16_t crc = CRC16.ccitt((uint8_t *)value,
-                                   totalElements * sizeof(SmartDataGeneric));
-        cw_pack_array_size(pc, 4);
-        cw_pack_unsigned(pc, id);
-        cw_pack_unsigned(pc, 2); // command for set, maybe expose this enum
-                                 // instead of hard-coding
-        // Serial.printf("Check 1: Return Code %d\n",pc->return_code);
-        // Serial.printf("Will run cw_pack_bin with size of %u\n", totalElements
-        // * sizeof(SmartDataGeneric));
-        cw_pack_bin(pc, value, totalElements * sizeof(SmartDataGeneric));
-        // Serial.printf("Check 2: Return Code %d\n",pc->return_code);
-        cw_pack_unsigned(pc, crc);
-        if (pc->return_code != CWP_RC_OK) {
-            Serial.printf("Error! Return Code %ld\n", pc->return_code);
-            return;
-        }
-        // uint16_t leng = pc.current - pc.start;
-        // leng = min(leng,16);
-        // Serial.print("Sent packet: ");
-        // for (uint i = 0; i < leng; i++) {
-        // Serial.printf("0x%02x ",pc.start[i]);
-        //}
-        // Serial.println();
-        stream->write(pc->start, pc->current - pc->start);
-        pc->current = pc->start; // reset for next one.
-*/
+void AllSmartDataPtr::sendValue2() {
+    Serial.printf("Sending Data (sendValue array) for %u\n", this->id);
+    delayMicroseconds(100000);
+    if (stream) {
+
         // #warning maybe do not want to reset pointer send we send...
         // currentElement = 0;
         // dataRequested = false;
@@ -324,6 +207,7 @@ void AllSmartDataPtr::sendValue() {
         // stream->write(packer->data(),packer->size());
     }
 }
+*/
 /*
 template <class SmartDataGeneric>
 void SmartDataPtr<SmartDataGeneric>::setNeedToSend(void) {
@@ -335,15 +219,15 @@ that plus queue
 }
 */
 void Base::setNeedToSend(void) {
-    // Serial.printf("New update and state is %u\n",this->pc, updates_needed);
-    if ((updates_needed == STATE_IDLE) ||
-        (updates_needed == STATE_NEED_TOSEND)) {
+    Serial.printf("New update for object at 0x%08x with size %u and state was %u / %u ",this, size(), updates_needed, getUpdateState());
+    if ((updates_needed == STATE_IDLE) || (updates_needed == STATE_NEED_TOSEND)) {
         updates_needed = STATE_NEED_TOSEND;
     } else {
         updates_needed =
             STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on
                                           // ACK, so now that plus queue
     }
+    Serial.printf(" and now is %u\n",updates_needed);
 }
 
 template <class SmartDataGeneric>

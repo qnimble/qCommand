@@ -84,20 +84,22 @@ template <typename T, std::size_t N> constexpr std::size_t arraySize(T (&)[N]) {
 
 class Base {
   public:
-    Base() : stream(0), id(0) {}
+    Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
     // virtual void _get(void* data); // pure virtual function
-    virtual void _get(void *data); // pure virtual function
-    virtual void _set(void *data); // pure virtual function
+    //virtual void _get(void *data); // pure virtual function
+    //virtual void _set(void *data); // pure virtual function
     void setNeedToSend(void); // set states as if set ran, even though it didn't.
-    virtual void sendValue(void);
+    //virtual void sendValue2(void);
     void resetUpdateState(void);
-    uint16_t size(void);
-
+    virtual uint16_t size(void);
+    UpdateState getUpdateState(void) { return updates_needed; }
+    
   protected:
     friend class qCommand;
-    UpdateState updates_needed = STATE_IDLE;
+    
     Stream *stream;
     uint8_t id;
+    UpdateState updates_needed;
 };
 
 //generic SmartData for single values and arrays
@@ -110,14 +112,16 @@ class SmartData : public Base {
 // Class for common elements in SmartData for arrays
 class AllSmartDataPtr : public Base {
   public:
-    AllSmartDataPtr(size_t size) : totalElements(size) {};
-    virtual size_t getCurrentElement(void);
-    virtual size_t getTotalElements(void);
-    virtual void resetCurrentElement(void);
-    
-    void sendValue(void);
-    void _get(void *data);
-    void _set(void *data);    
+    AllSmartDataPtr(size_t size) : totalElements(size) {};    
+    size_t getCurrentElement(void) { return currentElement; };
+    size_t getTotalElements(void) { return totalElements; };
+    void resetCurrentElement(void) {
+        currentElement = 0;
+        dataRequested = true;
+    };
+
+    void _get(void *data, size_t element);
+    void _set(void *data, size_t element);    
     void resetUpdateState(void);
 
     const size_t totalElements; //protected because const to can be public
@@ -173,7 +177,6 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     //void set(DataType);
     
     void setNext(baseType);
-    size_t getTotalElements(void) { return totalElements; };
 
     uint16_t size(void) {
         return totalElements * sizeof(baseType);
@@ -183,12 +186,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         return value[element];
     }
 
-    size_t getCurrentElement(void) { return currentElement; };
 
-    void resetCurrentElement(void) {
-        currentElement = 0;
-        dataRequested = true;
-    };
     
   private:
     void _setPrivateInfo(uint8_t id, Stream *stream);
@@ -203,7 +201,7 @@ template <class DataType>
 class SmartData<DataType, false> : public Base {
   public:
     SmartData(DataType data) : value(data) {};
-    void sendValue(void);
+    //void sendValue2(void);
     // For fundamental types like int, float, bool
     template <typename T = DataType>
     typename std::enable_if<
@@ -224,8 +222,8 @@ class SmartData<DataType, false> : public Base {
 
     void set(DataType);
     
-    void _get(void *data);
-    void _set(void *data);
+    //void _get(void *data);
+    //void _set(void *data);
 
     void resetUpdateState(void);
 
