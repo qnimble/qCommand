@@ -120,9 +120,9 @@ template <class DataType> class SmartData<DataType, false> : public Base {
         return value;
     }
 
-    // For complex types like String
+    // For complex types like String that are not arrays nor fundamental types
     template <typename T = DataType>
-    T get() const
+    const T &get() const
         requires !std::is_fundamental<
             typename std::remove_pointer<T>::type>::value
     {
@@ -160,7 +160,5 @@ template <typename T> struct type2int {
     static constexpr uint8_t result = type2int_base<typename unwrap_smart_data<
         typename remove_ptr_if_not_ptr<T>::type>::type>::result;
 };
-
-
 
 #endif // SMARTDATA_h
