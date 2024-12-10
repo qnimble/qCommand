@@ -202,9 +202,10 @@ class qCommand {
     bool binaryConnected;
 };
 
+/*
 // Base template for fixed-size arrays
+// Needs to be in header to get size N
 template <typename T, std::size_t N>
-// typename std::enable_if<!std::is_base_of<Base, T>::value>::type
 void qCommand::assignVariable(const char *command, T (&variable)[N],
                               bool read_only)
     requires(!std::is_base_of<Base, T>::value)
@@ -217,8 +218,9 @@ void qCommand::assignVariable(const char *command, T (&variable)[N],
     Serial.printf("Adding %s for fixed array size %zu\n", command, N);
     addCommandInternal(command, types, variable, N * sizeof(T));
 }
-
-// Specialization for arrays without size
+*/
+// Specialization for pointers to arrays with size
+// Needs to be in header since each size its own template / initialization
 template <typename T>
 void qCommand::assignVariable(const char *command, T variable, bool read_only)
     requires(
@@ -233,10 +235,10 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    Serial.printf("Adding %s for pointer to array (no size)\n", command);
+    Serial.printf("Adding %s for pointer to array with size = %u)\n", command, sizeof(base_type));
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
-
+/*
 // Specialization for arrays without size
 template <typename T>
 void qCommand::assignVariable(const char *command, T variable, bool read_only)
@@ -250,27 +252,8 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    Serial.printf("Adding %s for pointer to array (no size)\n", command);
+    Serial.printf("Adding %s for pointer to array (no size -> %u)\n", command, sizeof(T));
     addCommandInternal(command, types, variable, sizeof(T));
 }
-
-// Function for SmartData by reference
-template <typename T>
-void qCommand::assignVariable(const char *command, T &variable, bool read_only)
-    requires(std::is_base_of<Base, typename std::decay<T>::type>::value)
-{
-    Types types;
-    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-    // Serial.printf("Adding %s for reference SD Object\n", command);
-    uint16_t size = variable.size();
-    Serial.printf("Adding %s for SD reference data (types: 0x%02x) at 0x%08x\n",
-                  command, types, &variable);
-    addCommandInternal(command, types, &(variable), size);
-}
-
-uint16_t sizeOfType(qCommand::Types type);
-
+*/
 #endif // QCOMMAND_h
