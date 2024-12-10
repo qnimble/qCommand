@@ -727,7 +727,7 @@ template void qCommand::assignVariable(const char *command,
                                        bool read_only);
 
 
-template void qCommand::assignVariable(const char *command, unsigned char *object, bool read_only);
+template void qCommand::assignVariable(const char *command, char *object, bool read_only);
 
 
 template void qCommand::assignVariable(const char *command, uint8_t *variable,
@@ -794,7 +794,7 @@ template void qCommand::assignVariable(const char *command, int *variable,
 template void qCommand::assignVariable(const char *command, long *variable,
                                        bool read_only);
 
-template void qCommand::assignVariable(const char*, char*, bool);
+//template void qCommand::assignVariable(const char*, char*, bool);
 
 /*
 //Assign variable to command list for floating point numbers (calls

@@ -167,9 +167,11 @@ class qCommand {
  
 // Specialization for arrays without size
 template <typename T>
-typename std::enable_if<    
+typename std::enable_if<        
     std::is_pointer<T>::value &&    
-    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value 
+    
+    >::type    
     assignVariable(const char* command, T variable, bool read_only = false);
 
 
@@ -444,9 +446,11 @@ qCommand::assignVariable(const char* command, T (&variable)[N], bool read_only) 
 
 // Specialization for arrays without size
 template <typename T>
-typename std::enable_if<    
+typename std::enable_if<        
     std::is_pointer<T>::value &&    
-    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value 
+    
+    >::type    
 qCommand::assignVariable(const char* command, T variable, bool read_only) {
     using base_type = typename std::remove_pointer<T>::type;  // G
     using array_type = typename std::remove_extent<base_type>::type;  // G
