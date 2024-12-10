@@ -63,7 +63,7 @@ void qCommand::reset(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
             Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
-            ptr->updates_needed = STATE_IDLE;
+            ptr->updates_needed = Base::UpdateState::STATE_IDLE;
         }
     }
 }
@@ -183,7 +183,7 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
     return stop_ptr;
 
 }
-
+/*
 #warning debugging only functions
 extern "C" {
 void desc(const char *msg, uint16_t value);
@@ -200,32 +200,31 @@ void descl(const char *msg, uint32_t value) {
 void descs(const char *msg, const char *info) {
     Serial2.printf("%s: %s\n", msg, info);
 }
-
+*/
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     qCommand::Types type;
     type.raw = p_msg_obj->type;
     Serial2.printf("Command is %s with type=0x%02x and size=%u and ptr to 0x%08x\n",p_msg_obj->id, p_msg_obj->type, p_msg_obj->size, p_msg_obj->ptr.data);
     if (type.sub_types.data == 4) {
         // String pointer
-        SmartData<String> *SD_String =
-            static_cast<SmartData<String> *>(p_msg_obj->ptr.data);
-        // p_msg_obj->size = SD_String->get().length()+1;
+        const SmartData<String> *SD_String =
+            static_cast<const SmartData<String> *>(p_msg_obj->ptr.data);
+        // p_msg_obj->size = SD_String->get().length()+1;        
         p_msg_obj->size = strlen(SD_String->get().c_str()) + 1;
         // Serial.printf("Get Smart String: length set to %u with content %s\n",
         //             p_msg_obj->size, SD_String->get().c_str());
         return static_cast<const void *>(SD_String->get().c_str());
     } else {
         size_t offset = qCommand::getOffset(type, p_msg_obj->size);
-        uint8_t* data = (static_cast<uint8_t *>(p_msg_obj->ptr.data) + offset);
+        const uint8_t* data = (static_cast<const uint8_t *>(p_msg_obj->ptr.data) + offset);
         Serial2.printf("Offset is 0x%08x and data is 0x%08x and *data is 0x%08x\n", offset, data, * ((uint32_t*) data));
         if ( p_msg_obj->size > sizeOfType(type) ) {
             // Array of data
             const void* final_ptr = (const void*) (* (uint32_t*) data);
-            Serial2.printf("Returning 0x%08x\n", final_ptr);
-            return final_ptr;
-            return (const void*) (* (uint32_t*) data);
+            //Serial2.printf("Returning 0x%08x\n", final_ptr);
+            return final_ptr;            
         } else {
-          return static_cast<const void *>(data);
+            return static_cast<const void *>(data);
         }
         
     }
@@ -307,11 +306,11 @@ char qCommand::readBinaryInt2(void) {
                 delayMicroseconds(50000);
             }            
     */
-            if (ptr->updates_needed == STATE_NEED_TOSEND) {
+            if (ptr->updates_needed == Base::UpdateState::STATE_NEED_TOSEND) {
                 //debugStream->printf("Sending tracked variable %u\n", i);
                 Serial.printf("Sending tracked variable %u\n", i);
                 send_update_on_tracked_variable(i);
-                ptr->updates_needed = STATE_WAIT_ON_ACK;
+                ptr->updates_needed = Base::UpdateState::STATE_WAIT_ON_ACK;
             }
         }
     }
