@@ -17,8 +17,10 @@ static eui_interface_t serial_comms;
  * Constructor
  */
 qCommand::qCommand(bool caseSensitive)
-    : commandList(NULL), commandCount(0), binaryStream(&Serial3),
-      debugStream(&Serial), defaultHandler(NULL),
+    : binaryStream(&Serial3), debugStream(&Serial), 
+    callBack{nullptr},
+    commandCount(0), commandList(NULL), 
+    defaultHandler(NULL),
       term('\n'), // default terminator for commands, newline character
       caseSensitive(caseSensitive), cur(NULL), last(NULL), bufPos(0),
       binaryConnected(false) {
@@ -46,7 +48,7 @@ qCommand::qCommand(bool caseSensitive)
         eui_setup_interfaces(&serial_comms, 1);
     }
 }
-
+/*
 #warning Debuggin only, remove when done
 void qCommand::printTable(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
@@ -56,7 +58,7 @@ void qCommand::printTable(void) {
             commandList[i].size, commandList[i].types.sub_types.ptr);
     }
 }
-
+*/
 void qCommand::reset(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
@@ -218,7 +220,7 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
         Serial2.printf("Offset is 0x%08x and data is 0x%08x and *data is 0x%08x\n", offset, data, * ((uint32_t*) data));
         if ( p_msg_obj->size > sizeOfType(type) ) {
             // Array of data
-            void* final_ptr = (const void*) (* (uint32_t*) data);
+            const void* final_ptr = (const void*) (* (uint32_t*) data);
             Serial2.printf("Returning 0x%08x\n", final_ptr);
             return final_ptr;
             return (const void*) (* (uint32_t*) data);
@@ -449,7 +451,7 @@ void qCommand::addCommand(const char *command,
     // commandList);
     eui_setup_tracked((eui_message_t *)&commandList[0], commandCount + 1);
 
-#warning with const char cannot make lower case
+
     // if (!caseSensitive) {
     //   strlwr((char*) commandList[commandCount].command);
     // }
@@ -490,16 +492,7 @@ void qCommand::addCommandInternal(const char *command, Types types,
         // have SmartData object pointer
         // commandList[commandCount].types.ptr_type = PTR_SD_OBJECT;
         // Base *ptr = static_cast<Base *>(object);
-        commandList[commandCount].ptr.object = object;
-
-#warning hardcoding array size to 7, BAD!!
-// commandList[commandCount].size = 7;
-// commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand&
-// streamCommandParser, Stream& stream, void* ptr, const char* command, void*
-// object)) function; commandList[commandCount].ptr = NULL;
-// object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
-#warning do I need to set private info?
-        // ptr->_setPrivateInfo(commandCount+1, binaryStream, &pc);
+        commandList[commandCount].ptr.object = (Base*) object;
     } else {
         if (object == NULL) {
             // catch NULL pointer and trap with function that can handle it
@@ -517,7 +510,7 @@ void qCommand::addCommandInternal(const char *command, Types types,
         //              commandList[commandCount].size);
     }
 
-#warning skipping case sensitive stuff
+
     // if (!caseSensitive) {
     //   strlwr(commandList[commandCount].command);
     //}
@@ -597,8 +590,7 @@ object) {
 }
 */
 
-template void qCommand::assignVariable(const char *command,
-                                       unsigned char *object, bool read_only);
+
 
 //template void qCommand::assignVariable<uint16_t&>(const char *command, SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool read_only);
 
@@ -619,7 +611,7 @@ SmartData<DataType>*) = nullptr; Types types =
 }
 */
 
-#warning add back when we have pointers to float and double arrays
+//#warning add back when we have pointers to float and double arrays
 // template void qCommand::assignVariable(const char *command, SmartData<float
 // *> *object, bool read_only); template void qCommand::assignVariable(const
 // char *command, SmartData<double *> *object, bool read_only);
@@ -733,8 +725,16 @@ template void qCommand::assignVariable(const char *command,
 template void qCommand::assignVariable(const char *command,
                                        SmartData<unsigned long> *object,
                                        bool read_only);
+
+
+template void qCommand::assignVariable(const char *command, unsigned char *object, bool read_only);
+
+
 template void qCommand::assignVariable(const char *command, uint8_t *variable,
                                        bool read_only);
+
+
+
 template void qCommand::assignVariable(const char *command, uint16_t *variable,
                                        bool read_only);
 template void qCommand::assignVariable(const char *command, uint *variable,
@@ -744,9 +744,6 @@ template void qCommand::assignVariable(const char *command, ulong *variable,
 
 template void qCommand::assignVariable(const char *command,
                                        SmartData<String> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<String, false> *object,
                                        bool read_only);
 template void qCommand::assignVariable(const char *command, SmartData<uint16_t(&)> *object, bool read_only);
 
@@ -1023,30 +1020,7 @@ void qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
         S.printf("%s is %f\n", command, newValue);
     }
 }
-/*
-template <class argType>
-void qCommand::reportGetSet(qCommand& qC, Stream& S, argType (*get_ptr)(void),
-void (*set_ptr)(argType), const char* command) { if ( qC.next() != NULL) {
-    argType newValue = atof(qC.current());
 
-    if ( sizeof(argFloating) >  4 ) { //make setting variable atomic for doubles
-or anything greater than 32bits.
-      __disable_irq();
-      //*ptr = newValue;
-      set_ptr(newValue);
-      __enable_irq();
-    } else {
-      set_ptr(newValue);
-      //*ptr = newValue;
-    }
-  }
-  if ( ( abs(*ptr) > 10 ) || (abs(*ptr) < .1) ) {
-    S.printf("%s is %e\n",command,*ptr); //print gain in scientific notation
-  } else {
-    S.printf("%s is %f\n",command,*ptr);
-  }
-}
-*/
 
 /**
  * This sets up a handler to be called in the event that the receveived command

@@ -14,6 +14,49 @@
 // Maximum length of a command excluding the terminating null
 #define STREAMCOMMAND_MAXCOMMANDLENGTH 25 // 8
 
+/*
+template <typename T, typename Enable = void> struct TypeInfo {
+    static constexpr uint8_t isChar = 55;
+};
+
+template<>
+struct TypeInfo<char> {
+    static constexpr uint8_t isChar = 11;
+};
+
+template<>
+struct TypeInfo<uint8_t> {
+    static constexpr uint8_t isChar = 22;
+};
+
+template<>
+struct TypeInfo<uint8_t*> {
+    static constexpr uint8_t isChar = 44;
+};
+
+template<>
+struct TypeInfo<char*> {
+    static constexpr uint8_t isChar = 77;
+};
+
+template<>
+struct TypeInfo<unsigned char*> {
+    static constexpr uint8_t isChar = 88;
+};
+static_assert(TypeInfo<unsigned char*>::isChar != 1, "Should not be 1");
+*/
+
+/*
+// Specialization for pointer types (treated as pointers to arrays)
+template <typename T>
+struct TypeInfo<T, std::enable_if_t<
+(std::is_same<typename std::remove_pointer<T>::type, char>::value ||
+     std::is_same<typename std::remove_pointer<T>::type, unsigned char>::value)>>
+    {
+    static constexpr bool isChar = false;
+};
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,8 +69,26 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj);
 }
 #endif
 
+template<typename T>
+struct is_char_type : std::false_type {};
+
+template<>
+struct is_char_type<char> : std::true_type {};
+
+template<>
+struct is_char_type<unsigned char> : std::true_type {};
+
+template<>
+struct is_char_type<signed char> : std::true_type {};
+
+
 class qCommand {
   public:
+    
+    template<typename T>
+    using char_type = is_char_type<T>;
+    
+    
     enum class Commands : uint8_t {
         ListCommands = 0,
         Get = 1,
@@ -59,6 +120,7 @@ class qCommand {
         PtrType ptr_type : 4;  // 4 bits to set what ptr type is used}
     };
 
+    
     qCommand(bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command,
@@ -102,19 +164,24 @@ class qCommand {
     void assignVariable(char const *command, SmartData<T> *object, bool read_only = false);
 
 
-    // Specialization for arrays without size
-    template <typename T>
-    typename std::enable_if<    
-    std::is_pointer<T>::value &&
-    !std::is_base_of<Base, T>::value>::type
+ 
+// Specialization for arrays without size
+template <typename T>
+typename std::enable_if<    
+    std::is_pointer<T>::value &&    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type    
     assignVariable(const char* command, T variable, bool read_only = false);
+
+
+
+
 
     // Arrays with size
     template <typename T>
     typename std::enable_if<    
     !std::is_pointer<T>::value &&
     std::is_array<T>::value &&
-    !std::is_base_of<Base, T>::value>::type    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type
     assignVariable(const char* command, T variable, bool read_only = false);
 
 
@@ -238,7 +305,18 @@ class qCommand {
 
       */
 
-#warning move back to private after testing
+
+    
+
+   
+
+    // void reportData(qCommand& qC, Stream& inputStream, const char* command,
+    // Base* baseObject);
+   
+  private:
+    Stream *binaryStream;
+    Stream *debugStream;
+    
     union callBack {
         void (*f1)(qCommand &streamCommandParser, Stream &stream);
         void (qCommand::*f2)(qCommand &streamCommandParser, Stream &stream,
@@ -259,20 +337,15 @@ class qCommand {
         } ptr;
     }; // Data structure to hold Command/Handler function key-value pairs
 
-    StreamCommandParserCallback
-        *commandList; // Actual definition for command/handler array
     uint8_t commandCount;
+    StreamCommandParserCallback *commandList; // Actual definition for command/handler array
+    
 
-    // void reportData(qCommand& qC, Stream& inputStream, const char* command,
-    // Base* baseObject);
     void reportData(qCommand &qC, Stream &inputStream, const char *command,
                     Types types, void *ptr,
                     StreamCommandParserCallback *commandList = NULL);
 
-  private:
-    Stream *binaryStream;
-    Stream *debugStream;
-    //cw_pack_context pc;
+
     char readBinaryInt(void);
     char readBinaryInt2(void);
     // template <typename DataType, typename
@@ -372,8 +445,8 @@ qCommand::assignVariable(const char* command, T (&variable)[N], bool read_only) 
 // Specialization for arrays without size
 template <typename T>
 typename std::enable_if<    
-    std::is_pointer<T>::value &&
-    !std::is_base_of<Base, T>::value>::type    
+    std::is_pointer<T>::value &&    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type    
 qCommand::assignVariable(const char* command, T variable, bool read_only) {
     using base_type = typename std::remove_pointer<T>::type;  // G
     using array_type = typename std::remove_extent<base_type>::type;  // G
@@ -386,12 +459,14 @@ qCommand::assignVariable(const char* command, T variable, bool read_only) {
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
 
+
+
 // Specialization for arrays without size
 template <typename T>
 typename std::enable_if<    
     !std::is_pointer<T>::value &&
     std::is_array<T>::value &&
-    !std::is_base_of<Base, T>::value>::type    
+    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type    
 qCommand::assignVariable(const char* command, T variable, bool read_only) {
     using base_type = typename std::remove_pointer<T>::type;  // G
     Types types;
