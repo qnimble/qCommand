@@ -1,10 +1,6 @@
 #include "qCommand.h"
 #include <limits>
 
-// #include "basic_contexts.h"
-// #include "cwpack.h"
-// #include "cwpack_utils.h"
-
 #include "protothreads.h"
 #include "pt.h"
 
@@ -13,9 +9,6 @@
 
 static eui_interface_t serial_comms;
 
-/**
- * Constructor
- */
 qCommand::qCommand(bool caseSensitive)
     : binaryStream(&Serial3), debugStream(&Serial), callBack{nullptr},
       commandCount(0), commandList(NULL), defaultHandler(NULL),
@@ -25,8 +18,8 @@ qCommand::qCommand(bool caseSensitive)
     strcpy(delim, " "); // strtok_r needs a null-terminated string
     clearBuffer();
 #ifdef ARDUINO_QUARTO
-    // #warning getHardwareUUID is Quarto specific. Need some generic Arduino
-    // way to getting unique ID....
+    // getHardwareUUID is Quarto specific. Need some generic Arduino way to
+    // getting unique ID....
     uint32_t uuid[4];
     getHardwareUUID(uuid, sizeof(uuid));
     eui_setup_identifier(
@@ -46,17 +39,7 @@ qCommand::qCommand(bool caseSensitive)
         eui_setup_interfaces(&serial_comms, 1);
     }
 }
-/*
-#warning Debuggin only, remove when done
-void qCommand::printTable(void) {
-    for (uint8_t i = 0; i < commandCount; i++) {
-        debugStream->printf(
-            "Command %u: %s (type=%u, size=%u, ptr_type=%u)\n", i,
-            commandList[i].command, commandList[i].types.sub_types.data,
-            commandList[i].size, commandList[i].types.sub_types.ptr);
-    }
-}
-*/
+
 void qCommand::reset(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
@@ -66,39 +49,9 @@ void qCommand::reset(void) {
     }
 }
 
-void qCommand::readBinary(void) {
-    PT_SCHEDULE(readBinaryInt2());
-    // readBinaryInt();
-}
+void qCommand::readBinary(void) { PT_SCHEDULE(readBinaryInt2()); }
 
-// #include <cstddef> // For offsetof
-
-/*
-void* dataPtr(const void* SD_ptr, uint8_t type) {
-  qCommand::Types types;
-  types.data_type = type & 0x0F;
-  types.ptr_type = (type >> 4) & 0x0F;
-  if (types.ptr_type == qCommand::PTR_SD_OBJECT) {
-    switch (types.data_type) {
-      case 4:
-        //SmartData<String> *ptr4 = (SmartData<String>*) SD_ptr;
-        //return &(ptr4->value);
-        break;
-      case 6: { //uint8_t
-        // Compute the offset of 'value' within 'SmartData<uint8_t>'
-        const size_t valueOffset = offsetof(SmartData<uint8_t>, value);
-        return SD_ptr - valueOffset;
-      }
-      default:
-        return NULL;
-    }
-  } else {
-    return SD_ptr;
-  }
-}
-*/
-
-uint16_t sizeOfType(qCommand::Types type) {
+uint16_t qCommand::sizeOfType(qCommand::Types type) {
     switch (type.sub_types.data) {
     case 3: // byte
     case 4: // char / string
@@ -118,8 +71,6 @@ uint16_t sizeOfType(qCommand::Types type) {
         return 0;
     }
 }
-
-
 
 // Function for SmartData by reference
 template <typename T>
@@ -194,35 +145,18 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
             stop_ptr = 1000;
         }
     }
-    Serial2.printf("Got array with sub_type %u and returning 0x%08x\n",
-                   type.sub_types.data, stop_ptr);
+    // Serial2.printf("Got array with sub_type %u and returning 0x%08x\n",
+    //                type.sub_types.data, stop_ptr);
 
     return stop_ptr;
 }
-/*
-#warning debugging only functions
-extern "C" {
-void desc(const char *msg, uint16_t value);
-void descs(const char *msg, const char *info);
-void descl(const char *msg, uint32_t value);
-}
 
-void desc(const char *msg, uint16_t value) {
-    Serial2.printf("%s: %u (0x%04x)\n", msg, value, value);
-}
-void descl(const char *msg, uint32_t value) {
-    Serial2.printf("%s: %u (0x%08x)\n", msg, value, value);
-}
-void descs(const char *msg, const char *info) {
-    Serial2.printf("%s: %s\n", msg, info);
-}
-*/
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     qCommand::Types type;
     type.raw = p_msg_obj->type;
-    Serial2.printf(
-        "Command is %s with type=0x%02x and size=%u and ptr to 0x%08x\n",
-        p_msg_obj->id, p_msg_obj->type, p_msg_obj->size, p_msg_obj->ptr.data);
+    // Serial2.printf(
+    //    "Command is %s with type=0x%02x and size=%u and ptr to 0x%08x\n",
+    //    p_msg_obj->id, p_msg_obj->type, p_msg_obj->size, p_msg_obj->ptr.data);
     if (type.sub_types.data == 4) {
         // String pointer
         const SmartData<String> *SD_String =
@@ -236,10 +170,10 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
         size_t offset = qCommand::getOffset(type, p_msg_obj->size);
         const uint8_t *data =
             (static_cast<const uint8_t *>(p_msg_obj->ptr.data) + offset);
-        Serial2.printf(
-            "Offset is 0x%08x and data is 0x%08x and *data is 0x%08x\n", offset,
-            data, *((uint32_t *)data));
-        if (p_msg_obj->size > sizeOfType(type)) {
+        // Serial2.printf(
+        //     "Offset is 0x%08x and data is 0x%08x and *data is 0x%08x\n",
+        //     offset, data, *((uint32_t *)data));
+        if (p_msg_obj->size > qCommand::sizeOfType(type)) {
             // Array of data
             const void *final_ptr = (const void *)(*(uint32_t *)data);
             // Serial2.printf("Returning 0x%08x\n", final_ptr);
@@ -258,32 +192,32 @@ void ack_object(void *ptr) {
 void serial3_write(uint8_t *data, uint16_t len) {
     Serial3.write(data, len); // output on the main serial port
     // Serial3.println("Was there data???123456");
-    Serial.printf("\nSending (3) %u bytes: 0x  ", len);
-    len = min(len, 16);
-    for (uint8_t i = 0; i < len; i++) {
-        Serial.printf("%02x", data[i]);
-    }
-    Serial.println();
+    // Serial.printf("\nSending (3) %u bytes: 0x  ", len);
+    // len = min(len, 16);
+    // for (uint8_t i = 0; i < len; i++) {
+    //    Serial.printf("%02x", data[i]);
+    //}
+    // Serial.println();
 }
 
 void serial2_write(uint8_t *data, uint16_t len) {
     Serial2.write(data, len); // output on the main serial port
 
     // Serial.printf("\nSending (2) %u bytes: 0x  ", len);
-    len = min(len, 16);
-    for (uint8_t i = 0; i < len; i++) {
-        // Serial.printf("%02x", data[i]);
-    }
+    // len = min(len, 16);
+    // for (uint8_t i = 0; i < len; i++) {
+    // Serial.printf("%02x", data[i]);
+    //}
     // Serial.println();
 }
 
 char qCommand::readBinaryInt2(void) {
     PT_FUNC_START(pt);
-    static uint8_t store[64];
+    // static uint8_t store[64];
     eui_interface_t *p_link = &serial_comms;
 
     static int dataReady;
-    static uint8_t count = 0;
+    // static uint8_t count = 0;
     static uint8_t k = 0;
     dataReady = binaryStream->available();
     if (dataReady != 0) {
@@ -293,20 +227,20 @@ char qCommand::readBinaryInt2(void) {
         for (k = 0; k < dataReady; k++) {
             uint8_t inbound_byte = binaryStream->read();
             if (inbound_byte == 0) {
-                debugStream->println("");
-                debugStream->printf("Got a 0 with count = %u\n", count);
-                if (count > 0) {
-                    debugStream->printf("Received Packet: ");
-                    for (uint8_t i = 0; i < count; i++) {
-                        debugStream->printf(" %02x", store[i]);
-                    }
-                    debugStream->println();
-                    count = 0;
-                }
+                // debugStream->println("");
+                // debugStream->printf("Got a 0 with count = %u\n", count);
+                // if (count > 0) {
+                // debugStream->printf("Received Packet: ");
+                // for (uint8_t i = 0; i < count; i++) {
+                //     debugStream->printf(" %02x", store[i]);
+                // }
+                // debugStream->println();
+                // count = 0;
+                //}
             } else {
-                store[count++] = inbound_byte;
-                // debugStream->printf("SB\n");
-                // debugStream->printf(" %02x ", inbound_byte);
+                // store[count++] = inbound_byte;
+                //  debugStream->printf("SB\n");
+                //  debugStream->printf(" %02x ", inbound_byte);
             }
 
             // eui_errors_t stat_parse = eui_parse(inbound_byte, p_link);
@@ -343,11 +277,6 @@ char qCommand::readBinaryInt2(void) {
 }
 
 void qCommand::sendBinaryCommands(void) {
-    // packer.clear();
-    // uint8_t i = 5;
-    // uint8_t j = 9;
-    // packer.serialize(i,j);
-
     uint8_t elements = 0;
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT ||
@@ -362,54 +291,10 @@ void qCommand::sendBinaryCommands(void) {
                           commandList[i].types.sub_types.data);
         }
     }
-    // packer.serialize(MsgPack::arr_size_t(elements));
-    /*
-        cw_pack_array_size(
-            &pc, 3); // three elements, first is id = 0 for internal. Second is
-       the
-                     // command (list Commands). Third is the data
-        cw_pack_unsigned(&pc, 0); // set ID = 0 for internal
-        cw_pack_unsigned(&pc, static_cast<uint8_t>(Commands::ListCommands));
-        cw_pack_array_size(&pc, elements);
-        debugStream->printf(
-            "Start Binary Command send with %u elements (error=%d)\n", elements,
-            pc.return_code);
-        debugStream->printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n",
-                            pc.start, pc.current, pc.end);
-        for (uint8_t i = 0; i < commandCount; i++) {
-            if (commandList[i].ptr.object != NULL) {
-                cw_pack_array_size(&pc, 3);
-                cw_pack_unsigned(&pc, i + 1);
-                cw_pack_str(&pc, commandList[i].command,
-                            strlen(commandList[i].command));
-                cw_pack_unsigned(&pc, commandList[i].types.sub_types.data);
-
-                // MsgPack::str_t cmd_string = commandList[i].command;
-                // packer.serialize(MsgPack::arr_size_t(3),i+1, cmd_string,
-                // commandList[i].data_type );
-
-                // packer.packBinary32(const uint8_t* value, const uint32_t
-       size);
-                // packer.to_array(id,value, crc );
-                // Serial.printf("Start: 0x%08x -> Stop 0x%08x -> Max 0x%08x\n",
-                // pc.start, pc.current, pc.end  ); Serial.printf("So far,
-       binary
-                // data of size %u (error=%d)\n",pc.current - pc.start,
-                // pc.return_code );
-            }
-        }
-        debugStream->printf("Send binary data of size %u (error=%d)\n",
-                            pc.current - pc.start, pc.return_code);
-        binaryStream->write(pc.start, pc.current - pc.start);
-        pc.current = pc.start;
-        */
 }
 
 // Function for SmartData objects
 template <typename T>
-// typename std::enable_if<std::is_base_of<Base, T>::value>::type
-// void qCommand::assignVariable(char const *command, SmartData<T, TypeTraits<T,
-// void>::isArray> *object, bool read_only) {
 void qCommand::assignVariable(char const *command, SmartData<T> *object,
                               bool read_only) {
     Types types;
@@ -422,8 +307,7 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object,
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    // typename std::decay<T>::type *sd =
-    //     static_cast<typename std::decay<T>::type *>(object);
+
     uint16_t size = object->size();
     if (types.sub_types.data == 4) {
         // String subtype, max size is large
@@ -459,29 +343,10 @@ void qCommand::addCommand(const char *command,
     commandList[commandCount].size = 0;
     commandList[commandCount].types.sub_types.data = 0; // sets as Callback
 
-    // Serial.printf("Adding Command %s: (count to track is %u\n", command,
-    // commandCount + 1); Serial.printf("commandList starts at 0x%08x\n",
-    // commandList);
-    for (uint8_t i = 0; i < commandCount + 1; i++) {
-        // Serial.printf("Command %s: has length %u\n", commandList[i].command,
-        // strlen(commandList[i].command));
-    }
-    // Serial.printf("Setting commandCount in eui to %u", commandCount + 1);
-    // Serial.printf("Add Command pre eui setup: commandList is %08x\n",
-    // commandList);
     eui_setup_tracked((eui_message_t *)&commandList[0], commandCount + 1);
-
-    // if (!caseSensitive) {
-    //   strlwr((char*) commandList[commandCount].command);
-    // }
-    // Serial.printf("CC from %u", commandCount);
     commandCount++;
-    // printTable();
-    //  Serial.printf(" to %u\n", commandCount);
 }
 
-// template <typename DataType, typename
-// std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
 void qCommand::addCommandInternal(const char *command, Types types,
                                   void *object, uint16_t size) {
 #ifdef SERIALCOMMAND_DEBUG
@@ -494,202 +359,30 @@ void qCommand::addCommandInternal(const char *command, Types types,
                   types.sub_types.data, size);
     commandList = (StreamCommandParserCallback *)realloc(
         commandList, (commandCount + 1) * sizeof(StreamCommandParserCallback));
-    // strncpy(commandList[commandCount].command, command,
-    // STREAMCOMMAND_MAXCOMMANDLENGTH); Serial.printf("commandList starts at
-    // 0x%08x\n", commandList); Serial.printf("Setting commandCount in eui to
-    // %u", commandCount+1); Serial.printf("Command addr is 0x%08x\n", command);
-    // Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x\n",
-    // types.data_type, types.ptr_type);
     commandList[commandCount].command = command;
-    // commandList[commandCount].data_type =
-    // type2int<SmartData<DataType>>::result;
     commandList[commandCount].types = types;
     commandList[commandCount].size = size;
 
-    // commandList[commandCount].size = sizeof(DataType);
     if (commandList[commandCount].types.sub_types.ptr == PTR_SD_OBJECT) {
         // have SmartData object pointer
-        // commandList[commandCount].types.ptr_type = PTR_SD_OBJECT;
-        // Base *ptr = static_cast<Base *>(object);
         commandList[commandCount].ptr.object = (Base *)object;
     } else {
         if (object == NULL) {
             // catch NULL pointer and trap with function that can handle it
-            // commandList[commandCount].ptr.f1 =  &qCommand::invalidAddress;
             commandList[commandCount].types.sub_types.ptr = PTR_NULL;
         } else {
             commandList[commandCount].ptr.data = (void *)object;
             commandList[commandCount].types.sub_types.ptr = types.sub_types.ptr;
             commandList[commandCount].types.sub_types.data =
                 types.sub_types.data;
-        }
-        // Serial.printf("Data_Type 0x%02x and  ptr_type = 0x%02x and
-        // size=%u\n",
-        //               commandList[commandCount].types.sub_types.data,
-        //               commandList[commandCount].types.sub_types.ptr,
-        //               commandList[commandCount].size);
+        }     
     }
-
-    // if (!caseSensitive) {
-    //   strlwr(commandList[commandCount].command);
-    //}
-    // Serial.printf("CC from %u\n", commandCount);
+    
     commandCount++;
-    // Serial.printf("Setting commandCount in eui to %u\n", commandCount);
-    // Serial.printf("Add Cmd int: pre eui setup: commandList is %08x\n",
-    // commandList);
-
     eui_setup_tracked((eui_message_t *)commandList, commandCount);
-
-    // Serial.printf(" to %u\n", commandCount);
-    // printTable();
 }
 
 /*
-template <typename DataType, typename
-std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0> void
-qCommand::addCommandInternal(const char *command, void
-(qCommand::*function)(qCommand& streamCommandParser, Stream& stream, const char*
-command, uint8_t ptr_type, void* object),DataType* var, SmartData<DataType>*
-object)  { using baseType = typename std::remove_pointer<DataType>::type;
-
-  constexpr std::size_t arraySize = std::extent<DataType>::value;
-
-  commandList = (StreamCommandParserCallback *) realloc(commandList,
-(commandCount + 1) * sizeof(StreamCommandParserCallback));
-  //strncpy(commandList[commandCount].command, command,
-STREAMCOMMAND_MAXCOMMANDLENGTH); Serial.printf("commandList starts at 0x%08x\n",
-commandList); commandList[commandCount].command = command;
-  commandList[commandCount].data_type = TYPE2INFO_ARRAY +
-type2int<SmartData<baseType>>::result;
-
-
-  if (object != NULL)  {
-    //have SmartData object pointer
-    commandList[commandCount].ptr.object = object;
-    //commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand&
-streamCommandParser, Stream& stream, void* ptr, const char* command, void*
-object)) function; commandList[commandCount].ptr_type = PTR_SD_OBJECT;
-    //object->_setPrivateInfo(commandCount+1, binaryStream, &packer);
-    object->_setPrivateInfo(commandCount+1, binaryStream, &pc);
-
-    commandList[commandCount].size = object->getTotalElements();
-
-  } else {
-    //commandList[commandCount].object = NULL;
-    if ( var == NULL) {
-      //catch NULL pointer and trap with function that can handle it
-      commandList[commandCount].ptr.data = (void*) 1;
-      commandList[commandCount].ptr_type = PTR_NULL;
-      commandList[commandCount].size = 0;
-    } else {
-      //commandList[commandCount].function.f2 = (void(qCommand::*)(qCommand&
-streamCommandParser, Stream& stream, void* ptr, const char* command, void*
-object)) function; commandList[commandCount].ptr.data = (void*) var;
-      commandList[commandCount].ptr_type = PTR_RAW_DATA;
-      commandList[commandCount].size = arraySize;
-    }
-  }
-  #warning with const char cannot make lower case
-  //if (!caseSensitive) {
-  //   strlwr(commandList[commandCount].command);
-  //}
-  Serial.printf("CC from %u", commandCount);
-  commandCount++;
-  Serial.printf(" to %u\n", commandCount);
-  printTable();
-}
-*/
-/*
-void qCommand::assignVariable(const char* command, uint8_t ptr_type, void*
-object) {
-  //void (qCommand::*function)(qCommand&, Stream&, const char*, uint8_t, void*)
-= nullptr; addCommandInternal(command, ptr_type, object);
-
-}
-*/
-
-// template void qCommand::assignVariable<uint16_t&>(const char *command,
-// SmartData<uint16_t&, TypeTraits<uint16_t&, void>::isArray> *object, bool
-// read_only);
-
-template void qCommand::assignVariable<float *>(
-    const char *, SmartData<float *, TypeTraits<float *, void>::isArray> *,
-    bool);
-
-// template void qCommand::assignVariable<unsigned short&,0>(char const*
-// command, SmartData<unsigned short&, TypeTraits<unsigned short&,
-// void>::isArray> *object, bool read_only);
-/*
-template <typename DataType, typename
-std::enable_if<TypeTraits<DataType>::isArray, int>::type = 0> void
-qCommand::assignVariable(const char* command, SmartData<DataType>* object) {
-  Serial.printf("Trying to assign array to command %s\n",command);
-  //void (qCommand::*function)(qCommand&, Stream&, DataType*, const char*,
-SmartData<DataType>*) = nullptr; Types types =
-{type2int<SmartData<DataType>>::result, PTR_SD_OBJECT};
-  addCommandInternal(command, types, object);
-}
-*/
-
-// #warning add back when we have pointers to float and double arrays
-//  template void qCommand::assignVariable(const char *command, SmartData<float
-//  *> *object, bool read_only); template void qCommand::assignVariable(const
-//  char *command, SmartData<double *> *object, bool read_only);
-
-/*
-template <typename argArray, std::enable_if_t<std::is_pointer<argArray>::value,
-uint> = 0> void qCommand::assignVariable(const char* command,
-SmartDataPtr<argArray>* object) { Serial.printf("Trying to assign array to
-command %s\n",command); void (qCommand::*function)(qCommand&, Stream&,
-argArray*, const char*, SmartDataPtr<argArray>*) = nullptr;
-  addCommandInternal(command, function, (argArray*) NULL, object);
-}
-
-template void qCommand::assignVariable(const char* command,
-SmartDataPtr<float*>* object);
-*/
-
-// Assign variable to command list for string. Takes pointer to either data or
-// DataObject.
-/*
-void qCommand::assignVariable(const char* command, String* variable) {
-  Types types = {type2int<SmartData<String>>::result, PTR_RAW_DATA};
-  addCommandInternal(command,types, variable, sizeof(String));
-}
-
-void qCommand::assignVariable(const char* command, SmartData<String>* object) {
-  Serial.printf("Trying to assign object to command %s\n",command);
-  Types types = {type2int<SmartData<String>>::result, PTR_SD_OBJECT};
-  addCommandInternal(command,types, object, object->size());
-}
-
-*/
-
-/*
-//Assign variable to command list for booleans. Takes pointer to either data or
-DataObject. template <typename DataType, typename
-std::enable_if<std::is_same<std::remove_extent_t<DataType>, bool>::value &&
-std::is_array<DataType>::value, int>::type = 0> void
-qCommand::assignVariable(const char* command, bool& variable, bool read_only) {
-  uint16_t size = arraySize(variable);
-  Types types = {type2int<SmartData<bool>>::result, PTR_RAW_DATA};
-  if (read_only) {
-    types.read_only = true;
-  }
-  //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>)
-{ addCommandInternal(command,types, variable, size);
-}
-template <typename DataType, typename std::enable_if<std::is_same<DataType,
-bool>::value, int>::type = 0> void qCommand::assignVariable(const char* command,
-bool& variable, bool read_only) { uint16_t size = sizeof(DataType); Types types
-= {type2int<SmartData<bool>>::result, PTR_RAW_DATA}; if (read_only) {
-    types.read_only = true;
-  }
-  //if constexpr (std::is_array_v<std::remove_reference_t<decltype(variable)>>)
-{ addCommandInternal(command,types, variable, size);
-}
-*/
 void qCommand::assignVariable(const char *command, SmartData<bool> *object,
                               bool read_only) {
     Types types;
@@ -699,65 +392,6 @@ void qCommand::assignVariable(const char *command, SmartData<bool> *object,
     }
     // Serial.printf("Adding Bool SmartData wit %s\n", command);
     addCommandInternal(command, types, object, object->size());
-}
-
-// void qCommand::assignVariable(const char* command, argUInt* variable, size_t
-// elements) {
-//   addCommandInternal(command,NULL, variable, (SmartData<argUInt>*) NULL);
-// }
-/*
-//Assign variable to command list for unsigned ints (calls ReportUInt). Takes
-pointer to either data or DataObject. template <typename argUInt,
-std::enable_if_t< std::is_same<argUInt, uint8_t>::value || std::is_same<argUInt,
-uint16_t>::value || std::is_same<argUInt, uint>::value || std::is_same<argUInt,
-ulong>::value , uint> = 0> void qCommand::assignVariable(const char* command,
-argUInt* variable) { Types types = {type2int<SmartData<argUInt>>::result,
-PTR_RAW_DATA}; Serial.printf("assignVariable on Pointer Uint with types %u and
-%u at %08x\n",type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT, variable);
-
-  addCommandInternal(command,types, variable);
-}
-
-template <typename argUInt, std::enable_if_t<
-  std::is_same<argUInt, uint8_t>::value ||
-  std::is_same<argUInt, uint16_t>::value ||
-  std::is_same<argUInt, uint>::value ||
-  std::is_same<argUInt, ulong>::value
-  , uint> = 0>
-void qCommand::assignVariable(const char* command, SmartData<argUInt>* object) {
-  Serial.printf("assignVariable on SD Uint with types %u and
-%u\n",type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT); Types types =
-{type2int<SmartData<argUInt>>::result, PTR_SD_OBJECT};
-  Serial.printf("assignVariable on SD Uint with types %u and
-%u\n",types.data_type, types.ptr_type);
-
-  addCommandInternal(command,types, object);
-}
-*/
-
-
-// template void qCommand::assignVariable(const char *command,
-// SmartData<String,true> *object, bool read_only);
-
-/*
-//Assign variable to command list for signed ints (calls ReportInt). Takes
-pointer to either data or DataObject. template <typename argInt,
-std::enable_if_t< std::is_same<argInt,int8_t>::value || std::is_same<argInt,
-int16_t>::value || std::is_same<argInt, int>::value || std::is_same<argInt,
-long>::value , int> = 0> void qCommand::assignVariable(const char* command,
-argInt* variable) { Types types = {type2int<SmartData<argInt>>::result,
-PTR_RAW_DATA}; addCommandInternal(command,types, variable);
-}
-
-template <typename argInt, std::enable_if_t<
-  std::is_same<argInt,int8_t>::value ||
-  std::is_same<argInt, int16_t>::value ||
-  std::is_same<argInt, int>::value ||
-  std::is_same<argInt, long>::value
-  , int> = 0>
-void qCommand::assignVariable(const char* command, SmartData<argInt>* object) {
-  Types types = {type2int<SmartData<argInt>>::result, PTR_SD_OBJECT};
-  addCommandInternal(command ,types, object);
 }
 */
 
@@ -776,9 +410,6 @@ template void qCommand::assignVariable(const char *command, uint *variable,
 template void qCommand::assignVariable(const char *command, ulong *variable,
                                        bool read_only);
 
-
-
-
 template void qCommand::assignVariable(const char *command,
                                        SmartData<uint8_t> *object,
                                        bool read_only);
@@ -790,7 +421,6 @@ template void qCommand::assignVariable(const char *command,
 template void qCommand::assignVariable(const char *command,
                                        SmartData<unsigned long> *object,
                                        bool read_only);
-
 
 template void qCommand::assignVariable(const char *command,
                                        SmartData<String> *object,
@@ -818,7 +448,6 @@ template void qCommand::assignVariable(const char *command, int *variable,
                                        bool read_only);
 template void qCommand::assignVariable(const char *command, long *variable,
                                        bool read_only);
-
 
 // Add template lines here so functions get compiled into file for linking
 template void qCommand::assignVariable(const char *command, float *variable,
@@ -909,9 +538,9 @@ void qCommand::reportBool(qCommand &qC, Stream &S, bool *ptr,
 template <class argUInt>
 void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
                           Types types, argUInt *ptr) {
-    Serial.printf("reportUInt called with with ptr at 0x%08x and value of %u\n",
-                  ptr, *(argUInt *)ptr);
-    setDebugWord(0x12344489);
+    //Serial.printf("reportUInt called with with ptr at 0x%08x and value of %u\n",
+    //              ptr, *(argUInt *)ptr);
+    //setDebugWord(0x12344489);
     unsigned long temp;
     argUInt newValue;
     setDebugWord(0x01010001);
@@ -1225,26 +854,4 @@ char *qCommand::next() {
  * Retrieve the current token ("word" or "argument") from the command buffer.
  * Returns NULL if no more tokens exist.
  */
-char *qCommand::current() { return cur; }
 
-// template class DataObject<unsigned int>;
-
-// instatiate template from addCommandInternal
-// template void qCommand::addCommandInternal(const char *command, void
-// (qCommand::*function)(qCommand& streamCommandParser, Stream& stream, bool*
-// variable, const char* command), bool* var);
-
-// template <typename DataType>
-// void qCommand::addCommandInternal(const char *command, void
-// (qCommand::*function)(qCommand& streamCommandParser, Stream& stream,
-// DataType* variable, const char* command), DataType* var) {
-
-/*
-#warning ugly testing only
-uint16_t badsdata[67];
-SmartData<uint16_t&> badsplot(badsdata);
-qCommand qC2(true);
-void something(void) {
-  qC2.assignVariable("plot", &badsplot);
-}
-*/

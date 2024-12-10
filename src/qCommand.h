@@ -67,15 +67,19 @@ class qCommand {
     void readSerial(Stream &inputStream); // Main entry point.
     void readBinary(void);
     void clearBuffer(); // Clears the input buffer.
-    char *current(); // Returns pointer to current token found in command buffer
-                     // (for getting arguments to commands).
+
+    /**
+     * Retrieve the pointer to the current token ("word" or "argument") from the
+     * command buffer. Returns NULL if no more tokens exist.
+     */
+    char *current() { return cur; }
     char *next(); // Returns pointer to next token found in command buffer (for
                   // getting arguments to commands).
     void printAvailableCommands(
         Stream &outputStream); // Could be useful for a help menu type list
 
     static size_t getOffset(Types type, uint16_t size);
-
+    static uint16_t sizeOfType(qCommand::Types type);
     // Function for arrays with size
     template <typename T, std::size_t N>
     void assignVariable(const char *command, T (&variable)[N],
@@ -235,7 +239,8 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    Serial.printf("Adding %s for pointer to array with size = %u)\n", command, sizeof(base_type));
+    Serial.printf("Adding %s for pointer to array with size = %u)\n", command,
+                  sizeof(base_type));
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
 /*
@@ -252,8 +257,8 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     if (read_only) {
         types.sub_types.read_only = true;
     }
-    Serial.printf("Adding %s for pointer to array (no size -> %u)\n", command, sizeof(T));
-    addCommandInternal(command, types, variable, sizeof(T));
+    Serial.printf("Adding %s for pointer to array (no size -> %u)\n", command,
+sizeof(T)); addCommandInternal(command, types, variable, sizeof(T));
 }
 */
 #endif // QCOMMAND_h
