@@ -14,9 +14,9 @@ class Base {
     };
 
     Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
-    void sendUpdate(void);
     void resetUpdateState(void) { updates_needed = STATE_IDLE; };
     UpdateState getUpdateState(void) { return updates_needed; }
+    void sendUpdate(void);
     virtual uint16_t size(void);
  
 private:
@@ -49,8 +49,6 @@ class AllSmartDataPtr : public Base {
         dataRequested = true;
     };
 
-    //void _get(void *data, size_t element);
-    //void _set(void *data, size_t element);    
     void resetUpdateState(void);
 
     const size_t totalElements; //in public because protected by const flag
@@ -63,19 +61,20 @@ class AllSmartDataPtr : public Base {
 template <class DataType>
 class SmartData<DataType, true> : public AllSmartDataPtr {
   public:
-    //struct ref_of_array_to_pointer is underlying data type of array. 
     //DataType cannot be used directly as it may be a reference.
+    //default is just T.
     template<typename T>
     struct storage_type_specialization {
       using type = T;
     };
 
+    //But if it is an array, then we need to use a pointer
     template<typename T, size_t N>
     struct storage_type_specialization<T(&)[N]> {
       using type = T*;
     };
     
-    // Add: For basic references
+    // And references use pointer.
     template<typename T>
     struct storage_type_specialization<T&> {
       using type = T*;
@@ -84,13 +83,10 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     using storage_type = typename storage_type_specialization<DataType>::type;        
     using baseType = typename std::remove_pointer< typename std::remove_reference<storage_type>::type>::type;
 
-
     // For pointer arrays with explicitly set size    
     SmartData(storage_type data, size_t size)
         requires (TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
-        : AllSmartDataPtr(size / sizeof(baseType)), value(data) {
-        //Serial.printf("Manual Array: %u with Size = %u and now totalElements=%u\n",
-          //            data, size, totalElements);
+        : AllSmartDataPtr(size / sizeof(baseType)), value(data) {        
     };
 
     //For Reference to arrays
@@ -99,11 +95,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         requires (TypeTraits<DataType>::isReference)
         : AllSmartDataPtr(N),
         value(&data[0]) {
-        //Serial.printf("Reference Array: %u with size=%u and totalElements=%u\n",
-        //              data[0], totalElements * sizeof(baseType), totalElements);
     };
-
-    //void set(DataType);
     
     void setNext(baseType);
 
@@ -114,184 +106,79 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     baseType get(size_t element) {
         return value[element];
     }
-
-
     
   private:
-    //void _setPrivateInfo(uint8_t id, Stream *stream);
     storage_type value;
     friend class qCommand;
-        
-
 };
 
-// For non-arrays
+// Specialization for non-arrays
 template <class DataType>
 class SmartData<DataType, false> : public Base {
   public:
     SmartData(DataType data) : value(data) {};
-    //void sendValue2(void);
+
     // For fundamental types like int, float, bool
-    template <typename T = DataType>
-    typename std::enable_if<
-        std::is_fundamental<typename std::remove_pointer<T>::type>::value,
-        T>::type
-    get() const {
+    template <typename T = DataType>    
+    T get() const 
+        requires std::is_fundamental<typename std::remove_pointer<T>::type>::value
+    {
         return value;
     }
 
     // For complex types like String
-    template <typename T = DataType>
-    typename std::enable_if<
-        !std::is_fundamental<typename std::remove_pointer<T>::type>::value,
-        const T &>::type
-    get() const {
+    template <typename T = DataType>      
+    T get() const 
+        requires !std::is_fundamental<typename std::remove_pointer<T>::type>::value
+    {
         return value;
     }
 
     void set(DataType);
-    
-    //void _get(void *data);
-    //void _set(void *data);
-
     void resetUpdateState(void);
-
     uint16_t size(void) { return sizeof(DataType); }
     
-
-  private:
-    //void _setPrivateInfo(uint8_t id, Stream *stream);
+  private:    
     DataType value;
-
     bool dataRequested = false;
-
     friend class qCommand;
 };
 
-template <typename T> struct type2int {
-    // enum { result = 0 }; // do this if you want a fallback value, empty to
-    // force a definition
+
+template<typename T> struct type2int_base; //force defintion by leaving out result for default case
+template <> struct type2int_base<bool> { enum { result = 6 }; };
+template <> struct type2int_base<uint8_t> { enum { result = 6 }; };
+template <> struct type2int_base<uint16_t> { enum { result = 8 }; };
+template <> struct type2int_base<uint32_t> { enum { result = 10 }; };
+template <> struct type2int_base<unsigned int> { enum { result = 10 }; };
+template <> struct type2int_base<int8_t> { enum { result = 5 }; };
+template <> struct type2int_base<int16_t> { enum { result = 7 }; };
+template <> struct type2int_base<int32_t> { enum { result = 9 }; };
+template <> struct type2int_base<int> { enum { result = 9 }; };
+template <> struct type2int_base<float> { enum { result = 11 }; };
+template <> struct type2int_base<double> { enum { result = 12 }; };
+template <> struct type2int_base<char> { enum { result = 4 }; };
+template <> struct type2int_base<String> { enum { result = 4 }; };
+
+// Helper to unwrap SmartData
+template<typename T> struct unwrap_smart_data { using type = T; };
+template<typename T> struct unwrap_smart_data<SmartData<T>> { using type = T; };
+
+// Helper to remove pointer if not already pointer
+template<typename T> struct remove_ptr_if_not_ptr {
+    using type = typename std::conditional<
+        std::is_pointer<T>::value,
+        typename std::remove_pointer<T>::type,
+        T        
+    >::type;
 };
 
-// template<> struct type2int<char*> { enum { result = 4 }; };
-template <std::size_t N> struct type2int<char[N]> {
-    enum { result = 4 };
+// Base template that applies rules
+template <typename T>
+struct type2int {
+    static constexpr uint8_t result =  type2int_base<typename unwrap_smart_data<
+            typename remove_ptr_if_not_ptr<T>::type
+        >::type>::result;
 };
-template <> struct type2int<char*> {
-    enum { result = 4 };
-};
-template <> struct type2int<char> {
-    enum { result = 4 };
-};
-
-template <> struct type2int<String> {
-    enum { result = 4 };
-};
-
-template <> struct type2int<SmartData<String>> {
-    enum { result = 4 };
-};
-template <> struct type2int<bool> {
-    enum { result = 6 };
-};
-
-template <> struct type2int<bool*> {
-    enum { result = 6 };
-};
-template <> struct type2int<SmartData<bool>> {
-    enum { result = 6 };
-};
-
-template <> struct type2int<SmartData<bool*>> {
-    enum { result = 6 };
-};
-template <> struct type2int<SmartData<uint8_t>> {
-    enum { result = 6 };
-};
-template <> struct type2int<uint8_t> {
-    enum { result = 6 };
-};
-//template <> struct type2int<uint8_t&> {
-//    enum { result = 6 };
-//};
-
-template <> struct type2int<SmartData<uint16_t>> {
-    enum { result = 8 };
-};
-template <> struct type2int<SmartData<uint16_t *>> {
-    enum { result = 8 };
-};
-template <> struct type2int<uint16_t> {
-    enum { result = 8 };
-};
-//template <> struct type2int<uint16_t&> {
-//    enum { result = 8 };
-//};
-
-template <> struct type2int<SmartData<uint>> {
-    enum { result = 10 };
-};
-template <> struct type2int<uint> {
-    enum { result = 10 };
-};
-template <> struct type2int<SmartData<ulong>> {
-    enum { result = 10 };
-};
-template <> struct type2int<ulong> {
-    enum { result = 10 };
-};
-template <> struct type2int<SmartData<int8_t>> {
-    enum { result = 5 };
-};
-template <> struct type2int<int8_t> {
-    enum { result = 5 };
-};
-template <> struct type2int<SmartData<int16_t>> {
-    enum { result = 7 };
-};
-template <> struct type2int<int16_t> {
-    enum { result = 7 };
-};
-template <> struct type2int<SmartData<int>> {
-    enum { result = 9 };
-};
-template <> struct type2int<int> {
-    enum { result = 9 };
-};
-template <> struct type2int<SmartData<long>> {
-    enum { result = 9 };
-};
-template <> struct type2int<long> {
-    enum { result = 9 };
-};
-template <> struct type2int<SmartData<float>> {
-    enum { result = 11 };
-};
-
-template <> struct type2int<float> {
-    enum { result = 11 };
-};
-template <> struct type2int<float*> {
-    enum { result = 11 };
-};
-
-
-
-template <> struct type2int<SmartData<double>> {
-    enum { result = 12 };
-};
-template <> struct type2int<double> {
-    enum { result = 12 };
-};
-
-// template<> struct type2int<SmartDataPtr<float*>> { enum { result =
-// TYPE2INFO_ARRAY + TYPE2INFO_4BYTE +  TYPE2INFO_FLOAT }; };
-template <> struct type2int<SmartData<float *>> {
-    enum { result = 11 };
-};
-template <> struct type2int<SmartData<double *>> {
-    enum { result = 12 };
-};
-
 
 #endif // SMARTDATA_h
