@@ -8,12 +8,13 @@
 
 #include "electricui.h"
 
-#define STREAMCOMMAND_BUFFER 63 // Maximum length of a command excluding the terminating null
+#define STREAMCOMMAND_BUFFER 63 // Max length of a command (excludes null term)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// functions that need to be exposed to pure C for electricui
 void serial3_write(uint8_t *data, uint16_t len);
 void serial2_write(uint8_t *data, uint16_t len);
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj);
@@ -22,18 +23,8 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj);
 }
 #endif
 
-template <typename T> struct is_char_type : std::false_type {};
-
-template <> struct is_char_type<char> : std::true_type {};
-
-template <> struct is_char_type<unsigned char> : std::true_type {};
-
-template <> struct is_char_type<signed char> : std::true_type {};
-
 class qCommand {
   public:
-    template <typename T> using char_type = is_char_type<T>;
-
     enum class Commands : uint8_t {
         ListCommands = 0,
         Get = 1,
@@ -60,11 +51,6 @@ class qCommand {
         } sub_types;
     } Types;
 
-    struct TypesOld {
-        uint8_t data_type : 4; // 4 bits to match eui_header type
-        PtrType ptr_type : 4;  // 4 bits to set what ptr type is used}
-    };
-
     qCommand(bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command,
@@ -88,58 +74,46 @@ class qCommand {
     void printAvailableCommands(
         Stream &outputStream); // Could be useful for a help menu type list
 
-    // Assign Variable function for booleans: pointer to direct data or
-    // DataObject class
-    // void assignVariable(const char* command, uint8_t ptr_type, void* object);
     static size_t getOffset(Types type, uint16_t size);
 
     // Function for arrays with size
     template <typename T, std::size_t N>
-    typename std::enable_if<!std::is_base_of<Base, T>::value>::type
-    assignVariable(const char *command, T (&variable)[N],
-                   bool read_only = false);
+    void assignVariable(const char *command, T (&variable)[N],
+                        bool read_only = false)
+        requires(!std::is_base_of<Base, T>::value);
 
-    // template <typename T>
-    // template <typename T>
-    // void assignVariable(char const *command, SmartData<T,TypeTraits<T,
-    // void>::isArray> *object, bool read_only = false);
-
+    // Function for SmartData objects
     template <typename T>
     void assignVariable(char const *command, SmartData<T> *object,
                         bool read_only = false);
 
-    // Specialization for arrays without size
+    // Specialization for pointers without size (assuming not arrays but pointer
+    // to single value)
     template <typename T>
-    typename std::enable_if<
-        std::is_pointer<T>::value &&
-        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value
-
-        >::type
-    assignVariable(const char *command, T variable, bool read_only = false);
+    void assignVariable(const char *command, T variable, bool read_only = false)
+        requires(std::is_pointer<T>::value &&
+                 !std::is_base_of<Base,
+                                  typename std::remove_pointer<T>::type>::value)
+    ;
 
     // Arrays with size
     template <typename T>
-    typename std::enable_if<
-        !std::is_pointer<T>::value && std::is_array<T>::value &&
-        !std::is_base_of<Base,
-                         typename std::remove_pointer<T>::type>::value>::type
-    assignVariable(const char *command, T variable, bool read_only = false);
+    void assignVariable(const char *command, T variable, bool read_only = false)
+        requires(!std::is_pointer<T>::value && std::is_array<T>::value &&
+                 !std::is_base_of<Base,
+                                  typename std::remove_pointer<T>::type>::value)
+    ;
 
-  
     // Function for SmartData by reference
     template <typename T>
-    typename std::enable_if<
-        std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-    assignVariable(const char *command, T &variable, bool read_only = false);
-
-   
+    void assignVariable(const char *command, T &variable,
+                        bool read_only = false)
+        requires(std::is_base_of<Base, typename std::decay<T>::type>::value);
 
     void assignVariable(const char *command, bool &variable,
                         bool read_only = false);
     void assignVariable(const char *command, SmartData<bool> *object,
                         bool read_only = false);
-
-    
 
   private:
     Stream *binaryStream;
@@ -186,7 +160,6 @@ class qCommand {
     void addCommandInternal(const char *command, Types types, void *object,
                             uint16_t size);
 
-  
     void reportString(qCommand &qC, Stream &S, const char *command,
                       uint8_t ptr_type, char *ptr,
                       StreamCommandParserCallback *CommandList);
@@ -209,7 +182,6 @@ class qCommand {
     void reportFloat(qCommand &qC, Stream &S, argFloating *ptr,
                      const char *command, SmartData<argFloating> *object);
 
- 
     void invalidAddress(qCommand &qC, Stream &S, void *ptr, const char *command,
                         void *object);
 
@@ -230,12 +202,13 @@ class qCommand {
     bool binaryConnected;
 };
 
-
 // Base template for fixed-size arrays
 template <typename T, std::size_t N>
-typename std::enable_if<!std::is_base_of<Base, T>::value>::type
-qCommand::assignVariable(const char *command, T (&variable)[N],
-                         bool read_only) {
+// typename std::enable_if<!std::is_base_of<Base, T>::value>::type
+void qCommand::assignVariable(const char *command, T (&variable)[N],
+                              bool read_only)
+    requires(!std::is_base_of<Base, T>::value)
+{
     Types types;
     types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
     if (read_only) {
@@ -247,12 +220,12 @@ qCommand::assignVariable(const char *command, T (&variable)[N],
 
 // Specialization for arrays without size
 template <typename T>
-typename std::enable_if<
-    std::is_pointer<T>::value &&
-    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value
+void qCommand::assignVariable(const char *command, T variable, bool read_only)
+    requires(
+        std::is_pointer<T>::value &&
+        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
+{
 
-    >::type
-qCommand::assignVariable(const char *command, T variable, bool read_only) {
     using base_type = typename std::remove_pointer<T>::type;         // G
     using array_type = typename std::remove_extent<base_type>::type; // G
     Types types;
@@ -266,10 +239,11 @@ qCommand::assignVariable(const char *command, T variable, bool read_only) {
 
 // Specialization for arrays without size
 template <typename T>
-typename std::enable_if<
-    !std::is_pointer<T>::value && std::is_array<T>::value &&
-    !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value>::type
-qCommand::assignVariable(const char *command, T variable, bool read_only) {
+void qCommand::assignVariable(const char *command, T variable, bool read_only)
+    requires(
+        !std::is_pointer<T>::value && std::is_array<T>::value &&
+        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
+{
     using base_type = typename std::remove_pointer<T>::type; // G
     Types types;
     types.sub_types = {type2int<base_type>::result, PTR_RAW_DATA};
@@ -280,12 +254,11 @@ qCommand::assignVariable(const char *command, T variable, bool read_only) {
     addCommandInternal(command, types, variable, sizeof(T));
 }
 
-
 // Function for SmartData by reference
 template <typename T>
-typename std::enable_if<
-    std::is_base_of<Base, typename std::decay<T>::type>::value>::type
-qCommand::assignVariable(const char *command, T &variable, bool read_only) {
+void qCommand::assignVariable(const char *command, T &variable, bool read_only)
+    requires(std::is_base_of<Base, typename std::decay<T>::type>::value)
+{
     Types types;
     types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
     if (read_only) {
@@ -299,7 +272,5 @@ qCommand::assignVariable(const char *command, T &variable, bool read_only) {
 }
 
 uint16_t sizeOfType(qCommand::Types type);
-
-
 
 #endif // QCOMMAND_h
