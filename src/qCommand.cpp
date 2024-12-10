@@ -1120,7 +1120,7 @@ void qCommand::readSerial(Stream &inputStream) {
                     // Compare the found command against the list of known
                     // commands for a match
                     if (strncmp(command, commandList[i].command,
-                                STREAMCOMMAND_MAXCOMMANDLENGTH) == 0) {
+                                STREAMCOMMAND_BUFFER) == 0) {
                         matched = true;
                         // Serial.printf("Found match on command %s\n",command);
                         if (commandList[i].types.sub_types.ptr ==
