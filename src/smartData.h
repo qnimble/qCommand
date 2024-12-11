@@ -14,10 +14,11 @@ class Base {
     };
 
     Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
-    void resetUpdateState(void) { updates_needed = STATE_IDLE; };
+    
     UpdateState getUpdateState(void) { return updates_needed; }
     void sendUpdate(void);
     virtual uint16_t size(void);
+    virtual void resetUpdateState(void);
 
   private:
     Stream *stream;
@@ -50,7 +51,10 @@ class AllSmartDataPtr : public Base {
         dataRequested = true;
     };
 
-    void resetUpdateState(void);
+    void resetUpdateState(void) { 
+      updates_needed = STATE_IDLE;
+      currentElement = 0;
+    };
 
     const size_t totalElements; // in public because protected by const flag
   protected:
@@ -95,7 +99,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
         requires(TypeTraits<DataType>::isReference)
         : AllSmartDataPtr(N), value(&data[0]){};
 
-    void setNext(baseType);
+    bool setNext(baseType);
 
     uint16_t size(void) { return totalElements * sizeof(baseType); }
 
@@ -130,7 +134,7 @@ template <class DataType> class SmartData<DataType, false> : public Base {
     }
 
     void set(DataType);
-    void resetUpdateState(void);
+    void resetUpdateState(void) { updates_needed = STATE_IDLE;}
     uint16_t size(void) { return sizeof(DataType); }
 
   private:

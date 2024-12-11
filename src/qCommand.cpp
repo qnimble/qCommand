@@ -137,9 +137,37 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
         }
     } else {
         switch (type.sub_types.data) {
+        case 5: {
+            SmartData<int8_t *> *ptri8 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptri8->value));
+        } break;
+        case 6: {
+            SmartData<uint8_t *> *ptru8 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptru8->value));
+        } break;
+        case 7: {
+            SmartData<int16_t *> *ptri16 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptri16->value));
+        } break;
         case 8: {
             SmartData<uint16_t *> *ptru16 = NULL;
             stop_ptr = reinterpret_cast<uintptr_t>(&(ptru16->value));
+        } break;
+        case 9: {
+            SmartData<int32_t *> *ptri32 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptri32->value));
+        } break;
+        case 10: {
+            SmartData<uint32_t *> *ptru32 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptru32->value));
+        } break;
+        case 11: {
+            SmartData<float *> *float32 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(float32->value));
+        } break;
+        case 12: {
+            SmartData<double *> *float64 = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(float64->value));
         } break;
         default:
             stop_ptr = 1000;
@@ -375,9 +403,9 @@ void qCommand::addCommandInternal(const char *command, Types types,
             commandList[commandCount].types.sub_types.ptr = types.sub_types.ptr;
             commandList[commandCount].types.sub_types.data =
                 types.sub_types.data;
-        }     
+        }
     }
-    
+
     commandCount++;
     eui_setup_tracked((eui_message_t *)commandList, commandCount);
 }
@@ -394,72 +422,6 @@ void qCommand::assignVariable(const char *command, SmartData<bool> *object,
     addCommandInternal(command, types, object, object->size());
 }
 */
-
-
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command, char *object,
-                                       bool read_only);
-
-template void qCommand::assignVariable(const char *command, uint8_t *variable,
-                                       bool read_only);
-
-template void qCommand::assignVariable(const char *command, uint16_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, uint *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, ulong *variable,
-                                       bool read_only);
-
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint8_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint16_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint> *object, bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<unsigned long> *object,
-                                       bool read_only);
-
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<String> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint16_t(&)> *object,
-                                       bool read_only);
-
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int8_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int16_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int> *object, bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<long> *object, bool read_only);
-template void qCommand::assignVariable(const char *command, int8_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, int16_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, int *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, long *variable,
-                                       bool read_only);
-
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command, float *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, double *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<float> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<double> *object,
-                                       bool read_only);
 
 void qCommand::invalidAddress(qCommand &qC, Stream &S, void *ptr,
                               const char *command, void *object) {
@@ -538,9 +500,10 @@ void qCommand::reportBool(qCommand &qC, Stream &S, bool *ptr,
 template <class argUInt>
 void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
                           Types types, argUInt *ptr) {
-    //Serial.printf("reportUInt called with with ptr at 0x%08x and value of %u\n",
-    //              ptr, *(argUInt *)ptr);
-    //setDebugWord(0x12344489);
+    // Serial.printf("reportUInt called with with ptr at 0x%08x and value of
+    // %u\n",
+    //               ptr, *(argUInt *)ptr);
+    // setDebugWord(0x12344489);
     unsigned long temp;
     argUInt newValue;
     setDebugWord(0x01010001);
@@ -850,8 +813,71 @@ char *qCommand::next() {
     return cur;
 }
 
-/**
- * Retrieve the current token ("word" or "argument") from the command buffer.
- * Returns NULL if no more tokens exist.
- */
+// Add template lines here so functions get compiled into file for linking
+template void qCommand::assignVariable(const char *command, char *object,
+                                       bool read_only);
 
+template void qCommand::assignVariable(const char *command, uint8_t *variable,
+                                       bool read_only);
+
+template void qCommand::assignVariable(const char *command, uint16_t *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, uint *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, ulong *variable,
+                                       bool read_only);
+
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<uint8_t> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<uint16_t> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<uint> *object, bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<unsigned long> *object,
+                                       bool read_only);
+
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<String> *object,
+                                       bool read_only);
+
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<uint16_t(&)> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<int16_t(&)> *object,
+                                       bool read_only);
+
+// Add template lines here so functions get compiled into file for linking
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<int8_t> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<int16_t> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<int> *object, bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<long> *object, bool read_only);
+template void qCommand::assignVariable(const char *command, int8_t *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, int16_t *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, int *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, long *variable,
+                                       bool read_only);
+
+// Add template lines here so functions get compiled into file for linking
+template void qCommand::assignVariable(const char *command, float *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command, double *variable,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<float> *object,
+                                       bool read_only);
+template void qCommand::assignVariable(const char *command,
+                                       SmartData<double> *object,
+                                       bool read_only);

@@ -18,9 +18,9 @@ void SmartData<SmartDataGeneric, false>::set(SmartDataGeneric newValue) {
 }
 
 template <class DataType>
-void SmartData<DataType, true>::setNext(
+bool SmartData<DataType, true>::setNext(
     typename SmartData<DataType, true>::baseType data) {
-    if (dataRequested) {
+    //if (dataRequested) {
         if (currentElement < totalElements) {
             value[currentElement] = data;
             currentElement++;
@@ -28,37 +28,30 @@ void SmartData<DataType, true>::setNext(
                 // if this was last element, then
                 sendUpdate();
             }
+            return true; // updated data
+        } else {
+            return false; // data full
         }
-    }
+    //}
 }
 
-template class SmartData<bool>;
-template class SmartData<bool *>;
+#define INSTANTIATE_SMARTDATA(TYPE)                                            \
+    template class SmartData<TYPE>;                                            \
+    template class SmartData<TYPE *>;                                          \
+    template bool SmartData<TYPE&, true>::setNext(TYPE);                            
+    //    typename SmartData<TYPE *, true>::baseType);
 
-template class SmartData<char>;
-template class SmartData<char *>;
-template class SmartData<String>;
+INSTANTIATE_SMARTDATA(bool);
+INSTANTIATE_SMARTDATA(char);
 
-template class SmartData<uint8_t>;
-template class SmartData<uint8_t *>;
+INSTANTIATE_SMARTDATA(uint8_t);
+INSTANTIATE_SMARTDATA(int8_t);
+INSTANTIATE_SMARTDATA(uint16_t);
+INSTANTIATE_SMARTDATA(int16_t);
+INSTANTIATE_SMARTDATA(uint32_t);
+INSTANTIATE_SMARTDATA(int32_t);
 
-template class SmartData<uint16_t>;
-template class SmartData<uint16_t *>;
+INSTANTIATE_SMARTDATA(float);
+INSTANTIATE_SMARTDATA(double);
 
-template class SmartData<uint32_t>;
-template class SmartData<uint32_t *>;
-
-template class SmartData<int8_t>;
-template class SmartData<int8_t *>;
-
-template class SmartData<int16_t>;
-template class SmartData<int16_t *>;
-
-template class SmartData<int32_t>;
-template class SmartData<int32_t *>;
-
-template class SmartData<float>;
-template class SmartData<float *>;
-
-template class SmartData<double>;
-template class SmartData<double *>;
+INSTANTIATE_SMARTDATA(String);
