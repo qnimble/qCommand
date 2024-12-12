@@ -93,11 +93,34 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
                  !TypeTraits<DataType>::isReference)
         : AllSmartDataPtr(size / sizeof(baseType)), value(data) {};
 
+    // For arrays
+    //template <size_t N>
+    //SmartData(DataType (&data)[N])        
+     //   : AllSmartDataPtr(N), value(data){};
+
+
+// For pointer types with arrays
+template <size_t N>
+SmartData(typename std::remove_pointer<
+          typename std::remove_reference<DataType>::type>::type (&data)[N])
+    requires(TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
+    : AllSmartDataPtr(N), value(data) {};
+
+// For non-pointer types with arrays  
+template <size_t N>
+SmartData(typename std::remove_reference<DataType>::type (&data)[N])
+    requires(!TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
+    : AllSmartDataPtr(N), value(data) {};
+
+/*
     // For Reference to arrays
     template <size_t N>
     SmartData(typename std::remove_reference<DataType>::type (&data)[N])
         requires(TypeTraits<DataType>::isReference)
         : AllSmartDataPtr(N), value(&data[0]){};
+
+*/
+
 
     bool setNext(baseType);
 

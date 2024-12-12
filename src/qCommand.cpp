@@ -1,16 +1,14 @@
 #include "qCommand.h"
 #include <limits>
 
-#include "protothreads.h"
 #include "pt.h"
 
 #include "electricui.h"
-#include "eui_binary_transport.h"
 
 static eui_interface_t serial_comms;
 
 qCommand::qCommand(bool caseSensitive)
-    : binaryStream(&Serial3), debugStream(&Serial), callBack{nullptr},
+    : binaryStream(&Serial3), callBack{nullptr},
       commandCount(0), commandList(NULL), defaultHandler(NULL),
       term('\n'), // default terminator for commands, newline character
       caseSensitive(caseSensitive), cur(NULL), last(NULL), bufPos(0),
@@ -72,6 +70,7 @@ uint16_t qCommand::sizeOfType(qCommand::Types type) {
     }
 }
 
+/*
 // Function for SmartData by reference
 template <typename T>
 void qCommand::assignVariable(const char *command, T &variable, bool read_only)
@@ -88,7 +87,7 @@ void qCommand::assignVariable(const char *command, T &variable, bool read_only)
                   command, types, &variable);
     addCommandInternal(command, types, &(variable), size);
 }
-
+*/
 size_t qCommand::getOffset(Types type, uint16_t size) {
     uintptr_t stop_ptr = 0;
 
@@ -248,10 +247,7 @@ char qCommand::readBinaryInt2(void) {
     // static uint8_t count = 0;
     static uint8_t k = 0;
     dataReady = binaryStream->available();
-    if (dataReady != 0) {
-        debugStream->printf(
-            "Got %u bytes available... (next is 0x%02x) (k=%u)\n", dataReady,
-            binaryStream->peek(), k);
+    if (dataReady != 0) {        
         for (k = 0; k < dataReady; k++) {
             uint8_t inbound_byte = binaryStream->read();
             if (inbound_byte == 0) {
@@ -538,17 +534,14 @@ void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
         }
     }
     setDebugWord(0x01010015);
-    if (types.sub_types.ptr == PTR_SD_OBJECT) {
-        debugStream->printf("SD Object with %08x\n", types);
+    if (types.sub_types.ptr == PTR_SD_OBJECT) {        
         SmartData<argUInt> *object = (SmartData<argUInt> *)ptr;
         setDebugWord(0x01010016);
         newValue = object->get();
         setDebugWord(0x01010017);
     } else {
         setDebugWord(0x01010018);
-        newValue = *ptr;
-        Serial.printf("And now newValue is %u but ptr deref is %u\n", newValue,
-                      *(uint8_t *)ptr);
+        newValue = *ptr;        
         setDebugWord(0x01010019);
     }
     setDebugWord(0x12344480);
@@ -813,71 +806,27 @@ char *qCommand::next() {
     return cur;
 }
 
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command, char *object,
-                                       bool read_only);
 
-template void qCommand::assignVariable(const char *command, uint8_t *variable,
-                                       bool read_only);
+#define INSTANTIATE_SMARTDATA(TYPE)                                            \
+    template void qCommand::assignVariable(const char* command, TYPE *variable, bool real_only);  \
+    template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool real_only); \
+    template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool real_only); \
+    //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
 
-template void qCommand::assignVariable(const char *command, uint16_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, uint *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, ulong *variable,
-                                       bool read_only);
 
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint8_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint16_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint> *object, bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<unsigned long> *object,
-                                       bool read_only);
+INSTANTIATE_SMARTDATA(bool);
+INSTANTIATE_SMARTDATA(char);
 
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<String> *object,
-                                       bool read_only);
+INSTANTIATE_SMARTDATA(uint8_t);
+INSTANTIATE_SMARTDATA(int8_t);
+INSTANTIATE_SMARTDATA(uint16_t);
+INSTANTIATE_SMARTDATA(int16_t);
+INSTANTIATE_SMARTDATA(uint32_t);
+INSTANTIATE_SMARTDATA(int32_t);
 
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<uint16_t(&)> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int16_t(&)> *object,
-                                       bool read_only);
+INSTANTIATE_SMARTDATA(float);
+INSTANTIATE_SMARTDATA(double);
 
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int8_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int16_t> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<int> *object, bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<long> *object, bool read_only);
-template void qCommand::assignVariable(const char *command, int8_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, int16_t *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, int *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, long *variable,
-                                       bool read_only);
+//Only support Strings via SmartData
+template void qCommand::assignVariable(const char* command, SmartData<String> *variable, bool real_only); 
 
-// Add template lines here so functions get compiled into file for linking
-template void qCommand::assignVariable(const char *command, float *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command, double *variable,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<float> *object,
-                                       bool read_only);
-template void qCommand::assignVariable(const char *command,
-                                       SmartData<double> *object,
-                                       bool read_only);

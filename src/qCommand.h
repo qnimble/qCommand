@@ -2,7 +2,6 @@
 #define QCOMMAND_h
 
 #include "smartData.h"
-#include <Arduino.h>
 #include <Stream.h>
 #include <string.h>
 
@@ -80,7 +79,8 @@ class qCommand {
 
     static size_t getOffset(Types type, uint16_t size);
     static uint16_t sizeOfType(qCommand::Types type);
-    // Function for arrays with size
+
+    // Function for arrays with size explicitly defined
     template <typename T, std::size_t N>
     void assignVariable(const char *command, T (&variable)[N],
                         bool read_only = false)
@@ -107,21 +107,20 @@ class qCommand {
                  !std::is_base_of<Base,
                                   typename std::remove_pointer<T>::type>::value)
     ;
-
+/*
     // Function for SmartData by reference
     template <typename T>
     void assignVariable(const char *command, T &variable,
                         bool read_only = false)
         requires(std::is_base_of<Base, typename std::decay<T>::type>::value);
-
+*/
     void assignVariable(const char *command, bool &variable,
                         bool read_only = false);
     void assignVariable(const char *command, SmartData<bool> *object,
                         bool read_only = false);
 
   private:
-    Stream *binaryStream;
-    Stream *debugStream;
+    Stream *binaryStream;    
 
     union callBack {
         void (*f1)(qCommand &streamCommandParser, Stream &stream);
