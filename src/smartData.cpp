@@ -11,8 +11,8 @@ void Base::sendUpdate(void) {
     }
 }
 
-template <class SmartDataGeneric>
-void SmartData<SmartDataGeneric, false>::set(SmartDataGeneric newValue) {
+template <class DataType>
+void SmartData<DataType, false>::set(DataType newValue) {
     value = newValue;
     sendUpdate();
 }
@@ -20,26 +20,24 @@ void SmartData<SmartDataGeneric, false>::set(SmartDataGeneric newValue) {
 template <class DataType>
 bool SmartData<DataType, true>::setNext(
     typename SmartData<DataType, true>::baseType data) {
-    //if (dataRequested) {
-        if (currentElement < totalElements) {
-            value[currentElement] = data;
-            currentElement++;
-            if (currentElement == totalElements) {
-                // if this was last element, then
-                sendUpdate();
-            }
-            return true; // updated data
-        } else {
-            return false; // data full
+    // if (dataRequested) {
+    if (currentElement < totalElements) {
+        value[currentElement] = data;
+        currentElement++;
+        if (currentElement == totalElements) {
+            // if this was last element, then
+            sendUpdate();
         }
+        return true; // updated data
+    } else {
+        return false; // data full
+    }
     //}
 }
 
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template class SmartData<TYPE>;                                            \
-    template class SmartData<TYPE *>;                                          \
-    template bool SmartData<TYPE&, true>::setNext(TYPE);                            
-    //    typename SmartData<TYPE *, true>::baseType);
+    template class SmartData<TYPE *>;
 
 INSTANTIATE_SMARTDATA(bool);
 INSTANTIATE_SMARTDATA(char);

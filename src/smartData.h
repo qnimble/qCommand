@@ -14,7 +14,7 @@ class Base {
     };
 
     Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
-    
+
     UpdateState getUpdateState(void) { return updates_needed; }
     void sendUpdate(void);
     virtual uint16_t size(void);
@@ -34,7 +34,8 @@ class Base {
 };
 
 // generic SmartData for single values and arrays
-template <class DataType, bool isArray = TypeTraits<DataType>::isArray>
+template <class DataType, bool isArray = TypeTraits<DataType>::isArray ||
+                                         TypeTraits<DataType>::isPointer>
 class SmartData : public Base {
   public:
     SmartData(DataType data);
@@ -51,12 +52,13 @@ class AllSmartDataPtr : public Base {
         dataRequested = true;
     };
 
-    void resetUpdateState(void) { 
-      updates_needed = STATE_IDLE;
-      currentElement = 0;
+    void resetUpdateState(void) {
+        updates_needed = STATE_IDLE;
+        currentElement = 0;
     };
 
     const size_t totalElements; // in public because protected by const flag
+
   protected:
     size_t currentElement;
     bool dataRequested = false;
@@ -66,70 +68,25 @@ class AllSmartDataPtr : public Base {
 template <class DataType>
 class SmartData<DataType, true> : public AllSmartDataPtr {
   public:
-    // DataType cannot be used directly as it may be a reference.
-    // default is just T.
-    template <typename T> struct storage_type_specialization {
-        using type = T;
-    };
-
-    // But if it is an array, then we need to use a pointer
-    template <typename T, size_t N>
-    struct storage_type_specialization<T (&)[N]> {
-        using type = T *;
-    };
-
-    // And references use pointer.
-    template <typename T> struct storage_type_specialization<T &> {
-        using type = T *;
-    };
-
-    using storage_type = typename storage_type_specialization<DataType>::type;
-    using baseType = typename std::remove_pointer<
-        typename std::remove_reference<storage_type>::type>::type;
+    using baseType = typename std::remove_pointer<DataType>::type;
 
     // For pointer arrays with explicitly set size
-    SmartData(storage_type data, size_t size)
-        requires(TypeTraits<DataType>::isPointer &&
-                 !TypeTraits<DataType>::isReference)
+    SmartData(DataType data, size_t size)
+        requires(TypeTraits<DataType>::isPointer)
         : AllSmartDataPtr(size / sizeof(baseType)), value(data) {};
 
-    // For arrays
-    //template <size_t N>
-    //SmartData(DataType (&data)[N])        
-     //   : AllSmartDataPtr(N), value(data){};
-
-
-// For pointer types with arrays
-template <size_t N>
-SmartData(typename std::remove_pointer<
-          typename std::remove_reference<DataType>::type>::type (&data)[N])
-    requires(TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
-    : AllSmartDataPtr(N), value(data) {};
-
-// For non-pointer types with arrays  
-template <size_t N>
-SmartData(typename std::remove_reference<DataType>::type (&data)[N])
-    requires(!TypeTraits<DataType>::isPointer && !TypeTraits<DataType>::isReference)
-    : AllSmartDataPtr(N), value(data) {};
-
-/*
-    // For Reference to arrays
+    // For pointer types with arrays
     template <size_t N>
-    SmartData(typename std::remove_reference<DataType>::type (&data)[N])
-        requires(TypeTraits<DataType>::isReference)
-        : AllSmartDataPtr(N), value(&data[0]){};
-
-*/
-
+    SmartData(typename std::remove_pointer<DataType>::type (&data)[N])
+        : AllSmartDataPtr(N), value(data){};
 
     bool setNext(baseType);
 
     uint16_t size(void) { return totalElements * sizeof(baseType); }
-
     baseType get(size_t element) { return value[element]; }
 
   private:
-    storage_type value;
+    DataType value;
     friend class qCommand;
 };
 
@@ -157,7 +114,7 @@ template <class DataType> class SmartData<DataType, false> : public Base {
     }
 
     void set(DataType);
-    void resetUpdateState(void) { updates_needed = STATE_IDLE;}
+    void resetUpdateState(void) { updates_needed = STATE_IDLE; }
     uint16_t size(void) { return sizeof(DataType); }
 
   private:
@@ -184,8 +141,9 @@ template <typename T> struct remove_ptr_if_not_ptr {
 
 // Base template that applies rules
 template <typename T> struct type2int {
-    static constexpr uint8_t result = type2int_base<typename unwrap_smart_data<
-        typename remove_ptr_if_not_ptr<T>::type>::type>::result;
+    using removed_ptr = typename std::remove_pointer<T>::type;
+    using unwrapped = typename unwrap_smart_data<removed_ptr>::type;
+    static constexpr uint8_t result = type2int_base<unwrapped>::result;
 };
 
 #endif // SMARTDATA_h
