@@ -14,7 +14,7 @@ void Base::sendUpdate(void) {
 template <class DataType>
 void SmartData<DataType, false>::set(DataType newValue) {
     if (setter != nullptr) {
-        value = setter(newValue);
+        value = setter(newValue, value);
     } else {
         value = newValue;
     }

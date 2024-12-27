@@ -116,7 +116,7 @@ template <class DataType> class SmartData<DataType, false> : public Base {
     void set(DataType);
     void resetUpdateState(void) { updates_needed = STATE_IDLE; }
     uint16_t size(void) { return sizeof(DataType); }
-    using SetterFuncPtr = DataType (*)(DataType);
+    using SetterFuncPtr = DataType (*)(DataType, DataType);
     void setSetter(SetterFuncPtr setter) { this->setter = setter; }
 
   private:
