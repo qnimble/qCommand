@@ -114,10 +114,6 @@ class qCommand {
                         bool read_only = false)
         requires(std::is_base_of<Base, typename std::decay<T>::type>::value);
 */
-    void assignVariable(const char *command, bool &variable,
-                        bool read_only = false);
-    void assignVariable(const char *command, SmartData<bool> *object,
-                        bool read_only = false);
 
   private:
     Stream *binaryStream;    
@@ -166,8 +162,8 @@ class qCommand {
     void reportString(qCommand &qC, Stream &S, const char *command,
                       uint8_t ptr_type, char *ptr,
                       StreamCommandParserCallback *CommandList);
-    void reportBool(qCommand &qC, Stream &S, bool *ptr, const char *command,
-                    SmartData<bool> *object);
+    void reportBool(qCommand &qC, Stream &S, const char *command, Types types,
+                   bool *ptr);
 
     template <class argInt>
     void reportInt(qCommand &qC, Stream &S, const char *command, Types types,

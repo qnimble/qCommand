@@ -3,7 +3,7 @@
 
 #include "pt.h"
 
-//#include "electricui.h"
+#include "electricui.h"
 
 static eui_interface_t serial_comms;
 
@@ -70,24 +70,6 @@ uint16_t qCommand::sizeOfType(qCommand::Types type) {
     }
 }
 
-/*
-// Function for SmartData by reference
-template <typename T>
-void qCommand::assignVariable(const char *command, T &variable, bool read_only)
-    requires(std::is_base_of<Base, typename std::decay<T>::type>::value)
-{
-    Types types;
-    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-    // Serial.printf("Adding %s for reference SD Object\n", command);
-    uint16_t size = variable.size();
-    Serial.printf("Adding %s for SD reference data (types: 0x%02x) at 0x%08x\n",
-                  command, types, &variable);
-    addCommandInternal(command, types, &(variable), size);
-}
-*/
 size_t qCommand::getOffset(Types type, uint16_t size) {
     uintptr_t stop_ptr = 0;
 
@@ -169,21 +151,15 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
             stop_ptr = reinterpret_cast<uintptr_t>(&(float64->value));
         } break;
         default:
-            stop_ptr = 1000;
+            stop_ptr = 0;
         }
     }
-    // Serial2.printf("Got array with sub_type %u and returning 0x%08x\n",
-    //                type.sub_types.data, stop_ptr);
-
     return stop_ptr;
 }
 
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     qCommand::Types type;
     type.raw = p_msg_obj->type;
-    // Serial2.printf(
-    //    "Command is %s with type=0x%02x and size=%u and ptr to 0x%08x\n",
-    //    p_msg_obj->id, p_msg_obj->type, p_msg_obj->size, p_msg_obj->ptr.data);
     if (type.sub_types.data == 4) {
         // String pointer
         const SmartData<String> *SD_String =
@@ -470,21 +446,22 @@ void qCommand::reportString(qCommand &qC, Stream &S, const char *command,
     }
 }
 
-void qCommand::reportBool(qCommand &qC, Stream &S, bool *ptr,
-                          const char *command, SmartData<bool> *object) {
+
+void qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
+                          Types types, bool *ptr) {
     bool temp;
-    // Serial2.printf("String is %s\n", );
     if (qC.next() != NULL) {
         temp = qC.str2Bool(qC.current());
-        if (object != NULL) {
-            // Serial2.printf("Set Bool to %u\n",temp);
+        if (types.sub_types.ptr == PTR_SD_OBJECT) {
+            SmartData<bool> *object = (SmartData<bool> *)ptr;
             object->set(temp);
         } else {
             *ptr = temp;
         }
     }
 
-    if (object != NULL) {
+     if (types.sub_types.ptr == PTR_SD_OBJECT) {
+        SmartData<bool> *object = (SmartData<bool> *)ptr;
         temp = object->get();
     } else {
         temp = *ptr;
@@ -666,6 +643,9 @@ void qCommand::reportData(qCommand &qC, Stream &inputStream,
         reportFloat(*this, inputStream, command, types,
                     static_cast<double *>(ptr));
         break;
+    case 13:
+        reportBool(*this, inputStream, command, types, static_cast<bool *>(ptr));
+        break;
     default:
         inputStream.printf("Unknown data type %u\n", types.sub_types.data);
         break;
@@ -808,11 +788,10 @@ char *qCommand::next() {
 
 
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
-    template void qCommand::assignVariable(const char* command, TYPE *variable, bool real_only);  \
-    template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool real_only); \
-    template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool real_only); \
+    template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
+    template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
+    template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
-
 
 INSTANTIATE_SMARTDATA(bool);
 INSTANTIATE_SMARTDATA(char);

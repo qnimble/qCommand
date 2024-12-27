@@ -61,7 +61,7 @@ static_assert(TypeTraits<bool *>::isBool, "bool* is bool");
 template <typename T>
 struct type2int_base; // force defintion by leaving out result for default case
 template <> struct type2int_base<bool> {
-    enum { result = 6 };
+    enum { result = 13 };
 };
 template <> struct type2int_base<uint8_t> {
     enum { result = 6 };
