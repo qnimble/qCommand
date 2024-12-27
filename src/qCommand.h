@@ -142,7 +142,7 @@ class qCommand {
     StreamCommandParserCallback
         *commandList; // Actual definition for command/handler array
 
-    void reportData(qCommand &qC, Stream &inputStream, const char *command,
+    bool reportData(qCommand &qC, Stream &inputStream, const char *command,
                     Types types, void *ptr,
                     StreamCommandParserCallback *commandList = NULL);
 
@@ -159,26 +159,26 @@ class qCommand {
     void addCommandInternal(const char *command, Types types, void *object,
                             uint16_t size);
 
-    void reportString(qCommand &qC, Stream &S, const char *command,
+    bool reportString(qCommand &qC, Stream &S, const char *command,
                       uint8_t ptr_type, char *ptr,
                       StreamCommandParserCallback *CommandList);
-    void reportBool(qCommand &qC, Stream &S, const char *command, Types types,
+    bool reportBool(qCommand &qC, Stream &S, const char *command, Types types,
                    bool *ptr);
 
     template <class argInt>
-    void reportInt(qCommand &qC, Stream &S, const char *command, Types types,
+    bool reportInt(qCommand &qC, Stream &S, const char *command, Types types,
                    argInt *ptr);
 
     template <class argUInt>
-    void reportUInt(qCommand &qC, Stream &S, const char *command, Types types,
+    bool reportUInt(qCommand &qC, Stream &S, const char *command, Types types,
                     argUInt *ptr);
 
     template <class argFloating>
-    void reportFloat(qCommand &qC, Stream &S, const char *command, Types types,
+    bool reportFloat(qCommand &qC, Stream &S, const char *command, Types types,
                      argFloating *ptr);
 
     template <class argFloating>
-    void reportFloat(qCommand &qC, Stream &S, argFloating *ptr,
+    bool reportFloat(qCommand &qC, Stream &S, argFloating *ptr,
                      const char *command, SmartData<argFloating> *object);
 
     void invalidAddress(qCommand &qC, Stream &S, void *ptr, const char *command,

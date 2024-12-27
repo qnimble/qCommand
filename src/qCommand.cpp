@@ -65,6 +65,8 @@ uint16_t qCommand::sizeOfType(qCommand::Types type) {
         return 4;
     case 12: // double
         return 8;
+    case 13:
+        return 1;
     default:
         return 0;
     }
@@ -108,10 +110,13 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
             SmartData<float> *ptrf = NULL;
             stop_ptr = reinterpret_cast<uintptr_t>(&(ptrf->value));
         } break;
-
         case 12: {
             SmartData<double> *ptrd = NULL;
             stop_ptr = reinterpret_cast<uintptr_t>(&(ptrd->value));
+        } break;
+        case 13: {
+            SmartData<bool> *ptrb = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(ptrb->value));
         } break;
         default:
             stop_ptr = 0;
@@ -149,6 +154,10 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
         case 12: {
             SmartData<double *> *float64 = NULL;
             stop_ptr = reinterpret_cast<uintptr_t>(&(float64->value));
+        } break;
+        case 13: {
+            SmartData<bool *> *boolData = NULL;
+            stop_ptr = reinterpret_cast<uintptr_t>(&(boolData->value));
         } break;
         default:
             stop_ptr = 0;
@@ -425,9 +434,10 @@ bool qCommand::str2Bool(const char *string) {
     return result;
 }
 
-void qCommand::reportString(qCommand &qC, Stream &S, const char *command,
+bool qCommand::reportString(qCommand &qC, Stream &S, const char *command,
                             uint8_t ptr_type, char *ptr,
                             StreamCommandParserCallback *CommandList) {
+    bool need_to_send = false;
     if (ptr_type == PTR_SD_OBJECT) {
         SmartData<String> *object = (SmartData<String> *)ptr;
         if (qC.next() != NULL) {
@@ -441,15 +451,19 @@ void qCommand::reportString(qCommand &qC, Stream &S, const char *command,
         if (qC.next() != NULL) {
             strlcpy(ptr, qC.current(), CommandList->size);
             Serial.printf("Command Size is %u\n", CommandList->size);
+            //Updated value and not SD_Object, so data needs update
+            need_to_send = true;
         }
         S.printf("%s is %s\n", command, ptr);
     }
+    return need_to_send;
 }
 
 
-void qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
+bool qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
                           Types types, bool *ptr) {
     bool temp;
+    bool need_to_send = false;
     if (qC.next() != NULL) {
         temp = qC.str2Bool(qC.current());
         if (types.sub_types.ptr == PTR_SD_OBJECT) {
@@ -457,6 +471,7 @@ void qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
             object->set(temp);
         } else {
             *ptr = temp;
+            need_to_send = true;
         }
     }
 
@@ -468,15 +483,17 @@ void qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
     }
 
     S.printf("%s is %s\n", command, temp ? "true" : "false");
+    return need_to_send;
 }
 
 template <class argUInt>
-void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
+bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
                           Types types, argUInt *ptr) {
     // Serial.printf("reportUInt called with with ptr at 0x%08x and value of
     // %u\n",
     //               ptr, *(argUInt *)ptr);
     // setDebugWord(0x12344489);
+    bool need_to_send = false;
     unsigned long temp;
     argUInt newValue;
     setDebugWord(0x01010001);
@@ -507,6 +524,7 @@ void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
         } else {
             setDebugWord(0x01010013);
             *ptr = newValue;
+            need_to_send = true;
             setDebugWord(0x01010014);
         }
     }
@@ -523,12 +541,14 @@ void qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
     }
     setDebugWord(0x12344480);
     S.printf("%s is %u\n", command, newValue);
+    return need_to_send;
 }
 
 template <class argInt>
-void qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
+bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
                          Types types, argInt *ptr) {
     int temp;
+    bool need_to_send = false;
     if (qC.next() != NULL) {
         temp = atoi(qC.current());
         if (temp < std::numeric_limits<argInt>::min()) {
@@ -542,6 +562,7 @@ void qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
             object->set(temp);
         } else {
             *ptr = temp;
+            need_to_send = true;
         }
     }
     if (types.sub_types.ptr == PTR_SD_OBJECT) {
@@ -551,11 +572,13 @@ void qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
         temp = *ptr;
     }
     S.printf("%s is %d\n", command, temp);
+    return need_to_send;
 }
 
 template <class argFloating>
-void qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
+bool qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
                            Types types, argFloating *ptr) {
+    bool need_to_send = false;
     argFloating newValue;
     if (qC.next() != NULL) {
         newValue = atof(qC.current());
@@ -563,15 +586,16 @@ void qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
             SmartData<argFloating> *object = (SmartData<argFloating> *)ptr;
             object->set(newValue);
         } else {
-            if (sizeof(argFloating) >
-                4) { // make setting variable atomic for doubles or anything
-                     // greater than 32bits.
+            if (sizeof(argFloating) > 4) {
+                // make setting variable atomic for doubles or anything
+                // greater than 32bits.
                 __disable_irq();
                 *ptr = newValue;
                 __enable_irq();
             } else {
                 *ptr = newValue;
             }
+            need_to_send = true;
         }
     }
 
@@ -588,6 +612,7 @@ void qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
     } else {
         S.printf("%s is %f\n", command, newValue);
     }
+    return need_to_send;
 }
 
 /**
@@ -600,7 +625,7 @@ void qCommand::setDefaultHandler(void (*function)(const char *,
     defaultHandler = function;
 }
 
-void qCommand::reportData(qCommand &qC, Stream &inputStream,
+bool qCommand::reportData(qCommand &qC, Stream &inputStream,
                           const char *command, Types types, void *ptr,
                           StreamCommandParserCallback *commandList) {
     inputStream.printf(
@@ -608,47 +633,37 @@ void qCommand::reportData(qCommand &qC, Stream &inputStream,
         command, types.sub_types.data, types.sub_types.ptr, ptr);
     switch (types.sub_types.data) {
     case 4:
-        reportString(*this, inputStream, command, types.sub_types.ptr,
+        return reportString(*this, inputStream, command, types.sub_types.ptr,
                      static_cast<char *>(ptr), commandList);
-        break;
     case 6:
-        reportUInt(*this, inputStream, command, types,
+        return reportUInt(*this, inputStream, command, types,
                    static_cast<uint8_t *>(ptr));
-        break;
     case 8:
-        reportUInt(*this, inputStream, command, types,
+        return reportUInt(*this, inputStream, command, types,
                    static_cast<uint16_t *>(ptr));
-        break;
     case 10:
-        reportUInt(*this, inputStream, command, types,
+        return reportUInt(*this, inputStream, command, types,
                    static_cast<uint32_t *>(ptr));
-        break;
     case 5:
-        reportInt(*this, inputStream, command, types,
+        return reportInt(*this, inputStream, command, types,
                   static_cast<int8_t *>(ptr));
-        break;
     case 7:
-        reportInt(*this, inputStream, command, types,
+        return reportInt(*this, inputStream, command, types,
                   static_cast<int16_t *>(ptr));
-        break;
     case 9:
-        reportInt(*this, inputStream, command, types,
+        return reportInt(*this, inputStream, command, types,
                   static_cast<int32_t *>(ptr));
-        break;
     case 11:
-        reportFloat(*this, inputStream, command, types,
+        return reportFloat(*this, inputStream, command, types,
                     static_cast<float *>(ptr));
-        break;
     case 12:
-        reportFloat(*this, inputStream, command, types,
+        return reportFloat(*this, inputStream, command, types,
                     static_cast<double *>(ptr));
-        break;
     case 13:
-        reportBool(*this, inputStream, command, types, static_cast<bool *>(ptr));
-        break;
+        return reportBool(*this, inputStream, command, types, static_cast<bool *>(ptr));
     default:
         inputStream.printf("Unknown data type %u\n", types.sub_types.data);
-        break;
+        return 0;
     }
 }
 
@@ -705,6 +720,7 @@ void qCommand::readSerial(Stream &inputStream) {
                                 command);
                         } else {
                             // SD-Object or Raw PTR
+                            bool need_to_send =
                             reportData(*this, inputStream, command,
                                        commandList[i].types,
                                        commandList[i].ptr.object,
@@ -714,7 +730,7 @@ void qCommand::readSerial(Stream &inputStream) {
                             Serial.printf(
                                 "Send reportData on SD or Raw (0x%02x)\n",
                                 commandList[i].types.sub_types.ptr);
-                            if (commandList[i].types.sub_types.ptr ==
+                            if (need_to_send && commandList[i].types.sub_types.ptr ==
                                 PTR_RAW_DATA) {
                                 send_update_on_tracked_variable(i);
                                 Serial.printf(
