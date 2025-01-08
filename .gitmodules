@@ -1,4 +1,0 @@
-[submodule "eui"]
-	path = eui
-	url = git@github.com:qnimble/electricui-embedded.git
-	branch = main
