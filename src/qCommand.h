@@ -181,9 +181,6 @@ class qCommand {
     bool reportFloat(qCommand &qC, Stream &S, argFloating *ptr,
                      const char *command, SmartData<argFloating> *object);
 
-    void invalidAddress(qCommand &qC, Stream &S, void *ptr, const char *command,
-                        void *object);
-
     // Pointer to the default handler function
     void (*defaultHandler)(const char *, qCommand &streamCommandParser,
                            Stream &stream);
@@ -201,23 +198,6 @@ class qCommand {
     bool binaryConnected;
 };
 
-/*
-// Base template for fixed-size arrays
-// Needs to be in header to get size N
-template <typename T, std::size_t N>
-void qCommand::assignVariable(const char *command, T (&variable)[N],
-                              bool read_only)
-    requires(!std::is_base_of<Base, T>::value)
-{
-    Types types;
-    types.sub_types = {type2int<T>::result, PTR_RAW_DATA};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-    Serial.printf("Adding %s for fixed array size %zu\n", command, N);
-    addCommandInternal(command, types, variable, N * sizeof(T));
-}
-*/
 // Specialization for pointers to arrays with size
 // Needs to be in header since each size its own template / initialization
 template <typename T>
@@ -233,27 +213,8 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     types.sub_types = {type2int<array_type>::result, PTR_RAW_DATA};
     if (read_only) {
         types.sub_types.read_only = true;
-    }
-    Serial.printf("Adding %s for pointer to array with size = %u)\n", command,
-                  sizeof(base_type));
+    }    
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
-/*
-// Specialization for arrays without size
-template <typename T>
-void qCommand::assignVariable(const char *command, T variable, bool read_only)
-    requires(
-        !std::is_pointer<T>::value && std::is_array<T>::value &&
-        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
-{
-    using base_type = typename std::remove_pointer<T>::type; // G
-    Types types;
-    types.sub_types = {type2int<base_type>::result, PTR_RAW_DATA};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-    Serial.printf("Adding %s for pointer to array (no size -> %u)\n", command,
-sizeof(T)); addCommandInternal(command, types, variable, sizeof(T));
-}
-*/
+
 #endif // QCOMMAND_h
