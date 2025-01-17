@@ -52,6 +52,9 @@ class AllSmartDataPtr : public Base {
         dataRequested = true;
     };
 
+    bool isEmpty(void) { return currentElement == 0; };
+    bool isFull(void) { return currentElement == totalElements; };
+
     void resetUpdateState(void) {
         updates_needed = STATE_IDLE;
         currentElement = 0;
@@ -91,7 +94,8 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 };
 
 // Specialization for non-arrays
-template <class DataType> class SmartData<DataType, false> : public Base {
+template <class DataType> 
+class SmartData<DataType, false> : public Base {
   public:
     SmartData(DataType data) : value(data) {};
 
@@ -142,11 +146,23 @@ template <typename T> struct remove_ptr_if_not_ptr {
                                   T>::type;
 };
 
+// Helper to remove const qualifier
+template <typename T>
+struct remove_const {
+    using type = T;
+};
+
+template <typename T>
+struct remove_const<const T> {
+    using type = T;
+};
+
 // Base template that applies rules
 template <typename T> struct type2int {
     using removed_ptr = typename std::remove_pointer<T>::type;
     using unwrapped = typename unwrap_smart_data<removed_ptr>::type;
-    static constexpr uint8_t result = type2int_base<unwrapped>::result;
+    using non_const = typename remove_const<unwrapped>::type;
+    static constexpr uint8_t result = type2int_base<non_const>::result;
 };
 
 #endif // SMARTDATA_h

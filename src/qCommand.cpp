@@ -166,6 +166,76 @@ size_t qCommand::getOffset(Types type, uint16_t size) {
     return stop_ptr;
 }
 
+template <typename T>
+void set_smart_data(void* data_ptr, uint8_t* data_in) {
+    SmartData<T>* smart_data = reinterpret_cast<SmartData<T>*>(const_cast<void*>(data_ptr));
+    smart_data->set(*reinterpret_cast<T*>(data_in));
+}
+
+
+void set_object(eui_message_t *p_msg_obj,uint16_t offset, uint8_t* data_in, uint16_t len) {
+    //Serial2.printf("setObj called: new data has length: %u\n", len);
+    if (offset != 0) {
+        //Do not support offset writes to SmartData objects
+        return;
+    } else {
+        qCommand::Types type;
+        type.raw = p_msg_obj->type;
+        if (type.sub_types.data == 4) {
+            // String pointer
+            SmartData<String> *SD_String =
+                reinterpret_cast<SmartData<String> *>(const_cast<void*>(p_msg_obj->ptr.data));
+            //p_msg_obj->size = strlen(SD_String->get().c_str()) + 1;
+            //if (p_msg_obj->size >= len) {
+                SD_String->set((char *)data_in);            
+            //}
+        } else {
+            //size_t offset = qCommand::getOffset(type, p_msg_obj->size);            
+            const uint8_t *data =
+            (static_cast<const uint8_t *>(p_msg_obj->ptr.data) + offset);
+            if (p_msg_obj->size > qCommand::sizeOfType(type)) {
+                // Array of data
+                memcpy((uint8_t *)data, data_in, len);
+            }  else {
+                switch (type.sub_types.data) {
+                    case 5:
+                        set_smart_data<int8_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 6: 
+                        set_smart_data<uint8_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 7: 
+                        set_smart_data<int16_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 8: 
+                        set_smart_data<uint16_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 9: 
+                        set_smart_data<int32_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 10: 
+                        set_smart_data<uint32_t>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 11: 
+                        set_smart_data<float>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 12: 
+                        set_smart_data<double>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                    case 13: 
+                        set_smart_data<bool>(const_cast<void*>(p_msg_obj->ptr.data), data_in);
+                        break;
+                }
+            }
+            //const void *final_ptr = (const void *)(*(uint32_t *)data);        
+            //return final_ptr;
+        //} else {
+        //    return static_cast<const void *>(data);
+        //}
+        }
+    }
+}
+
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     qCommand::Types type;
     type.raw = p_msg_obj->type;
@@ -706,6 +776,7 @@ char *qCommand::next() {
 
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
+    template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 

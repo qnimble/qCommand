@@ -17,6 +17,7 @@ extern "C" {
 void serial3_write(uint8_t *data, uint16_t len);
 void serial2_write(uint8_t *data, uint16_t len);
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj);
+void set_object(eui_message_t *p_msg_obj, uint16_t offset, uint8_t *data_in, uint16_t len);
 
 #ifdef __cplusplus
 }
@@ -50,7 +51,7 @@ class qCommand {
         } sub_types;
     } Types;
 
-    qCommand(bool caseSensitive = false);
+    qCommand(const bool caseSensitive = false);
     void sendBinaryCommands(void);
     void addCommand(const char *command,
                     void (*function)(qCommand &streamCommandParser,
@@ -88,13 +89,23 @@ class qCommand {
 
     // Function for SmartData objects
     template <typename T>
-    void assignVariable(char const *command, SmartData<T> *object,
+    void assignVariable(const char *command, SmartData<T> *object,
                         bool read_only = false);
 
     // Specialization for pointers without size (assuming not arrays but pointer
     // to single value)
     template <typename T>
     void assignVariable(const char *command, T variable, bool read_only = false)
+        requires(std::is_pointer<T>::value &&
+                 !std::is_base_of<Base,
+                                  typename std::remove_pointer<T>::type>::value &&
+                    !std::is_const<typename std::remove_pointer<T>::type>::value)
+    ;
+
+    // Specialization for pointers to const without size (assuming not arrays but pointer
+    // to single value)
+    template <typename T>
+    void assignVariable(const char *command, const T variable)
         requires(std::is_pointer<T>::value &&
                  !std::is_base_of<Base,
                                   typename std::remove_pointer<T>::type>::value)
@@ -204,7 +215,10 @@ template <typename T>
 void qCommand::assignVariable(const char *command, T variable, bool read_only)
     requires(
         std::is_pointer<T>::value &&
-        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
+        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value &&
+        !std::is_const<typename std::remove_pointer<T>::type>::value
+    )
+
 {
 
     using base_type = typename std::remove_pointer<T>::type;         // G
@@ -216,5 +230,22 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     }    
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
+
+template <typename T>
+void qCommand::assignVariable(const char *command, const T variable)
+    requires(
+        std::is_pointer<T>::value &&
+        !std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
+{
+    using base_type = typename std::remove_pointer<T>::type;         // G
+    using array_type = typename std::remove_extent<base_type>::type; // G
+    Types types;
+    types.sub_types = {type2int<array_type>::result, PTR_RAW_DATA};
+    types.sub_types.read_only = true;
+    addCommandInternal(command, types, const_cast<void*>(static_cast<const void*>(variable)), sizeof(base_type));
+}
+
+
+
 
 #endif // QCOMMAND_h
