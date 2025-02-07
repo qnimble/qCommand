@@ -111,8 +111,8 @@ class SmartData<DataType, false> : public Base {
     // For complex types like String that are not arrays nor fundamental types
     template <typename T = DataType>
     const T &get() const
-        requires !std::is_fundamental<
-            typename std::remove_pointer<T>::type>::value
+        requires (!std::is_fundamental<
+            typename std::remove_pointer<T>::type>::value)
     {
         return value;
     }
