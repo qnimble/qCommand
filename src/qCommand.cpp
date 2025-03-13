@@ -664,9 +664,6 @@ void qCommand::readSerial(Stream &inputStream) {
             Serial.println(buffer);
 #endif
 
-            if (!caseSensitive) {
-                strlwr(buffer);
-            }
             char *command = strtok_r(
                 buffer, delim, &last); // Search for command at start of buffer
             if (command != NULL) {
@@ -682,7 +679,7 @@ void qCommand::readSerial(Stream &inputStream) {
 
                     // Compare the found command against the list of known
                     // commands for a match
-                    if (strncmp(command, commandList[i].command,
+                    if (compareStrings(command, commandList[i].command,
                                 STREAMCOMMAND_BUFFER) == 0) {
                         matched = true;
                         // Serial.printf("Found match on command %s\n",command);

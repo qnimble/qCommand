@@ -4,6 +4,7 @@
 #include "smartData.h"
 #include <Stream.h>
 #include <string.h>
+#include <strings.h>
 
 #include "electricui.h"
 
@@ -68,6 +69,9 @@ class qCommand {
     void readBinary(void);
     void clearBuffer(); // Clears the input buffer.
 
+    int compareStrings(const char* str1, const char* str2, size_t count) const {
+        return caseSensitive ? strncmp(str1, str2, count) : strncasecmp(str1, str2, count);
+    }
     /**
      * Retrieve the pointer to the current token ("word" or "argument") from the
      * command buffer. Returns NULL if no more tokens exist.
