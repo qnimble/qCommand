@@ -1,14 +1,23 @@
 #include "smartData.h"
 
 void Base::sendUpdate(void) {
-    if ((updates_needed == STATE_IDLE) ||
-        (updates_needed == STATE_NEED_TOSEND)) {
-        updates_needed = STATE_NEED_TOSEND;
-    } else {
-        updates_needed =
-            STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on
-                                          // ACK, so now that plus queue
-    }
+    switch (updates_needed){
+        case STATE_IDLE:
+            updates_needed = STATE_NEED_TOSEND;
+            break;
+        case STATE_NEED_TOSEND:
+            //alread in need to send state, do nothing
+            break;
+        case STATE_WAIT_ON_ACK:
+            updates_needed = STATE_WAIT_ON_ACK_PLUS_QUEUE; // remaining states were waiting on
+                                                          // ACK, so now that plus queue
+            break;
+        case STATE_WAIT_ON_ACK_PLUS_QUEUE:
+            //already in wait on ack plus queue, do nothing
+            break;
+        default:
+            break;
+        }
 }
 
 template <class DataType>

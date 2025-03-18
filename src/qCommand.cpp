@@ -275,16 +275,16 @@ void serial2_write(uint8_t *data, uint16_t len) {
 char qCommand::readBinaryInt2(void) {
     PT_FUNC_START(pt);
     // static uint8_t store[64];
-    eui_interface_t *p_link = &serial_comms;
+    //static eui_interface_t *p_link = &serial_comms;
 
     static int dataReady;
     // static uint8_t count = 0;
-    static uint8_t k = 0;
+    static int k = 0;
     dataReady = binaryStream->available();
     if (dataReady != 0) {        
         for (k = 0; k < dataReady; k++) {
             uint8_t inbound_byte = binaryStream->read();           
-            eui_parse(inbound_byte, p_link);            
+            eui_parse(inbound_byte, &serial_comms);
             PT_YIELD(pt);
         }
     }
