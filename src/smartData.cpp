@@ -30,6 +30,16 @@ void SmartData<DataType, false>::set(DataType newValue) {
     sendUpdate();
 }
 
+
+template <class DataType>
+void SmartData<DataType, true>::set(
+    typename SmartData<DataType, true>::baseType data, size_t element) {
+    if (element < totalElements) {
+        value[element] = data;
+        currentElement = element + 1; // set currentElement to next element
+    }
+}
+
 template <class DataType>
 bool SmartData<DataType, true>::setNext(
     typename SmartData<DataType, true>::baseType data) {

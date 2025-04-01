@@ -49,7 +49,6 @@ class AllSmartDataPtr : public Base {
     size_t getTotalElements(void) { return totalElements; };
     void resetCurrentElement(void) {
         currentElement = 0;
-        dataRequested = true;
     };
 
     bool isEmpty(void) { return currentElement == 0; };
@@ -64,7 +63,7 @@ class AllSmartDataPtr : public Base {
 
   protected:
     size_t currentElement;
-    bool dataRequested = false;
+    //bool dataRequested = false;
 };
 
 // Specialization of SmartData for arrays!
@@ -83,6 +82,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
     SmartData(typename std::remove_pointer<DataType>::type (&data)[N])
         : AllSmartDataPtr(N), value(data){};
 
+    void set(baseType,size_t element);
     bool setNext(baseType);
 
     uint16_t size(void) { return totalElements * sizeof(baseType); }
