@@ -53,12 +53,10 @@ class qCommand {
     } Types;
 
     qCommand(const bool caseSensitive = false);
-    void sendBinaryCommands(void);
     void addCommand(const char *command,
                     void (*function)(qCommand &streamCommandParser,
                                      Stream &stream)); // Add a command to the
                                                        // processing dictionary.
-    void printTable(void);
     void reset(void);
     void setDefaultHandler(void (*function)(
         const char *, qCommand &streamCommandParser,
@@ -67,11 +65,8 @@ class qCommand {
                                        // etc to a bool.
     void readSerial(Stream &inputStream); // Main entry point.
     void readBinary(void);
-    void clearBuffer(); // Clears the input buffer.
 
-    int compareStrings(const char* str1, const char* str2, size_t count) const {
-        return caseSensitive ? strncmp(str1, str2, count) : strncasecmp(str1, str2, count);
-    }
+
     /**
      * Retrieve the pointer to the current token ("word" or "argument") from the
      * command buffer. Returns NULL if no more tokens exist.
@@ -155,11 +150,16 @@ class qCommand {
 
     uint8_t commandCount;
     StreamCommandParserCallback
-        *commandList; // Actual definition for command/handler array
+    *commandList; // Actual definition for command/handler array
+
+    int compareStrings(const char* str1, const char* str2, size_t count) const {
+        return caseSensitive ? strncmp(str1, str2, count) : strncasecmp(str1, str2, count);
+    }
+    void clearBuffer(); // Clears the input buffer.
 
     bool reportData(qCommand &qC, Stream &inputStream, const char *command,
-                    Types types, void *ptr,
-                    StreamCommandParserCallback *commandList = NULL);
+        Types types, void *ptr,
+        StreamCommandParserCallback *commandList = NULL);
 
     char readBinaryInt(void);
     char readBinaryInt2(void);

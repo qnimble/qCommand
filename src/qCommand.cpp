@@ -306,22 +306,7 @@ char qCommand::readBinaryInt2(void) {
     PT_FUNC_END(pt);
 }
 
-void qCommand::sendBinaryCommands(void) {
-    uint8_t elements = 0;
-    for (uint8_t i = 0; i < commandCount; i++) {
-        if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT ||
-            commandList[i].types.sub_types.ptr == PTR_RAW_DATA) {
-            elements++;
-            //Serial.printf("Adding(%u): %s (ptr=0x%08x) data_type=0x%02x)\n", i,
-            //              commandList[i].command, commandList[i].ptr.object,
-            //              commandList[i].types.sub_types.data);
-        } else {
-            //Serial.printf("Skipping: %s (ptr=0x%08x) data_type=0x%02x)\n",
-            //              commandList[i].command, commandList[i].ptr.object,
-             //             commandList[i].types.sub_types.data);
-        }
-    }
-}
+
 
 // Function for SmartData objects
 template <typename T>
