@@ -42,7 +42,7 @@ void qCommand::reset(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
         if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
             Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
-            ptr->updates_needed = Base::UpdateState::STATE_IDLE;
+            ptr->resetUpdateState();
         }
     }
 }
@@ -284,7 +284,10 @@ char qCommand::readBinaryInt2(void) {
     if (dataReady != 0) {        
         for (k = 0; k < dataReady; k++) {
             uint8_t inbound_byte = binaryStream->read();           
-            eui_parse(inbound_byte, &serial_comms);
+            eui_errors_t error = eui_parse(inbound_byte, &serial_comms);
+            if (error.parser == eui_parse_errors::EUI_PARSER_ERROR) {
+                reset(); // reset the qCommand states
+            }
             PT_YIELD(pt);
         }
     }
