@@ -54,6 +54,14 @@ class AllSmartDataPtr : public Base {
     bool isEmpty(void) { return currentElement == 0; };
     bool isFull(void) { return currentElement == totalElements; };
 
+    void ackObject(void) {
+        if (updates_needed == STATE_WAIT_ON_ACK) {
+            updates_needed = STATE_IDLE; // reset to idle state
+        } else if (updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
+            updates_needed = STATE_NEED_TOSEND; // reset to need to send state
+        }
+    }
+
     void resetUpdateState(void) {
         updates_needed = STATE_IDLE;
         currentElement = 0;
