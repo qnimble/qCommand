@@ -261,7 +261,8 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
 
 void ack_object(void *ptr) {
     Base *ptrBase = static_cast<Base *>(ptr);
-    ptrBase->resetUpdateState();
+    //ptrBase->resetUpdateState();
+    ptrBase->ackObject();
 }
 
 void serial3_write(uint8_t *data, uint16_t len) {

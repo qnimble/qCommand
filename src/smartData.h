@@ -18,7 +18,8 @@ class Base {
     UpdateState getUpdateState(void) { return updates_needed; }
     void sendUpdate(void);
     virtual uint16_t size(void);
-    virtual void resetUpdateState(void);
+    virtual void resetUpdateState(void) = 0;
+    virtual void ackObject(void) = 0;
 
   private:
     Stream *stream;
@@ -57,8 +58,10 @@ class AllSmartDataPtr : public Base {
     void ackObject(void) {
         if (updates_needed == STATE_WAIT_ON_ACK) {
             updates_needed = STATE_IDLE; // reset to idle state
+            currentElement = 0; // reset current element after ack
         } else if (updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
             updates_needed = STATE_NEED_TOSEND; // reset to need to send state
+            currentElement = 0; // reset current element after ack
         }
     }
 
@@ -127,6 +130,15 @@ class SmartData<DataType, false> : public Base {
 
     void set(DataType);
     void resetUpdateState(void) { updates_needed = STATE_IDLE; }
+    void ackObject(void) {
+        if (updates_needed == STATE_WAIT_ON_ACK) {
+            updates_needed = STATE_IDLE; // reset to idle state
+        } else if (updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
+            updates_needed = STATE_NEED_TOSEND; // reset to need to send state
+        } else {
+        //updates_needed = STATE_IDLE; // reset to idle state
+        }
+    }
     uint16_t size(void) { return sizeof(DataType); }
     using SetterFuncPtr = DataType (*)(DataType, DataType);
     void setSetter(SetterFuncPtr setter) { this->setter = setter; }
