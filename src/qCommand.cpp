@@ -261,8 +261,8 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
 
 void ack_object(void *ptr) {
     Base *ptrBase = static_cast<Base *>(ptr);
-    ptrBase->resetUpdateState();
-    //ptrBase->ackObject();
+    //ptrBase->resetUpdateState();
+    ptrBase->ackObject();
 }
 
 void serial3_write(uint8_t *data, uint16_t len) {
@@ -282,7 +282,7 @@ char qCommand::readBinaryInt2(void) {
     // static uint8_t count = 0;
     static int k = 0;
     dataReady = binaryStream->available();
-    if (dataReady != 0) {        
+    if (dataReady != 0) {
         for (k = 0; k < dataReady; k++) {
             uint8_t inbound_byte = binaryStream->read();           
             eui_errors_t error = eui_parse(inbound_byte, &serial_comms);
@@ -293,13 +293,16 @@ char qCommand::readBinaryInt2(void) {
         }
     }
 
-    for (uint8_t i = 0; i < commandCount; i++) {
-        if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
-            Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
-            if (ptr->updates_needed == Base::UpdateState::STATE_NEED_TOSEND) {
-                // debugStream->printf("Sending tracked variable %u\n", i);              
-                send_update_on_tracked_variable(i);
-                ptr->updates_needed = Base::UpdateState::STATE_WAIT_ON_ACK;
+    if (eui_get_host_setup()) {
+        for (uint8_t i = 0; i < commandCount; i++) {
+            if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
+                Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
+                if (ptr->updates_needed == Base::UpdateState::STATE_NEED_TOSEND) {
+                    //Serial2.printf("S%u ", i);
+                    send_update_on_tracked_variable(i);
+                    //Serial2.printf(" (%u)\n", Serial3.availableForWrite());
+                    ptr->updates_needed = Base::UpdateState::STATE_WAIT_ON_ACK;
+                }
             }
         }
     }
