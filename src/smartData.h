@@ -98,6 +98,14 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
     uint16_t size(void) { return totalElements * sizeof(baseType); }
     baseType get(size_t element) { return value[element]; }
+    explicit operator DataType() const { return value; }
+
+    baseType& operator[](size_t index) {
+        return value[index];
+    }
+    const baseType& operator[](size_t index) const {
+        return value[index];
+    }
 
   private:
     DataType value;
@@ -128,6 +136,9 @@ class SmartData<DataType, false> : public Base {
         return value;
     }
 
+    operator DataType() const {
+        return value; // return the pointer to the array
+    }
     void set(DataType);
     void resetUpdateState(void) { updates_needed = STATE_IDLE; }
     void ackObject(void) {
