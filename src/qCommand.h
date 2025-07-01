@@ -163,6 +163,7 @@ class qCommand {
 
     char readBinaryInt(void);
     char readBinaryInt2(void);
+    char checkHeartBeat(void);
     // template <typename DataType, typename
     // std::enable_if<!TypeTraits<DataType>::isArray, int>::type = 0>
     void addCommandInternal(const char *command,

@@ -2,6 +2,7 @@
 #include <limits>
 
 #include "pt.h"
+#include "pt-sleep.h"
 
 #include "electricui.h"
 
@@ -47,7 +48,10 @@ void qCommand::reset(void) {
     }
 }
 
-void qCommand::readBinary(void) { PT_SCHEDULE(readBinaryInt2()); }
+void qCommand::readBinary(void) {
+    PT_SCHEDULE(readBinaryInt2());
+    //PT_SCHEDULE(checkHeartBeat());
+}
 
 uint16_t qCommand::sizeOfType(qCommand::Types type) {
     switch (type.sub_types.data) {
@@ -259,9 +263,13 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
     }
 }
 
+void reset_object(void *ptr) {
+    Base *ptrBase = static_cast<Base *>(ptr);
+    ptrBase->resetUpdateState();
+}
+
 void ack_object(void *ptr) {
     Base *ptrBase = static_cast<Base *>(ptr);
-    //ptrBase->resetUpdateState();
     ptrBase->ackObject();
 }
 
@@ -271,6 +279,36 @@ void serial3_write(uint8_t *data, uint16_t len) {
 
 void serial2_write(uint8_t *data, uint16_t len) {
     Serial2.write(data, len); // output on the main serial port
+}
+
+char qCommand::checkHeartBeat(void) {
+    PT_FUNC_START(pt);
+    static uint8_t lastHeartbeat = 0;
+    static uint8_t heartBeatFails = 0;
+
+    while(true) {
+        PT_SLEEP(pt,1500); // wait 1.5 second before checking heartbeat again
+        if (eui_get_host_setup()) {
+            //host is connected
+            if (lastHeartbeat == eui_get_heartbeat() ) {
+                heartBeatFails++; // increment the heartbeat fails counter
+                if (heartBeatFails > 3) {
+                    // if heartbeat fails more than 3 times, we are not connected
+                    //Serial2.println("Got 3 heartbeat fails.");
+                    heartBeatFails = 0;
+                    reset(); // reset the qCommand states
+                }
+            } else {
+                //heartBeat changed, so we are connected
+                heartBeatFails = 0; // reset the heartbeat fails counter
+                lastHeartbeat = eui_get_heartbeat();
+            }
+        } else {
+            lastHeartbeat = eui_get_heartbeat(); // reset the heartbeat
+            heartBeatFails = 0; // reset the heartbeat fails counter
+        }
+    }
+    PT_FUNC_END(pt);
 }
 
 char qCommand::readBinaryInt2(void) {
