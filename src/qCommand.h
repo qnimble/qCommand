@@ -39,6 +39,7 @@ class qCommand {
     enum PtrType {
         PTR_RAW_DATA = 0, // default for data
         PTR_QC_CALLBACK = 4,
+        PTR_SD_OBJECT_LIST = 5,
         PTR_SD_OBJECT = 6,
         PTR_NULL = 7, // maybe this should never happen
     };
@@ -90,6 +91,12 @@ class qCommand {
     template <typename T>
     void assignVariable(const char *command, SmartData<T> *object,
                         bool read_only = false);
+
+    // Function for Lists objects
+    template <typename T>
+    void assignVariable(const char *command, SmartData<Keys<T>*> &object,
+                        bool read_only = false);
+
 
     // Specialization for pointers without size (assuming not arrays but pointer
     // to single value)
@@ -235,6 +242,7 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     }    
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
+
 
 template <typename T>
 void qCommand::assignVariable(const char *command, const T variable)

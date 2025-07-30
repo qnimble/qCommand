@@ -351,6 +351,13 @@ char qCommand::readBinaryInt2(void) {
     PT_FUNC_END(pt);
 }
 
+template <typename T>
+void qCommand::assignVariable(const char* command, SmartData<Keys<T>*> &variable, bool read_only){
+    Types types;
+    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT_LIST};
+    types.sub_types.read_only = read_only;
+    addCommandInternal(command, types, const_cast<void*>(static_cast<const void*>(variable.value)), sizeof(T));
+}
 
 
 // Function for SmartData objects
@@ -804,6 +811,7 @@ char *qCommand::next() {
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
+    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*> &variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
@@ -819,6 +827,7 @@ INSTANTIATE_SMARTDATA(uint32_t);
 INSTANTIATE_SMARTDATA(int32_t);
 INSTANTIATE_SMARTDATA(uint);
 INSTANTIATE_SMARTDATA(int);
+
 
 
 INSTANTIATE_SMARTDATA(float);

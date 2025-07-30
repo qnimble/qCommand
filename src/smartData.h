@@ -4,6 +4,14 @@
 #include "typeTraits.h"
 #include <Arduino.h>
 
+template <typename KeyType>
+struct Keys {
+    KeyType key;
+    String value;
+};
+
+
+
 class Base {
   public:
     enum UpdateState {
