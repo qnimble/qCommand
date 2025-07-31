@@ -13,6 +13,12 @@ struct Keys {
     String value;
 };
 
+template <typename T>
+struct is_keys_ptr : std::false_type {};
+
+template <typename KeyType>
+struct is_keys_ptr<Keys<KeyType>*> : std::true_type {};
+
 
 // Set Default values for TypeTraits
 template <typename T, typename Enable = void> struct TypeTraits {
@@ -27,30 +33,22 @@ struct TypeTraits<T, std::enable_if_t<!std::is_pointer<T>::value &&  std::is_arr
     static constexpr bool isPointer = false;
 };
 
-// Pointer but not Array
+// Pointer but not Array nor Keys
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<
     !std::is_array<T>::value &&
     std::is_pointer<T>::value &&
-    !std::is_same<T, Keys<typename std::remove_pointer<T>::type>*>::value>>
+    !is_keys_ptr<T>::value>>
 {    static constexpr bool isArray = false;
     static constexpr bool isPointer = true;
 };
 
 // Add this specialization to typeTraits.h
 template <typename T>
-struct TypeTraits<T, std::enable_if_t<
-std::is_same<T, Keys<typename std::remove_pointer<T>::type>*>::value>>
-{
+struct TypeTraits<T, std::enable_if_t<is_keys_ptr<T>::value>> {
    static constexpr bool isArray = false;
    static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
 };
-
-template <typename T>
-struct is_keys_ptr : std::false_type {};
-
-template <typename KeyType>
-struct is_keys_ptr<Keys<KeyType>*> : std::true_type {};
 
 
 /*
@@ -83,6 +81,9 @@ static_assert(TypeTraits<bool>::isBool, "bool is bool");
 static_assert(TypeTraits<bool *>::isBool, "bool* is bool");
 */
 
+// Specialization for Keys<KeyType>*
+
+/*
 #define SPECIALIZE_KEYS_TRAITS(TYPE) \
 template<> \
 struct TypeTraits<Keys<TYPE>*> { \
@@ -99,7 +100,7 @@ SPECIALIZE_KEYS_TRAITS(uint32_t)
 SPECIALIZE_KEYS_TRAITS(int32_t)
 SPECIALIZE_KEYS_TRAITS(float)
 SPECIALIZE_KEYS_TRAITS(double)
-
+*/
 template <typename T>
 struct type2int_base; // force defintion by leaving out result for default case
 template <> struct type2int_base<bool> {
