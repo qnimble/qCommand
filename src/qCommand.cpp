@@ -835,15 +835,25 @@ char *qCommand::next() {
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
-    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*> *variable, bool read_only); \
+    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*,false> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
+
+template void qCommand::assignVariable<
+    Keys<unsigned char>*
+>(
+    const char*,
+    SmartData<Keys<unsigned char>*, TypeTraits<Keys<unsigned char>*, void>::isArray||TypeTraits<Keys<unsigned char>*, void>::isPointer>*,
+    bool
+);
+
 
 INSTANTIATE_SMARTDATA(bool);
 INSTANTIATE_SMARTDATA(char);
 
 INSTANTIATE_SMARTDATA(uint8_t);
+//INSTANTIATE_SMARTDATA(unsigned char);
 INSTANTIATE_SMARTDATA(int8_t);
 INSTANTIATE_SMARTDATA(uint16_t);
 INSTANTIATE_SMARTDATA(int16_t);

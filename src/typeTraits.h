@@ -154,4 +154,14 @@ template <> struct type2int_base<String> {
 };
 
 
+template <typename T>
+struct type2int_base<Keys<T>> {
+    enum { result = type2int_base<T>::result };
+};
+
+template <typename T>
+struct type2int_base<Keys<T>*> {
+    enum { result = type2int_base<T>::result };
+};
+
 #endif // TYPE_TRAITS_H

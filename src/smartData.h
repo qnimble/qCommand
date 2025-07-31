@@ -125,10 +125,12 @@ class SmartData<DataType, false> : public Base {
 
     template <typename T = DataType, size_t N,
               typename std::enable_if<is_keys_ptr<T>::value, int>::type = 0>
-    SmartData(Keys<typename std::remove_pointer<
-                   typename std::remove_extent<T>::type
-                  >::type::key_type> (&data)[N])
-        requires is_keys_ptr<T>::value
+  SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
+
+//              SmartData(Keys<typename std::remove_pointer<
+//                   typename std::remove_extent<T>::type
+//                  >::type::KeyType_t> (&data)[N])
+//        requires is_keys_ptr<T>::value
         : mapSize(N), map(data) {
         if (N > 0) {
             value = map[0].key;
