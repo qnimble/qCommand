@@ -66,7 +66,13 @@ class qCommand {
                                        // etc to a bool.
     void readSerial(Stream &inputStream); // Main entry point.
     void readBinary(void);
-
+    bool isSmartObject(PtrType Type) {
+        if ( Type == PtrType::PTR_SD_OBJECT_LIST ||
+            Type == PtrType::PTR_SD_OBJECT_DEFAULT) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Retrieve the pointer to the current token ("word" or "argument") from the
