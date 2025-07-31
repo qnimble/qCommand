@@ -31,6 +31,9 @@ void SmartData<DataType, false>::set(DataType newValue) {
 }
 
 
+
+
+
 template <class DataType>
 void SmartData<DataType, true>::set(
     typename SmartData<DataType, true>::baseType data, size_t element) {

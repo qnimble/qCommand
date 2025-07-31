@@ -6,6 +6,14 @@
 #include <WString.h>
 
 
+template <typename KeyType>
+struct Keys {    
+    using KeyType_t = KeyType;
+    KeyType key;
+    String value;
+};
+
+
 // Set Default values for TypeTraits
 template <typename T, typename Enable = void> struct TypeTraits {
     static constexpr bool isArray = false;
@@ -21,11 +29,28 @@ struct TypeTraits<T, std::enable_if_t<!std::is_pointer<T>::value &&  std::is_arr
 
 // Pointer but not Array
 template <typename T>
-struct TypeTraits<T, std::enable_if_t<!std::is_array<T>::value &&  std::is_pointer<T>::value>> {
-    static constexpr bool isArray = false;
+struct TypeTraits<T, std::enable_if_t<
+    !std::is_array<T>::value &&
+    std::is_pointer<T>::value &&
+    !std::is_same<T, Keys<typename std::remove_pointer<T>::type>*>::value>>
+{    static constexpr bool isArray = false;
     static constexpr bool isPointer = true;
 };
 
+// Add this specialization to typeTraits.h
+template <typename T>
+struct TypeTraits<T, std::enable_if_t<
+std::is_same<T, Keys<typename std::remove_pointer<T>::type>*>::value>>
+{
+   static constexpr bool isArray = false;
+   static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
+};
+
+template <typename T>
+struct is_keys_ptr : std::false_type {};
+
+template <typename KeyType>
+struct is_keys_ptr<Keys<KeyType>*> : std::true_type {};
 
 
 /*
@@ -57,6 +82,23 @@ static_assert(TypeTraits<int16_t *>::isArray,
 static_assert(TypeTraits<bool>::isBool, "bool is bool");
 static_assert(TypeTraits<bool *>::isBool, "bool* is bool");
 */
+
+#define SPECIALIZE_KEYS_TRAITS(TYPE) \
+template<> \
+struct TypeTraits<Keys<TYPE>*> { \
+    static constexpr bool isArray = false; \
+    static constexpr bool isPointer = false; \
+};
+
+SPECIALIZE_KEYS_TRAITS(bool)
+SPECIALIZE_KEYS_TRAITS(uint8_t)  // unsigned char
+SPECIALIZE_KEYS_TRAITS(int8_t)
+SPECIALIZE_KEYS_TRAITS(uint16_t)
+SPECIALIZE_KEYS_TRAITS(int16_t)
+SPECIALIZE_KEYS_TRAITS(uint32_t)
+SPECIALIZE_KEYS_TRAITS(int32_t)
+SPECIALIZE_KEYS_TRAITS(float)
+SPECIALIZE_KEYS_TRAITS(double)
 
 template <typename T>
 struct type2int_base; // force defintion by leaving out result for default case

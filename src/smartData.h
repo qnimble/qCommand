@@ -4,12 +4,6 @@
 #include "typeTraits.h"
 #include <Arduino.h>
 
-template <typename KeyType>
-struct Keys {
-    KeyType key;
-    String value;
-};
-
 
 
 class Base {
@@ -126,6 +120,17 @@ class SmartData<DataType, false> : public Base {
   public:
     SmartData(DataType data) : value(data) {};
 
+    template <typename T = DataType, size_t N>
+    SmartData(Keys<typename std::remove_pointer<
+                   typename std::remove_extent<T>::type
+                  >::type::key_type> (&data)[N])
+        requires is_keys_ptr<T>::value
+        : mapSize(N), map(data) {
+        if (N > 0) {
+            value = map[0].key;
+        }
+    }
+
     // For fundamental types like int, float, bool
     template <typename T = DataType>
     T get() const
@@ -167,7 +172,30 @@ class SmartData<DataType, false> : public Base {
     bool dataRequested = false;
     friend class qCommand;
     SetterFuncPtr setter = nullptr;
+  
+    // Add Keys-specific members
+    
+
+    
+    // Only used for Keys types
+    size_t mapSize = 0;
+    // Use a conditional pointer type that resolves to nullptr for non-Keys types
+    template <typename T = DataType>
+    static constexpr auto GetMapPointerType() {
+        if constexpr (is_keys_ptr<T>::value) {
+        // Extract KeyType from Keys<KeyType>*
+        using ActualKeysType = typename std::remove_pointer<T>::type;
+        using KeyType = typename ActualKeysType::KeyType_t;
+        return static_cast<Keys<KeyType>*>(nullptr);
+        } else {
+            return static_cast<void*>(nullptr);
+        }
+    }
+    // Use decltype to get the correct pointer type
+    decltype(GetMapPointerType<DataType>()) map = nullptr;        
+
 };
+
 
 // Helper to unwrap SmartData
 template <typename T> struct unwrap_smart_data {
