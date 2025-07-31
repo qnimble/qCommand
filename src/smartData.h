@@ -159,7 +159,25 @@ class SmartData<DataType, false> : public Base {
     operator ValueType() const {
         return value; // return the pointer to the array
     }
-    void set(ValueType);
+    void set(ValueType newValue) {        
+        if constexpr (is_keys_ptr<DataType>::value) {
+            Serial2.println("Is keys");
+            bool found = false;
+            for (size_t i = 0; i < mapSize; ++i) {
+                if (map[i].key == newValue) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                setImpl(newValue);
+            }    
+        } else {
+            setImpl(newValue);
+        }
+    }
+
+    
     void resetUpdateState(void) { updates_needed = STATE_IDLE; }
     void ackObject(void) {
         if (updates_needed == STATE_WAIT_ON_ACK) {
@@ -180,6 +198,7 @@ class SmartData<DataType, false> : public Base {
     friend class qCommand;
     SetterFuncPtr setter = nullptr;
   
+    void setImpl(ValueType newValue);    
     // Add Keys-specific members
     
 

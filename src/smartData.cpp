@@ -20,33 +20,16 @@ void Base::sendUpdate(void) {
         }
 }
 
+
 template <class DataType>
-void SmartData<DataType, false>::set(ValueType newValue) {    
-    if constexpr (is_keys_ptr<DataType>::value) {
-        // Only update if newValue exists in the map
-        //Serial2.println("Is keys");
-        bool found = false;
-        for (size_t i = 0; i < mapSize; ++i) {
-            if (map[i].key == newValue) {
-                found = true;
-                break;
-            }
-        }
-        if (found) {
-            value = newValue;
-            sendUpdate();
-        }
-        // else: ignore or handle invalid value
-    } else {    
-        if (setter != nullptr) {
+void SmartData<DataType, false>::setImpl(ValueType newValue) {
+    if (setter != nullptr) {
             value = setter(newValue, value);
         } else {
             value = newValue;
         }
     sendUpdate();
-    }
 }
-
 
 
 
