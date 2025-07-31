@@ -92,10 +92,9 @@ class qCommand {
     void assignVariable(const char *command, SmartData<T> *object,
                         bool read_only = false);
 
-    // Function for Lists objects
     template <typename T>
-    void assignVariable(const char *command, SmartData<Keys<T>*> &object,
-                        bool read_only = false);
+    void assignVariable(char const *command, SmartData<Keys<T>*> *object,
+                              bool read_only);
 
 
     // Specialization for pointers without size (assuming not arrays but pointer

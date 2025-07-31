@@ -351,13 +351,6 @@ char qCommand::readBinaryInt2(void) {
     PT_FUNC_END(pt);
 }
 
-template <typename T>
-void qCommand::assignVariable(const char* command, SmartData<Keys<T>*> &variable, bool read_only){
-    Types types;
-    types.sub_types = {type2int<T>::result, PTR_SD_OBJECT_LIST};
-    types.sub_types.read_only = read_only;
-    addCommandInternal(command, types, const_cast<void*>(static_cast<const void*>(variable.value)), sizeof(T));
-}
 
 
 // Function for SmartData objects
@@ -382,6 +375,34 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object,
     }
     addCommandInternal(command, types, object, size);
 }
+
+
+// Function for SmartData objects
+template <typename T>
+void qCommand::assignVariable(char const *command, SmartData<Keys<T>*> *object,
+                              bool read_only) {
+    Types types;
+    /*
+    using base_type =
+        typename std::conditional<std::is_reference<T>::value,
+                                  typename std::remove_reference<T>::type,
+                                  T>::type;
+  */
+    using ValueType = typename SmartData<Keys<T>*>::ValueType;
+    types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+
+    uint16_t size = object->size();
+    if (types.sub_types.data == 4) {
+        // String subtype, max size is large
+        size = 255;
+    }
+    addCommandInternal(command, types, object, size);
+}
+
+
 
 /**
  * Adds a "command" and a handler function to the list of available commands.
@@ -573,6 +594,9 @@ bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
         if (types.sub_types.ptr == PTR_SD_OBJECT) {
             SmartData<argInt> *object = (SmartData<argInt> *)ptr;
             object->set(temp);
+        } else if (types.sub_types.ptr == PTR_SD_OBJECT_LIST) {
+            SmartData<Keys<argInt>*> *object = (SmartData<Keys<argInt>*> *)ptr;
+            object->set(temp);    
         } else {
             *ptr = temp;
             need_to_send = true;
@@ -811,7 +835,7 @@ char *qCommand::next() {
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
-    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*> &variable, bool read_only); \
+    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 

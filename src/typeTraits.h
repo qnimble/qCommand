@@ -50,6 +50,16 @@ struct TypeTraits<T, std::enable_if_t<is_keys_ptr<T>::value>> {
    static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
 };
 
+// Helper trait for ValueType
+template <typename T>
+struct SmartDataKeyType {
+    using type = T;
+};
+
+template <typename KeyType>
+struct SmartDataKeyType<Keys<KeyType>*> {
+    using type = KeyType;
+};
 
 /*
 

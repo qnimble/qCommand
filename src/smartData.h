@@ -118,9 +118,13 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 template <class DataType> 
 class SmartData<DataType, false> : public Base {
   public:
-    SmartData(DataType data) : value(data) {};
+    template <typename T = DataType,
+              typename std::enable_if<!is_keys_ptr<T>::value, int>::type = 0>
+    SmartData(T data) : value(data) {}
 
-    template <typename T = DataType, size_t N>
+
+    template <typename T = DataType, size_t N,
+              typename std::enable_if<is_keys_ptr<T>::value, int>::type = 0>
     SmartData(Keys<typename std::remove_pointer<
                    typename std::remove_extent<T>::type
                   >::type::key_type> (&data)[N])
@@ -130,9 +134,9 @@ class SmartData<DataType, false> : public Base {
             value = map[0].key;
         }
     }
-
+    using ValueType = typename SmartDataKeyType<DataType>::type;
     // For fundamental types like int, float, bool
-    template <typename T = DataType>
+    template <typename T = ValueType>
     T get() const
         requires std::is_fundamental<
             typename std::remove_pointer<T>::type>::value
@@ -141,7 +145,7 @@ class SmartData<DataType, false> : public Base {
     }
 
     // For complex types like String that are not arrays nor fundamental types
-    template <typename T = DataType>
+    template <typename T = ValueType>
     const T &get() const
         requires (!std::is_fundamental<
             typename std::remove_pointer<T>::type>::value)
@@ -149,10 +153,11 @@ class SmartData<DataType, false> : public Base {
         return value;
     }
 
-    operator DataType() const {
+
+    operator ValueType() const {
         return value; // return the pointer to the array
     }
-    void set(DataType);
+    void set(ValueType);
     void resetUpdateState(void) { updates_needed = STATE_IDLE; }
     void ackObject(void) {
         if (updates_needed == STATE_WAIT_ON_ACK) {
@@ -163,12 +168,12 @@ class SmartData<DataType, false> : public Base {
         //updates_needed = STATE_IDLE; // reset to idle state
         }
     }
-    uint16_t size(void) { return sizeof(DataType); }
-    using SetterFuncPtr = DataType (*)(DataType, DataType);
+    uint16_t size(void) { return sizeof(ValueType); }
+    using SetterFuncPtr = ValueType (*)(ValueType, ValueType);
     void setSetter(SetterFuncPtr setter) { this->setter = setter; }
 
   private:
-    DataType value;
+    ValueType value;
     bool dataRequested = false;
     friend class qCommand;
     SetterFuncPtr setter = nullptr;
