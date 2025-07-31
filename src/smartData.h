@@ -36,10 +36,26 @@ class Base {
     UpdateState updates_needed;
 };
 
+template <typename T>
+class BaseTyped : public Base {
+    public:
+   
+    BaseTyped(T data) : value(data) {}
+
+    T get() const { return value; }
+    virtual void set(T newValue);
+
+    operator T() const { return value; }
+
+  protected:
+    T value;
+};
+
+
 // generic SmartData for single values and arrays
 template <class DataType, bool isArray = TypeTraits<DataType>::isArray ||
                                          TypeTraits<DataType>::isPointer>
-class SmartData : public Base {
+class SmartData : public BaseTyped<DataType> {
   public:
     SmartData(DataType data);
 };
@@ -116,11 +132,12 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
 // Specialization for non-arrays
 template <class DataType> 
-class SmartData<DataType, false> : public Base {
+class SmartData<DataType, false> : BaseTyped<    typename SmartDataKeyType<DataType>::type>{
+
   public:
     template <typename T = DataType,
               typename std::enable_if<!is_keys_ptr<T>::value, int>::type = 0>
-    SmartData(T data) : value(data) {}
+    SmartData(T data) : BaseTyped<DataType>(data) {}
 
 
     template <typename T = DataType, size_t N,
@@ -131,11 +148,8 @@ class SmartData<DataType, false> : public Base {
 //                   typename std::remove_extent<T>::type
 //                  >::type::KeyType_t> (&data)[N])
 //        requires is_keys_ptr<T>::value
-        : mapSize(N), map(data) {
-        if (N > 0) {
-            value = map[0].key;
-        }
-    }
+        : BaseTyped<typename SmartDataKeyType<DataType>::type>(N > 0 ? data[0].key : 0),
+        mapSize(N), map(data) { }
     using ValueType = typename SmartDataKeyType<DataType>::type;
     // For fundamental types like int, float, bool
     template <typename T = ValueType>
@@ -143,7 +157,7 @@ class SmartData<DataType, false> : public Base {
         requires std::is_fundamental<
             typename std::remove_pointer<T>::type>::value
     {
-        return value;
+        return this->value;
     }
 
     // For complex types like String that are not arrays nor fundamental types
@@ -152,38 +166,33 @@ class SmartData<DataType, false> : public Base {
         requires (!std::is_fundamental<
             typename std::remove_pointer<T>::type>::value)
     {
-        return value;
+        return this->value;
     }
 
 
     operator ValueType() const {
-        return value; // return the pointer to the array
+        return this->value; // return the pointer to the array
     }
     void set(ValueType newValue) {        
         if constexpr (is_keys_ptr<DataType>::value) {
-            Serial2.println("Is keys");
-            bool found = false;
             for (size_t i = 0; i < mapSize; ++i) {
                 if (map[i].key == newValue) {
-                    found = true;
+                    setImpl(newValue);  
                     break;
                 }
-            }
-            if (found) {
-                setImpl(newValue);
-            }    
+            }            
         } else {
             setImpl(newValue);
         }
     }
 
     
-    void resetUpdateState(void) { updates_needed = STATE_IDLE; }
+    void resetUpdateState(void) { this->updates_needed = this->STATE_IDLE; }
     void ackObject(void) {
-        if (updates_needed == STATE_WAIT_ON_ACK) {
-            updates_needed = STATE_IDLE; // reset to idle state
-        } else if (updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
-            updates_needed = STATE_NEED_TOSEND; // reset to need to send state
+        if (this->updates_needed == this->STATE_WAIT_ON_ACK) {
+            this->updates_needed = this->STATE_IDLE; // reset to idle state
+        } else if (this->updates_needed == this->STATE_WAIT_ON_ACK_PLUS_QUEUE) {
+            this->updates_needed = this->STATE_NEED_TOSEND; // reset to need to send state
         } else {
         //updates_needed = STATE_IDLE; // reset to idle state
         }
@@ -192,8 +201,7 @@ class SmartData<DataType, false> : public Base {
     using SetterFuncPtr = ValueType (*)(ValueType, ValueType);
     void setSetter(SetterFuncPtr setter) { this->setter = setter; }
 
-  private:
-    ValueType value;
+  private:    
     bool dataRequested = false;
     friend class qCommand;
     SetterFuncPtr setter = nullptr;

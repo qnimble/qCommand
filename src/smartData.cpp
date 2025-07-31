@@ -24,11 +24,11 @@ void Base::sendUpdate(void) {
 template <class DataType>
 void SmartData<DataType, false>::setImpl(ValueType newValue) {
     if (setter != nullptr) {
-            value = setter(newValue, value);
+            this->value = setter(newValue, this->value);
         } else {
-            value = newValue;
+            this->value = newValue;
         }
-    sendUpdate();
+    this->sendUpdate();
 }
 
 

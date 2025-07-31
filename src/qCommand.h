@@ -40,7 +40,7 @@ class qCommand {
         PTR_RAW_DATA = 0, // default for data
         PTR_QC_CALLBACK = 4,
         PTR_SD_OBJECT_LIST = 5,
-        PTR_SD_OBJECT = 6,
+        PTR_SD_OBJECT_DEFAULT = 6,
         PTR_NULL = 7, // maybe this should never happen
     };
 

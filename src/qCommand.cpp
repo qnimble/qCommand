@@ -41,7 +41,7 @@ qCommand::qCommand(bool caseSensitive)
 
 void qCommand::reset(void) {
     for (uint8_t i = 0; i < commandCount; i++) {
-        if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
+        if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
             Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
             ptr->resetUpdateState();
         }
@@ -333,7 +333,7 @@ char qCommand::readBinaryInt2(void) {
 
     if (eui_get_host_setup()) {
         for (uint8_t i = 0; i < commandCount; i++) {
-            if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT) {
+            if (commandList[i].types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
                 Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
                 if (ptr->updates_needed == Base::UpdateState::STATE_NEED_TOSEND) {
                     //Serial2.printf("S%u ", i);
@@ -363,7 +363,7 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object,
                                   typename std::remove_reference<T>::type,
                                   T>::type;
 
-    types.sub_types = {type2int<base_type>::result, PTR_SD_OBJECT};
+    types.sub_types = {type2int<base_type>::result, PTR_SD_OBJECT_DEFAULT};
     if (read_only) {
         types.sub_types.read_only = true;
     }
@@ -447,7 +447,7 @@ void qCommand::addCommandInternal(const char *command, Types types,
     commandList[commandCount].types = types;
     commandList[commandCount].size = size;
 
-    if (commandList[commandCount].types.sub_types.ptr == PTR_SD_OBJECT) {
+    if (commandList[commandCount].types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
         // have SmartData object pointer
         commandList[commandCount].ptr.object = (Base *)object;
     } else {
@@ -495,7 +495,7 @@ bool qCommand::reportString(qCommand &qC, Stream &S, const char *command,
                             uint8_t ptr_type, char *ptr,
                             StreamCommandParserCallback *CommandList) {
     bool need_to_send = false;
-    if (ptr_type == PTR_SD_OBJECT) {
+    if (ptr_type == PTR_SD_OBJECT_DEFAULT) {
         SmartData<String> *object = (SmartData<String> *)ptr;
         if (qC.next() != NULL) {
             object->set(qC.current());
@@ -522,7 +522,7 @@ bool qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
     bool need_to_send = false;
     if (qC.next() != NULL) {
         temp = qC.str2Bool(qC.current());
-        if (types.sub_types.ptr == PTR_SD_OBJECT) {
+        if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
             SmartData<bool> *object = (SmartData<bool> *)ptr;
             object->set(temp);
         } else {
@@ -531,7 +531,7 @@ bool qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
         }
     }
 
-     if (types.sub_types.ptr == PTR_SD_OBJECT) {
+     if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
         SmartData<bool> *object = (SmartData<bool> *)ptr;
         temp = object->get();
     } else {
@@ -559,7 +559,7 @@ bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
             }
         }
         newValue = temp;
-        if (types.sub_types.ptr == PTR_SD_OBJECT) {
+        if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
             SmartData<argUInt> *object = (SmartData<argUInt> *)ptr;         
             object->set(newValue);            
         } else {
@@ -568,7 +568,7 @@ bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
         }
     }
     
-    if (types.sub_types.ptr == PTR_SD_OBJECT) {        
+    if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {        
         SmartData<argUInt> *object = (SmartData<argUInt> *)ptr;        
         newValue = object->get();        
     } else {        
@@ -591,7 +591,7 @@ bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
             temp = std::numeric_limits<argInt>::max();
         }
 
-        if (types.sub_types.ptr == PTR_SD_OBJECT) {
+        if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
             SmartData<argInt> *object = (SmartData<argInt> *)ptr;
             object->set(temp);
         } else if (types.sub_types.ptr == PTR_SD_OBJECT_LIST) {
@@ -602,7 +602,7 @@ bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
             need_to_send = true;
         }
     }
-    if (types.sub_types.ptr == PTR_SD_OBJECT) {
+    if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
         SmartData<argInt> *object = (SmartData<argInt> *)ptr;
         temp = object->get();
     } else {
@@ -619,7 +619,7 @@ bool qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
     argFloating newValue;
     if (qC.next() != NULL) {
         newValue = atof(qC.current());
-        if (types.sub_types.ptr == PTR_SD_OBJECT) {
+        if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
             SmartData<argFloating> *object = (SmartData<argFloating> *)ptr;
             object->set(newValue);
         } else {
@@ -636,7 +636,7 @@ bool qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
         }
     }
 
-    if (types.sub_types.ptr == PTR_SD_OBJECT) {
+    if (types.sub_types.ptr == PTR_SD_OBJECT_DEFAULT) {
         SmartData<argFloating> *object = (SmartData<argFloating> *)ptr;
         newValue = object->get();
     } else {
