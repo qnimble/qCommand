@@ -377,17 +377,11 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object,
 }
 
 
-// Function for SmartData objects
+// Function for SmartData objects with Keys
 template <typename T>
 void qCommand::assignVariable(char const *command, SmartData<Keys<T>*> *object,
                               bool read_only) {
     Types types;
-    /*
-    using base_type =
-        typename std::conditional<std::is_reference<T>::value,
-                                  typename std::remove_reference<T>::type,
-                                  T>::type;
-  */
     using ValueType = typename SmartData<Keys<T>*>::ValueType;
     types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
     if (read_only) {
@@ -401,6 +395,26 @@ void qCommand::assignVariable(char const *command, SmartData<Keys<T>*> *object,
     }
     addCommandInternal(command, types, object, size);
 }
+
+// Function for SmartData objects with Lists
+template <typename T>
+void qCommand::assignVariable(char const *command, SmartData<List<T>*> *object,
+                              bool read_only) {
+    Types types;
+    using ValueType = typename SmartData<List<T>*>::ValueType;
+    types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
+    if (read_only) {
+        types.sub_types.read_only = true;
+    }
+
+    uint16_t size = object->size();
+    if (types.sub_types.data == 4) {
+        // String subtype, max size is large
+        size = 255;
+    }
+    addCommandInternal(command, types, object, size);
+}
+
 
 
 
@@ -498,8 +512,6 @@ bool qCommand::reportString(qCommand &qC, Stream &S, const char *command,
     //qCommand::Types Type ;
     //Type.sub_types.ptr = (qCommand::PtrType) ptr_type; 
     if (isSmartObject((qCommand::PtrType) ptr_type)){
-        //
-        //SmartData<String> *object = (SmartData<String> *)ptr;
         BaseTyped<String> *object = (BaseTyped<String> *)ptr;
         if (qC.next() != NULL) {
             object->set(qC.current());
@@ -837,18 +849,13 @@ char *qCommand::next() {
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
-    template void qCommand::assignVariable(const char* command, SmartData<Keys<TYPE>*,false> *variable, bool read_only); \
+    template void qCommand::assignVariable<Keys<TYPE>*>(const char*, SmartData<Keys<TYPE>*, TypeTraits<Keys<TYPE>*, void>::isArray||TypeTraits<Keys<TYPE>*,void>::isPointer>*,bool); \
+    template void qCommand::assignVariable<List<TYPE>*>(const char*, SmartData<List<TYPE>*, TypeTraits<List<TYPE>*, void>::isArray||TypeTraits<List<TYPE>*,void>::isPointer>*,bool); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
 
-template void qCommand::assignVariable<
-    Keys<unsigned char>*
->(
-    const char*,
-    SmartData<Keys<unsigned char>*, TypeTraits<Keys<unsigned char>*, void>::isArray||TypeTraits<Keys<unsigned char>*, void>::isPointer>*,
-    bool
-);
+    
 
 
 INSTANTIATE_SMARTDATA(bool);

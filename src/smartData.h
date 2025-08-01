@@ -142,15 +142,18 @@ class SmartData<DataType, false> : BaseTyped<    typename SmartDataKeyType<DataT
 
     template <typename T = DataType, size_t N,
               typename std::enable_if<is_keys_ptr<T>::value, int>::type = 0>
-  SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
-
-//              SmartData(Keys<typename std::remove_pointer<
-//                   typename std::remove_extent<T>::type
-//                  >::type::KeyType_t> (&data)[N])
-//        requires is_keys_ptr<T>::value
+    SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
         : BaseTyped<typename SmartDataKeyType<DataType>::type>(N > 0 ? data[0].key : 0),
         mapSize(N), map(data) { }
-    using ValueType = typename SmartDataKeyType<DataType>::type;
+
+    template <typename T = DataType, size_t N,
+              typename std::enable_if<is_list_ptr<T>::value, int>::type = 0>
+    SmartData(List<typename SmartDataListType<DataType>::type> (&data)[N])
+        : BaseTyped<typename SmartDataListType<DataType>::type>(N > 0 ? data[0] : 0),
+        mapSize(N), map(data) { }
+
+    
+        using ValueType = typename SmartDataKeyType<DataType>::type;
     // For fundamental types like int, float, bool
     template <typename T = ValueType>
     T get() const
@@ -217,10 +220,14 @@ class SmartData<DataType, false> : BaseTyped<    typename SmartDataKeyType<DataT
     template <typename T = DataType>
     static constexpr auto GetMapPointerType() {
         if constexpr (is_keys_ptr<T>::value) {
-        // Extract KeyType from Keys<KeyType>*
-        using ActualKeysType = typename std::remove_pointer<T>::type;
-        using KeyType = typename ActualKeysType::KeyType_t;
-        return static_cast<Keys<KeyType>*>(nullptr);
+            // Extract KeyType from Keys<KeyType>*
+            using ActualKeysType = typename std::remove_pointer<T>::type;
+            using KeyType = typename ActualKeysType::KeyType_t;
+            return static_cast<Keys<KeyType>*>(nullptr);
+        } else if constexpr (is_list_ptr<T>::value) {
+            using ActualListType = typename std::remove_pointer<T>::type;
+            using ListType = typename ActualListType::ListType_t;
+            return static_cast<List<ListType>*>(nullptr);
         } else {
             return static_cast<void*>(nullptr);
         }
