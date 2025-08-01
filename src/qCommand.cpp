@@ -355,8 +355,11 @@ char qCommand::readBinaryInt2(void) {
 
 // Function for SmartData objects
 template <typename T>
-void qCommand::assignVariable(char const *command, SmartData<T> *object,
-                              bool read_only) {
+
+void qCommand::assignVariable(const char *command, SmartData<T> *object,
+                              bool read_only)  
+  requires(!is_list_ptr<T>::value && !is_keys_ptr<T>::value)
+ {
     Types types;
     using base_type =
         typename std::conditional<std::is_reference<T>::value,
@@ -379,7 +382,7 @@ void qCommand::assignVariable(char const *command, SmartData<T> *object,
 
 // Function for SmartData objects with Keys
 template <typename T>
-void qCommand::assignVariable(char const *command, SmartData<Keys<T>*> *object,
+void qCommand::assignVariable(const char *command, SmartData<Keys<T>*> *object,
                               bool read_only) {
     Types types;
     using ValueType = typename SmartData<Keys<T>*>::ValueType;
@@ -398,7 +401,7 @@ void qCommand::assignVariable(char const *command, SmartData<Keys<T>*> *object,
 
 // Function for SmartData objects with Lists
 template <typename T>
-void qCommand::assignVariable(char const *command, SmartData<List<T>*> *object,
+void qCommand::assignVariable(const char *command, SmartData<List<T>*> *object,
                               bool read_only) {
     Types types;
     using ValueType = typename SmartData<List<T>*>::ValueType;
@@ -849,8 +852,8 @@ char *qCommand::next() {
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
-    template void qCommand::assignVariable<Keys<TYPE>*>(const char*, SmartData<Keys<TYPE>*, TypeTraits<Keys<TYPE>*, void>::isArray||TypeTraits<Keys<TYPE>*,void>::isPointer>*,bool); \
-    template void qCommand::assignVariable<List<TYPE>*>(const char*, SmartData<List<TYPE>*, TypeTraits<List<TYPE>*, void>::isArray||TypeTraits<List<TYPE>*,void>::isPointer>*,bool); \
+    template void qCommand::assignVariable<TYPE>(const char*, SmartData<Keys<TYPE>*, TypeTraits<Keys<TYPE>*, void>::isArray||TypeTraits<Keys<TYPE>*,void>::isPointer>*,bool); \
+    template void qCommand::assignVariable<TYPE>(const char*, SmartData<List<TYPE>*, TypeTraits<List<TYPE>*, void>::isArray||TypeTraits<List<TYPE>*,void>::isPointer>*,bool); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 
