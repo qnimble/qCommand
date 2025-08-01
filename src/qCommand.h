@@ -247,7 +247,7 @@ void qCommand::assignVariable(const char *command, T variable, bool read_only)
     types.sub_types = {type2int<array_type>::result, PTR_RAW_DATA};
     if (read_only) {
         types.sub_types.read_only = true;
-    }    
+    }
     addCommandInternal(command, types, variable, sizeof(base_type));
 }
 

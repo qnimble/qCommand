@@ -84,18 +84,6 @@ struct SmartDataKeyType<Keys<KeyType>*> {
 };
 
 
-// Helper trait for ValueType
-template <typename T>
-struct SmartDataListType {
-    using type = T;
-};
-
-template <typename T>
-struct SmartDataListType<List<T>*> {
-    using type = T;
-};
-
-
 
 /*
 

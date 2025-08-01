@@ -679,9 +679,9 @@ void qCommand::setDefaultHandler(void (*function)(const char *,
 bool qCommand::reportData(qCommand &qC, Stream &inputStream,
                           const char *command, Types types, void *ptr,
                           StreamCommandParserCallback *commandList) {
-    //inputStream.printf(
-    //    "Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n",
-    //    command, types.sub_types.data, types.sub_types.ptr, ptr);
+    inputStream.printf(
+        "Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n",
+        command, types.sub_types.data, types.sub_types.ptr, ptr);
     switch (types.sub_types.data) {
     case 4:
         return reportString(*this, inputStream, command, types.sub_types.ptr,

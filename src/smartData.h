@@ -132,7 +132,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
 // Specialization for non-arrays
 template <class DataType> 
-class SmartData<DataType, false> : BaseTyped<    typename SmartDataKeyType<DataType>::type>{
+class SmartData<DataType, false> : BaseTyped<typename SmartDataKeyType<DataType>::type>{
 
   public:
     template <typename T = DataType,
@@ -148,8 +148,8 @@ class SmartData<DataType, false> : BaseTyped<    typename SmartDataKeyType<DataT
 
     template <typename T = DataType, size_t N,
               typename std::enable_if<is_list_ptr<T>::value, int>::type = 0>
-    SmartData(List<typename SmartDataListType<DataType>::type> (&data)[N])
-        : BaseTyped<typename SmartDataListType<DataType>::type>(N > 0 ? data[0] : 0),
+    SmartData(List<typename SmartDataKeyType<DataType>::type> (&data)[N])
+        : BaseTyped<typename SmartDataKeyType<DataType>::type> (N > 0 ? data[0] : 0),
         mapSize(N), map(data) { }
 
     
