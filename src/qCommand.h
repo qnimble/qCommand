@@ -93,21 +93,22 @@ class qCommand {
                         bool read_only = false)
         requires(!std::is_base_of<Base, T>::value);
 
-    // Function for SmartData objects
-    template <typename T>    
-    void assignVariable(const char *command, SmartData<T> *object,
-                        bool read_only = false)
-    requires(!is_list_ptr<T>::value && !is_keys_ptr<T>::value);
     
+    template <typename T>
+    void assignVariable(const char *command, SmartData<T> *object,
+                              bool read_only = false)  
+    requires(!is_keys_ptr<T>::value);
+
+
 
     template <typename T>
     void assignVariable(const char *command, SmartData<Keys<T>*> *object,
                               bool read_only = false);
 
-    template <typename T>
-    void assignVariable(const char *command, SmartData<List<T>*> *object,
-                              bool read_only = false);
 
+
+                              
+    
     // Specialization for pointers without size (assuming not arrays but pointer
     // to single value)
     template <typename T>

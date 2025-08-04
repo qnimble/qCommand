@@ -358,7 +358,7 @@ template <typename T>
 
 void qCommand::assignVariable(const char *command, SmartData<T> *object,
                               bool read_only)  
-  requires(!is_list_ptr<T>::value && !is_keys_ptr<T>::value)
+  requires(!is_keys_ptr<T>::value)
  {
     Types types;
     using base_type =
@@ -398,27 +398,6 @@ void qCommand::assignVariable(const char *command, SmartData<Keys<T>*> *object,
     }
     addCommandInternal(command, types, object, size);
 }
-
-// Function for SmartData objects with Lists
-template <typename T>
-void qCommand::assignVariable(const char *command, SmartData<List<T>*> *object,
-                              bool read_only) {
-    Types types;
-    using ValueType = typename SmartData<List<T>*>::ValueType;
-    types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
-    if (read_only) {
-        types.sub_types.read_only = true;
-    }
-
-    uint16_t size = object->size();
-    if (types.sub_types.data == 4) {
-        // String subtype, max size is large
-        size = 255;
-    }
-    addCommandInternal(command, types, object, size);
-}
-
-
 
 
 /**
@@ -853,7 +832,6 @@ char *qCommand::next() {
     template void qCommand::assignVariable(const char* command, TYPE *variable, bool read_only);  \
     template void qCommand::assignVariable(const char* command, const TYPE *variable);  \
     template void qCommand::assignVariable<TYPE>(const char*, SmartData<Keys<TYPE>*, TypeTraits<Keys<TYPE>*, void>::isArray||TypeTraits<Keys<TYPE>*,void>::isPointer>*,bool); \
-    template void qCommand::assignVariable<TYPE>(const char*, SmartData<List<TYPE>*, TypeTraits<List<TYPE>*, void>::isArray||TypeTraits<List<TYPE>*,void>::isPointer>*,bool); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE> *variable, bool read_only); \
     template void qCommand::assignVariable(const char* command, SmartData<TYPE*> *variable, bool read_only);
     //template void qCommand::assignVariable(const char* command, SmartData<TYPE&> *variable, bool real_only); 

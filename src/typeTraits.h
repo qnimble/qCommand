@@ -13,24 +13,12 @@ struct Keys {
     String value;
 };
 
-template <typename ListType>
-struct List {    
-    using ListType_t = ListType;
-    ListType key;    
-};
-
 
 template <typename T>
 struct is_keys_ptr : std::false_type {};
 
 template <typename KeyType>
 struct is_keys_ptr<Keys<KeyType>*> : std::true_type {};
-
-template <typename T>
-struct is_list_ptr : std::false_type {};
-
-template <typename ListType>
-struct is_list_ptr<List<ListType>*> : std::true_type {};
 
 
 // Set Default values for TypeTraits
@@ -50,8 +38,7 @@ struct TypeTraits<T, std::enable_if_t<!std::is_pointer<T>::value &&  std::is_arr
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<
     !std::is_array<T>::value &&
-    std::is_pointer<T>::value &&
-    !is_list_ptr<T>::value &&
+    std::is_pointer<T>::value &&    
     !is_keys_ptr<T>::value>>
 {    static constexpr bool isArray = false;
     static constexpr bool isPointer = true;
@@ -60,13 +47,6 @@ struct TypeTraits<T, std::enable_if_t<
 // Add this specialization to typeTraits.h
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<is_keys_ptr<T>::value>> {
-   static constexpr bool isArray = false;
-   static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
-};
-
-// Add this specialization to typeTraits.h
-template <typename T>
-struct TypeTraits<T, std::enable_if_t<is_list_ptr<T>::value>> {
    static constexpr bool isArray = false;
    static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
 };
@@ -185,16 +165,6 @@ struct type2int_base<Keys<T>> {
 
 template <typename T>
 struct type2int_base<Keys<T>*> {
-    enum { result = type2int_base<T>::result };
-};
-
-template <typename T>
-struct type2int_base<List<T>> {
-    enum { result = type2int_base<T>::result };
-};
-
-template <typename T>
-struct type2int_base<List<T>*> {
     enum { result = type2int_base<T>::result };
 };
 

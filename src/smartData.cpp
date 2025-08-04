@@ -65,7 +65,6 @@ bool SmartData<DataType, true>::setNext(
 #define INSTANTIATE_SMARTDATA(TYPE)                                            \
     template class SmartData<TYPE>;                                            \
     template class SmartData<Keys<TYPE>*>;                                     \
-    template class SmartData<List<TYPE>*>;                                     \
     template class SmartData<TYPE *>;
 
 INSTANTIATE_SMARTDATA(bool);
