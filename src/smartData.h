@@ -150,7 +150,7 @@ class SmartData<DataType, false> : public BaseTyped<typename SmartDataKeyType<Da
     SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
         : BaseTyped<typename SmartDataKeyType<DataType>::type>(N > 0 ? data[0].key : 0),
         mapSize(N), map(data) { 
-            if (N > 0) {
+            if ( (N > 0) && (data[0].value != "") ) {
                 this->setName(data[0].value.c_str());
             }
         }
@@ -199,7 +199,11 @@ class SmartData<DataType, false> : public BaseTyped<typename SmartDataKeyType<Da
             for (size_t i = 0; i < mapSize; ++i) {
                 if (map[i].key == newValue) {
                     setImpl(newValue);
-                    this->setName(map[i].value.c_str());  
+                    if (map[i].value != "") {
+                        this->setName(map[i].value.c_str());  
+                    } else {
+                        this->setName(nullptr); // clear name if empty string
+                    }
                     break;
                 }
             }            

@@ -529,14 +529,19 @@ bool qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
         }
     }
 
-    if (isSmartObject(types.sub_types.ptr)) {    
-        BaseTyped<bool> *object = (BaseTyped<bool> *)ptr;
+  if (isSmartObject(types.sub_types.ptr)) {    
+        BaseTyped<bool> *object = (BaseTyped<bool> *)ptr;        
         temp = object->get();
-    } else {
+        if (object->getName() != NULL) {            
+            S.printf("%s is %s (%s)\n", command, object->getName(), temp ? "true": "false");
+        } else {            
+            S.printf("%s is %s\n", command, temp ? "true" : "false");
+        }        
+    } else {        
         temp = *ptr;
+        S.printf("%s is %s\n", command, temp ? "true" : "false");
     }
-
-    S.printf("%s is %s\n", command, temp ? "true" : "false");
+    
     return need_to_send;
 }
 
@@ -570,14 +575,15 @@ bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
         BaseTyped<argUInt> *object = (BaseTyped<argUInt> *)ptr;        
         newValue = object->get();
         if (object->getName() != NULL) {            
-            S.printf("Name of current setting (%u) is %s\n",newValue, object->getName());
+            S.printf("%s is %s (%u)\n",command,object->getName(),newValue);
         } else {            
-            S.printf("Name of current setting (%u) is not set\n",newValue);
+            S.printf("%s is %u\n", command, newValue);
         }        
     } else {        
-        newValue = *ptr;                
+        newValue = *ptr;
+        S.printf("%s is %u\n", command, newValue);
     }
-    S.printf("%s is %u\n", command, newValue);
+    
     return need_to_send;
 }
 
@@ -603,13 +609,19 @@ bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
         }
     }
 
-    if (isSmartObject(types.sub_types.ptr)) {           
-        BaseTyped<argInt> *object = (BaseTyped<argInt> *)ptr;
+    if (isSmartObject(types.sub_types.ptr)) {    
+        BaseTyped<argInt> *object = (BaseTyped<argInt> *)ptr;        
         temp = object->get();
-    } else {
+        if (object->getName() != NULL) {            
+            S.printf("%s is %s (%d)\n",command,object->getName(),temp);
+        } else {            
+            S.printf("%s is %d\n", command, temp);
+        }
+    } else {        
         temp = *ptr;
+        S.printf("%s is %d\n", command, temp);
     }
-    S.printf("%s is %d\n", command, temp);
+    
     return need_to_send;
 }
 
@@ -637,19 +649,21 @@ bool qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
             need_to_send = true;
         }
     }
-    if (isSmartObject(types.sub_types.ptr)) {               
-        BaseTyped<argFloating> *object = (BaseTyped<argFloating> *)ptr;
+    
+    
+    if (isSmartObject(types.sub_types.ptr)) {    
+        BaseTyped<argFloating> *object = (BaseTyped<argFloating> *)ptr;        
         newValue = object->get();
-    } else {
+        if (object->getName() != NULL) {            
+            S.printf("%s is %s (%e)\n",command,object->getName(),newValue);
+        } else {            
+            S.printf("%s is %f\n", command, newValue);
+        }        
+    } else {        
         newValue = *ptr;
-    }
-
-    if ((abs(newValue) > 10) || (abs(newValue) < .1)) {
-        S.printf("%s is %e\n", command,
-                 newValue); // print gain in scientific notation
-    } else {
         S.printf("%s is %f\n", command, newValue);
     }
+    
     return need_to_send;
 }
 
@@ -666,9 +680,9 @@ void qCommand::setDefaultHandler(void (*function)(const char *,
 bool qCommand::reportData(qCommand &qC, Stream &inputStream,
                           const char *command, Types types, void *ptr,
                           StreamCommandParserCallback *commandList) {
-    inputStream.printf(
-        "Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n",
-        command, types.sub_types.data, types.sub_types.ptr, ptr);
+    //inputStream.printf(
+    //    "Command: %s and data_type is %u (ptr_type is %u at addr 0x%08x)\n",
+    //    command, types.sub_types.data, types.sub_types.ptr, ptr);
     switch (types.sub_types.data) {
     case 4:
         return reportString(*this, inputStream, command, types.sub_types.ptr,
