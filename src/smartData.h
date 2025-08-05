@@ -46,10 +46,14 @@ class BaseTyped : public Base {
     virtual void set(T newValue);
 
     operator T() const { return value; }
-    virtual const char* getName() { return nullptr; };
+    //virtual const char* getName() {         Serial2.println("BaseTyped CLASS getName() CALLED"); return "BaseTyped-Result"; }
+    const char* getName() { return name; }
 
   protected:
     T value;
+    void setName(const char* newName) { name = newName; }
+  private:
+    const char* name = nullptr;
 };
 
 
@@ -133,7 +137,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
 // Specialization for non-arrays
 template <class DataType> 
-class SmartData<DataType, false> : BaseTyped<typename SmartDataKeyType<DataType>::type>{
+class SmartData<DataType, false> : public BaseTyped<typename SmartDataKeyType<DataType>::type>{
 
   public:
     template <typename T = DataType,
@@ -145,7 +149,11 @@ class SmartData<DataType, false> : BaseTyped<typename SmartDataKeyType<DataType>
               typename std::enable_if<is_keys_ptr<T>::value, int>::type = 0>
     SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
         : BaseTyped<typename SmartDataKeyType<DataType>::type>(N > 0 ? data[0].key : 0),
-        mapSize(N), map(data) { }
+        mapSize(N), map(data) { 
+            if (N > 0) {
+                this->setName(data[0].value.c_str());
+            }
+        }
         
     using ValueType = typename SmartDataKeyType<DataType>::type;
     // For fundamental types like int, float, bool
@@ -157,6 +165,22 @@ class SmartData<DataType, false> : BaseTyped<typename SmartDataKeyType<DataType>
         return this->value;
     }
 
+/*
+    const char* getName() override {
+        Serial2.print("DataType is keys_ptr: ");
+        Serial2.println(is_keys_ptr<DataType>::value ? "true" : "false");
+        if constexpr (is_keys_ptr<DataType>::value) {
+            for (size_t i = 0; i < mapSize; ++i) {
+                if (map[i].key == this->value) {
+                    return map[i].value.c_str(); 
+                }
+            }                
+            return "This is a SmartData with Keys, but could not find key";
+        } else {
+            return "NOT KEYS"; //nullptr; // or return BaseTyped<...>::getName();
+        }
+    }
+*/
     // For complex types like String that are not arrays nor fundamental types
     template <typename T = ValueType>
     const T &get() const
@@ -174,7 +198,8 @@ class SmartData<DataType, false> : BaseTyped<typename SmartDataKeyType<DataType>
         if constexpr (is_keys_ptr<DataType>::value) {
             for (size_t i = 0; i < mapSize; ++i) {
                 if (map[i].key == newValue) {
-                    setImpl(newValue);  
+                    setImpl(newValue);
+                    this->setName(map[i].value.c_str());  
                     break;
                 }
             }            

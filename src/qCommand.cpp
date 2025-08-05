@@ -568,7 +568,12 @@ bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
         
     if (isSmartObject(types.sub_types.ptr)) {    
         BaseTyped<argUInt> *object = (BaseTyped<argUInt> *)ptr;        
-        newValue = object->get();        
+        newValue = object->get();
+        if (object->getName() != NULL) {            
+            S.printf("Name of current setting (%u) is %s\n",newValue, object->getName());
+        } else {            
+            S.printf("Name of current setting (%u) is not set\n",newValue);
+        }        
     } else {        
         newValue = *ptr;                
     }
