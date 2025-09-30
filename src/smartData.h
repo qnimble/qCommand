@@ -18,7 +18,7 @@ class Base {
 
 	UpdateState getUpdateState(void) { return updates_needed; }
 	void sendUpdate(void);
-	virtual uint16_t size(void);
+	virtual uint16_t size(void) = 0;
 	virtual void resetUpdateState(void) = 0;
 	virtual void ackObject(void) = 0;
 
@@ -41,7 +41,7 @@ class BaseTyped : public Base {
 	BaseTyped(T data) : value(data) {}
 
 	T get() const { return value; }
-	virtual void set(T newValue);
+	virtual void set(T newValue) = 0;
 
 	operator T() const { return value; }
 	// virtual const char* getName() {         Serial2.println("BaseTyped CLASS
