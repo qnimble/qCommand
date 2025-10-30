@@ -259,6 +259,10 @@ void set_object(eui_message_t *p_msg_obj, uint16_t offset, uint8_t *data_in,
 	}
 }
 
+//void qCommand::setDefaultLayout(const char* layout) { 
+//	::set_default_layout(layout); 
+//};
+
 const void *ptr_settings_from_object(eui_message_t *p_msg_obj) {
 	qCommand::Types type;
 	type.raw = p_msg_obj->type;
@@ -291,6 +295,18 @@ void ack_object(void *ptr) {
 	Base *ptrBase = static_cast<Base *>(ptr);
 	ptrBase->ackObject();
 }
+
+uint8_t number_of_valid_entries(const void* ptr) {
+	const Base *ptrBase = static_cast<const Base *>(ptr);
+	return ptrBase->getMapSize();
+}
+
+uint16_t list_or_key_pair(const void* ptr, uint8_t index, char* msgBuffer, uint16_t bufferSize) {
+	const Base *ptrBase = static_cast<const Base *>(ptr);
+	return ptrBase->getKeyPairAsString(index, msgBuffer, bufferSize);	
+}
+
+
 
 void serial3_write(uint8_t *data, uint16_t len) {
 	Serial3.write(data, len);  // output on the main serial port

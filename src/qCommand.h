@@ -21,6 +21,9 @@ const void *ptr_settings_from_object(eui_message_t *p_msg_obj);
 void set_object(eui_message_t *p_msg_obj, uint16_t offset, uint8_t *data_in,
 				uint16_t len);
 
+void set_default_layout(const char* layout);
+
+
 #ifdef __cplusplus
 }
 #endif
@@ -55,6 +58,15 @@ class qCommand {
 	} Types;
 
 	qCommand(const bool caseSensitive = false);
+	//void setDefaultLayout(const char* layout);
+ 	void setDefaultLayout(const char* layout) && = delete;
+    
+    // Allow string literals and lvalues only
+    void setDefaultLayout(const char* layout) & { 
+        ::set_default_layout(layout); 
+    }
+
+
 	void addCommand(
 		const char *command,
 		void (*function)(qCommand &streamCommandParser,
@@ -140,6 +152,7 @@ class qCommand {
 
    private:
 	Stream *binaryStream;
+	const char* defaultLayout = nullptr;
 
 	union callBack {
 		void (*f1)(qCommand &streamCommandParser, Stream &stream);

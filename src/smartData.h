@@ -21,6 +21,8 @@ class Base {
 	virtual uint16_t size(void) = 0;
 	virtual void resetUpdateState(void) = 0;
 	virtual void ackObject(void) = 0;
+	virtual uint8_t getMapSize(void) const {return 0;}
+	virtual uint16_t getKeyPairAsString(uint8_t index, char* buffer, uint16_t bufferSize) const { return 0; }
 
    private:
 	Stream* stream;
@@ -220,6 +222,50 @@ class SmartData<DataType, false>
 	uint16_t size(void) { return sizeof(ValueType); }
 	using SetterFuncPtr = ValueType (*)(ValueType, ValueType);
 	void setSetter(SetterFuncPtr setter) { this->setter = setter; }
+	
+	uint8_t getMapSize(void) const { 
+		if constexpr (is_option_ptr<DataType>::value) {
+            return mapSize;
+        } else {
+            return 0;
+		}
+	}
+
+	uint16_t getKeyPairAsString(uint8_t index, char* buffer, uint16_t bufferSize) const { 
+		if constexpr (is_option_ptr<DataType>::value) {
+			 if (index >= mapSize || bufferSize == 0) {
+                return 0;
+            }
+			
+			 // Explicit type: map is Option<ValueType>*
+            using OptionType = Option<ValueType>;
+            const OptionType& entry = map[index];
+            
+            // Access key and value
+            ValueType keyValue = entry.key;
+			uint16_t len1 = sizeof(keyValue);
+			if (len1 > bufferSize) {
+				return 0; // Not enough space in buffer
+			}
+			memcpy(buffer, &keyValue, len1);
+
+            const char* valueStr = entry.value.c_str();
+            
+            // Copy value string to buffer
+            uint16_t len2 = strlen(valueStr);
+            if (len1+ len2 + 1 > bufferSize) {
+                return 0; // Not enough space in buffer
+            }
+            strncpy(&buffer[len1], valueStr, len2);
+            buffer[len1 + len2] = '\0';
+            
+            return len1 + len2 + 1;
+        } else {
+            return 0;
+		}
+	}
+
+
 
    private:
 	bool dataRequested = false;
@@ -229,17 +275,17 @@ class SmartData<DataType, false>
 	void setImpl(ValueType newValue);
 	// Add Keys-specific members
 
-	// Only used for Keys types
-	size_t mapSize = 0;
-	// Use a conditional pointer type that resolves to nullptr for non-Keys
+	// Only used for Option types
+	uint8_t mapSize = 0;
+	// Use a conditional pointer type that resolves to nullptr for non-Option
 	// types
 	template <typename T = DataType>
 	static constexpr auto GetMapPointerType() {
-		if constexpr (is_keys_ptr<T>::value) {
-			// Extract KeyType from Keys<KeyType>*
-			using ActualKeysType = typename std::remove_pointer<T>::type;
-			using KeyType = typename ActualKeysType::KeyType_t;
-			return static_cast<Keys<KeyType>*>(nullptr);
+		if constexpr (is_option_ptr<T>::value) {
+			// Extract KeyType from Option<KeyType>*
+			using ActualOptionType = typename std::remove_pointer<T>::type;
+			using KeyType = typename ActualOptionType::KeyType_t;
+			return static_cast<Option<KeyType>*>(nullptr);
 		} else {
 			return static_cast<void*>(nullptr);
 		}
