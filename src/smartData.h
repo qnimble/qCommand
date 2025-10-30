@@ -190,6 +190,13 @@ class SmartData<DataType, false>
 	operator ValueType() const {
 		return this->value;	 // return the pointer to the array
 	}
+
+	 // Add assignment operator to enable testList = 5 syntax
+    SmartData& operator=(ValueType newValue) {
+        set(newValue);
+        return *this;
+    }
+
 	void set(ValueType newValue) {
 		if constexpr (is_option_ptr<DataType>::value) {
 			for (size_t i = 0; i < mapSize; ++i) {
