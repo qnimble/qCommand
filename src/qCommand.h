@@ -110,10 +110,10 @@ class qCommand {
 	template <typename T>
 	void assignVariable(const char *command, SmartData<T> *object,
 						bool read_only = false)
-		requires(!is_keys_ptr<T>::value);
+		requires(!is_option_ptr<T>::value);
 
 	template <typename T>
-	void assignVariable(const char *command, SmartData<Keys<T> *> *object,
+	void assignVariable(const char *command, SmartData<Option<T> *> *object,
 						bool read_only = false);
 
 	// Specialization for pointers without size (assuming not arrays but pointer

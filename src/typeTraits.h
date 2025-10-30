@@ -7,7 +7,7 @@
 
 
 template <typename KeyType>
-struct Keys {    
+struct Option {    
     using KeyType_t = KeyType;
     KeyType key;
     String value;
@@ -15,10 +15,10 @@ struct Keys {
 
 
 template <typename T>
-struct is_keys_ptr : std::false_type {};
+struct is_option_ptr : std::false_type {};
 
 template <typename KeyType>
-struct is_keys_ptr<Keys<KeyType>*> : std::true_type {};
+struct is_option_ptr<Option<KeyType>*> : std::true_type {};
 
 
 // Set Default values for TypeTraits
@@ -34,19 +34,19 @@ struct TypeTraits<T, std::enable_if_t<!std::is_pointer<T>::value &&  std::is_arr
     static constexpr bool isPointer = false;
 };
 
-// Pointer but not Array nor Keys
+// Pointer but not Array nor Option
 template <typename T>
 struct TypeTraits<T, std::enable_if_t<
     !std::is_array<T>::value &&
     std::is_pointer<T>::value &&    
-    !is_keys_ptr<T>::value>>
+    !is_option_ptr<T>::value>>
 {    static constexpr bool isArray = false;
     static constexpr bool isPointer = true;
 };
 
 // Add this specialization to typeTraits.h
 template <typename T>
-struct TypeTraits<T, std::enable_if_t<is_keys_ptr<T>::value>> {
+struct TypeTraits<T, std::enable_if_t<is_option_ptr<T>::value>> {
    static constexpr bool isArray = false;
    static constexpr bool isPointer = false; // Treat it as not a pointer for SmartData
 };
@@ -59,7 +59,7 @@ struct SmartDataKeyType {
 };
 
 template <typename KeyType>
-struct SmartDataKeyType<Keys<KeyType>*> {
+struct SmartDataKeyType<Option<KeyType>*> {
     using type = KeyType;
 };
 
@@ -95,25 +95,25 @@ static_assert(TypeTraits<bool>::isBool, "bool is bool");
 static_assert(TypeTraits<bool *>::isBool, "bool* is bool");
 */
 
-// Specialization for Keys<KeyType>*
+// Specialization for Option<KeyType>*
 
 /*
-#define SPECIALIZE_KEYS_TRAITS(TYPE) \
+#define SPECIALIZE_OPTION_TRAITS(TYPE) \
 template<> \
-struct TypeTraits<Keys<TYPE>*> { \
+struct TypeTraits<Option<TYPE>*> { \
     static constexpr bool isArray = false; \
     static constexpr bool isPointer = false; \
 };
 
-SPECIALIZE_KEYS_TRAITS(bool)
-SPECIALIZE_KEYS_TRAITS(uint8_t)  // unsigned char
-SPECIALIZE_KEYS_TRAITS(int8_t)
-SPECIALIZE_KEYS_TRAITS(uint16_t)
-SPECIALIZE_KEYS_TRAITS(int16_t)
-SPECIALIZE_KEYS_TRAITS(uint32_t)
-SPECIALIZE_KEYS_TRAITS(int32_t)
-SPECIALIZE_KEYS_TRAITS(float)
-SPECIALIZE_KEYS_TRAITS(double)
+SPECIALIZE_OPTION_TRAITS(bool)
+SPECIALIZE_OPTION_TRAITS(uint8_t)  // unsigned char
+SPECIALIZE_OPTION_TRAITS(int8_t)
+SPECIALIZE_OPTION_TRAITS(uint16_t)
+SPECIALIZE_OPTION_TRAITS(int16_t)
+SPECIALIZE_OPTION_TRAITS(uint32_t)
+SPECIALIZE_OPTION_TRAITS(int32_t)
+SPECIALIZE_OPTION_TRAITS(float)
+SPECIALIZE_OPTION_TRAITS(double)
 */
 template <typename T>
 struct type2int_base; // force defintion by leaving out result for default case
@@ -159,12 +159,12 @@ template <> struct type2int_base<String> {
 
 
 template <typename T>
-struct type2int_base<Keys<T>> {
+struct type2int_base<Option<T>> {
     enum { result = type2int_base<T>::result };
 };
 
 template <typename T>
-struct type2int_base<Keys<T>*> {
+struct type2int_base<Option<T>*> {
     enum { result = type2int_base<T>::result };
 };
 

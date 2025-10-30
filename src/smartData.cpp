@@ -57,11 +57,11 @@ bool SmartData<DataType, true>::setNext(
 	}
 	//}
 }
-// SmartData<Keys<uint8_t>*> testMap(myMap);
+// SmartData<Option<uint8_t>*> testMap(myMap);
 
 #define INSTANTIATE_SMARTDATA(TYPE)         \
 	template class SmartData<TYPE>;         \
-	template class SmartData<Keys<TYPE> *>; \
+	template class SmartData<Option<TYPE> *>; \
 	template class SmartData<TYPE *>;
 
 INSTANTIATE_SMARTDATA(bool);

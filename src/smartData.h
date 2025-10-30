@@ -136,12 +136,12 @@ class SmartData<DataType, false>
 	: public BaseTyped<typename SmartDataKeyType<DataType>::type> {
    public:
 	template <typename T = DataType,
-			  typename std::enable_if<!is_keys_ptr<T>::value, int>::type = 0>
+			  typename std::enable_if<!is_option_ptr<T>::value, int>::type = 0>
 	SmartData(T data) : BaseTyped<DataType>(data) {}
 
 	template <typename T = DataType, size_t N,
-			  typename std::enable_if<is_keys_ptr<T>::value, int>::type = 0>
-	SmartData(Keys<typename SmartDataKeyType<DataType>::type> (&data)[N])
+			  typename std::enable_if<is_option_ptr<T>::value, int>::type = 0>
+	SmartData(Option<typename SmartDataKeyType<DataType>::type> (&data)[N])
 		: BaseTyped<typename SmartDataKeyType<DataType>::type>(
 			  N > 0 ? data[0].key : 0),
 		  mapSize(N),
@@ -163,17 +163,17 @@ class SmartData<DataType, false>
 
 	/*
 		const char* getName() override {
-			Serial2.print("DataType is keys_ptr: ");
-			Serial2.println(is_keys_ptr<DataType>::value ? "true" : "false");
-			if constexpr (is_keys_ptr<DataType>::value) {
+			Serial2.print("DataType is option_ptr: ");
+			Serial2.println(is_option_ptr<DataType>::value ? "true" : "false");
+			if constexpr (is_option_ptr<DataType>::value) {
 				for (size_t i = 0; i < mapSize; ++i) {
 					if (map[i].key == this->value) {
 						return map[i].value.c_str();
 					}
 				}
-				return "This is a SmartData with Keys, but could not find key";
+				return "This is a SmartData with Options, but could not find key";
 			} else {
-				return "NOT KEYS"; //nullptr; // or return
+				return "NOT OPTIONS"; //nullptr; // or return
 	   BaseTyped<...>::getName();
 			}
 		}
@@ -191,7 +191,7 @@ class SmartData<DataType, false>
 		return this->value;	 // return the pointer to the array
 	}
 	void set(ValueType newValue) {
-		if constexpr (is_keys_ptr<DataType>::value) {
+		if constexpr (is_option_ptr<DataType>::value) {
 			for (size_t i = 0; i < mapSize; ++i) {
 				if (map[i].key == newValue) {
 					setImpl(newValue);

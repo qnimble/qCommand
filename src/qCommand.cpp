@@ -393,7 +393,7 @@ template <typename T>
 
 void qCommand::assignVariable(const char *command, SmartData<T> *object,
 							  bool read_only)
-	requires(!is_keys_ptr<T>::value)
+	requires(!is_option_ptr<T>::value)
 {
 	Types types;
 	using base_type =
@@ -414,12 +414,12 @@ void qCommand::assignVariable(const char *command, SmartData<T> *object,
 	addCommandInternal(command, types, object, size);
 }
 
-// Function for SmartData objects with Keys
+// Function for SmartData objects with Options
 template <typename T>
-void qCommand::assignVariable(const char *command, SmartData<Keys<T> *> *object,
+void qCommand::assignVariable(const char *command, SmartData<Option<T> *> *object,
 							  bool read_only) {
 	Types types;
-	using ValueType = typename SmartData<Keys<T> *>::ValueType;
+	using ValueType = typename SmartData<Option<T> *>::ValueType;
 	types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
 	if (read_only) {
 		types.sub_types.read_only = true;
@@ -887,8 +887,8 @@ char *qCommand::next() {
 										   const TYPE *variable);              \
 	template void qCommand::assignVariable<TYPE>(                              \
 		const char *,                                                          \
-		SmartData<Keys<TYPE> *, TypeTraits<Keys<TYPE> *, void>::isArray ||     \
-									TypeTraits<Keys<TYPE> *, void>::isPointer> \
+		SmartData<Option<TYPE> *, TypeTraits<Option<TYPE> *, void>::isArray ||     \
+									TypeTraits<Option<TYPE> *, void>::isPointer> \
 			*,                                                                 \
 		bool);                                                                 \
 	template void qCommand::assignVariable(                                    \
