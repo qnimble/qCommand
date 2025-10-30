@@ -55,7 +55,7 @@ class BaseTyped : public Base {
 	void setName(const char* newName) { name = newName; }
 
    private:
-	const char* name = nullptr;
+	const char* name = "";
 };
 
 // generic SmartData for single values and arrays
@@ -205,7 +205,7 @@ class SmartData<DataType, false>
 					if (map[i].value != "") {
 						this->setName(map[i].value.c_str());
 					} else {
-						this->setName(nullptr);	 // clear name if empty string
+						this->setName("");	 // clear name if empty string
 					}
 					break;
 				}
