@@ -256,7 +256,7 @@ class SmartData<DataType, false>
             if (len1+ len2 + 1 > bufferSize) {
                 return 0; // Not enough space in buffer
             }
-            strncpy(&buffer[len1], valueStr, len2);
+            memcpy(&buffer[len1], valueStr, len2);
             buffer[len1 + len2] = '\0';
             
             return len1 + len2 + 1;
