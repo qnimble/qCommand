@@ -141,11 +141,11 @@ class SmartData<DataType, false>
 
 	template <typename T = DataType, size_t N,
 			  typename std::enable_if<is_option_ptr<T>::value, int>::type = 0>
-	SmartData(Option<typename SmartDataKeyType<DataType>::type> (&data)[N])
-		: BaseTyped<typename SmartDataKeyType<DataType>::type>(
-			  N > 0 ? data[0].key : 0),
+	SmartData(typename std::remove_pointer<T>::type (&data)[N])
+        : BaseTyped<typename SmartDataKeyType<DataType>::type>(
+              N > 0 ? static_cast<typename SmartDataKeyType<DataType>::type>(data[0].key) : static_cast<typename SmartDataKeyType<DataType>::type>(0)),
 		  mapSize(N),
-		  map(data) {
+		  map(reinterpret_cast<decltype(map)>(data)) {
 		if ((N > 0) && (data[0].value != "")) {
 			this->setName(data[0].value.c_str());
 		}
@@ -243,13 +243,15 @@ class SmartData<DataType, false>
 			 if (index >= mapSize || bufferSize == 0) {
                 return 0;
             }
-			
-			 // Explicit type: map is Option<ValueType>*
-            using OptionType = Option<ValueType>;
-            const OptionType& entry = map[index];
+
+            // DataType is OptionImpl<KeyType>*, so just extract it directly
+            using StoredOptionType = typename std::remove_pointer<DataType>::type;
+            using StoredKeyType = decltype(StoredOptionType::key);
+
+            const StoredOptionType& entry = map[index];
             
             // Access key and value
-            ValueType keyValue = entry.key;
+            StoredKeyType keyValue = entry.key;
 			uint16_t len1 = sizeof(keyValue);
 			if (len1 > bufferSize) {
 				return 0; // Not enough space in buffer
@@ -289,10 +291,7 @@ class SmartData<DataType, false>
 	template <typename T = DataType>
 	static constexpr auto GetMapPointerType() {
 		if constexpr (is_option_ptr<T>::value) {
-			// Extract KeyType from Option<KeyType>*
-			using ActualOptionType = typename std::remove_pointer<T>::type;
-			using KeyType = typename ActualOptionType::KeyType_t;
-			return static_cast<Option<KeyType>*>(nullptr);
+            return static_cast<typename std::remove_pointer<T>::type*>(nullptr);
 		} else {
 			return static_cast<void*>(nullptr);
 		}

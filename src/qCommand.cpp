@@ -416,10 +416,10 @@ void qCommand::assignVariable(const char *command, SmartData<T> *object,
 
 // Function for SmartData objects with Options
 template <typename T>
-void qCommand::assignVariable(const char *command, SmartData<Option<T> *> *object,
+void qCommand::assignVariable(const char *command, SmartData<OptionImpl<T> *> *object,
 							  bool read_only) {
 	Types types;
-	using ValueType = typename SmartData<Option<T> *>::ValueType;
+	using ValueType = typename SmartData<OptionImpl<T> *>::ValueType;
 	types.sub_types = {type2int<ValueType>::result, PTR_SD_OBJECT_LIST};
 	if (read_only) {
 		types.sub_types.read_only = true;
@@ -887,8 +887,8 @@ char *qCommand::next() {
 										   const TYPE *variable);              \
 	template void qCommand::assignVariable<TYPE>(                              \
 		const char *,                                                          \
-		SmartData<Option<TYPE> *, TypeTraits<Option<TYPE> *, void>::isArray ||     \
-									TypeTraits<Option<TYPE> *, void>::isPointer> \
+		SmartData<OptionImpl<TYPE> *, TypeTraits<OptionImpl<TYPE> *, void>::isArray ||     \
+									TypeTraits<OptionImpl<TYPE> *, void>::isPointer> \
 			*,                                                                 \
 		bool);                                                                 \
 	template void qCommand::assignVariable(                                    \

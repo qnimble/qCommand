@@ -6,19 +6,39 @@
 #include <WString.h>
 
 
-template <typename KeyType>
-struct Option {    
-    using KeyType_t = KeyType;
-    KeyType key;
-    String value;
+
+// Helper to convert enum types to their underlying type
+template <typename T, typename Enable = void>
+struct EnumToUnderlying {
+    using type = T;  // Default: use the type as-is
 };
+
+// Specialization for enum types
+template <typename T>
+struct EnumToUnderlying<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+    using type = typename std::underlying_type<T>::type;  // Extract underlying type for enums
+};
+
+template <typename KeyType>
+struct OptionImpl {
+    KeyType key;  // Store as the original type
+    String value;
+
+    // Constructor accepts original KeyType (enum or fundamental type)
+    constexpr OptionImpl(KeyType k = KeyType(), const String& v = "")
+        : key(k), value(v) {}
+};
+
+// Option is a template alias that converts enums to their underlying type
+template <typename KeyType>
+using Option = OptionImpl<typename EnumToUnderlying<KeyType>::type>;
 
 
 template <typename T>
 struct is_option_ptr : std::false_type {};
 
 template <typename KeyType>
-struct is_option_ptr<Option<KeyType>*> : std::true_type {};
+struct is_option_ptr<OptionImpl<KeyType>*> : std::true_type {};
 
 
 // Set Default values for TypeTraits
@@ -59,7 +79,7 @@ struct SmartDataKeyType {
 };
 
 template <typename KeyType>
-struct SmartDataKeyType<Option<KeyType>*> {
+struct SmartDataKeyType<OptionImpl<KeyType>*> {
     using type = KeyType;
 };
 
@@ -159,12 +179,12 @@ template <> struct type2int_base<String> {
 
 
 template <typename T>
-struct type2int_base<Option<T>> {
+struct type2int_base<OptionImpl<T>> {
     enum { result = type2int_base<T>::result };
 };
 
 template <typename T>
-struct type2int_base<Option<T>*> {
+struct type2int_base<OptionImpl<T>*> {
     enum { result = type2int_base<T>::result };
 };
 
