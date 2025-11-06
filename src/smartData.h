@@ -229,7 +229,31 @@ class SmartData<DataType, false>
 	uint16_t size(void) { return sizeof(ValueType); }
 	using SetterFuncPtr = ValueType (*)(ValueType, ValueType);
 	void setSetter(SetterFuncPtr setter) { this->setter = setter; }
-	
+
+
+	// Add conversion wrapper for enum-based setters
+	template <typename EnumType, typename T = DataType>
+	typename std::enable_if<
+		is_option_ptr<T>::value &&
+		std::is_enum<EnumType>::value &&
+		std::is_same<typename std::underlying_type<EnumType>::type, ValueType>::value,
+		void>::type
+	setSetter(EnumType (*enumSetter)(EnumType, EnumType)) {
+		// Create a static wrapper that stores the enum function pointer
+		static EnumType (*storedEnumSetter)(EnumType, EnumType) = nullptr;
+		storedEnumSetter = enumSetter;
+
+		// Create a wrapper function that converts types
+		static auto wrapper = [](ValueType newV, ValueType oldV) -> ValueType {
+			return static_cast<ValueType>(
+				storedEnumSetter(static_cast<EnumType>(newV), static_cast<EnumType>(oldV))
+			);
+		};
+
+		// Assign the wrapper (lambdas without captures can convert to function pointers)
+		this->setter = +wrapper;  // The + forces conversion to function pointer
+	}
+
 	uint8_t getMapSize(void) const { 
 		if constexpr (is_option_ptr<DataType>::value) {
             return mapSize;
