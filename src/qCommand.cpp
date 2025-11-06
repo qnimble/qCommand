@@ -564,7 +564,7 @@ bool qCommand::reportBool(qCommand &qC, Stream &S, const char *command,
 	if (isSmartObject(types.sub_types.ptr)) {
 		BaseTyped<bool> *object = (BaseTyped<bool> *)ptr;
 		temp = object->get();
-		if (object->getName() != NULL) {
+		if (strlen(object->getName()) != 0) {
 			S.printf("%s is %s (%s)\n", command, object->getName(),
 					 temp ? "true" : "false");
 		} else {
@@ -607,7 +607,7 @@ bool qCommand::reportUInt(qCommand &qC, Stream &S, const char *command,
 	if (isSmartObject(types.sub_types.ptr)) {
 		BaseTyped<argUInt> *object = (BaseTyped<argUInt> *)ptr;
 		newValue = object->get();
-		if (object->getName() != NULL) {
+		if (strlen(object->getName()) != 0) {
 			S.printf("%s is %s (%u)\n", command, object->getName(), newValue);
 		} else {
 			S.printf("%s is %u\n", command, newValue);
@@ -645,7 +645,7 @@ bool qCommand::reportInt(qCommand &qC, Stream &S, const char *command,
 	if (isSmartObject(types.sub_types.ptr)) {
 		BaseTyped<argInt> *object = (BaseTyped<argInt> *)ptr;
 		temp = object->get();
-		if (object->getName() != NULL) {
+		if (strlen(object->getName()) != 0) {
 			S.printf("%s is %s (%d)\n", command, object->getName(), temp);
 		} else {
 			S.printf("%s is %d\n", command, temp);
@@ -686,7 +686,7 @@ bool qCommand::reportFloat(qCommand &qC, Stream &S, const char *command,
 	if (isSmartObject(types.sub_types.ptr)) {
 		BaseTyped<argFloating> *object = (BaseTyped<argFloating> *)ptr;
 		newValue = object->get();
-		if (object->getName() != NULL) {
+		if (strlen(object->getName()) != 0) {
 			S.printf("%s is %s (%e)\n", command, object->getName(), newValue);
 		} else {
 			S.printf("%s is %f\n", command, newValue);
