@@ -1,4 +1,6 @@
 #include "smartData.h"
+#include "qCommand.h"
+
 
 void Base::sendUpdate(void) {
 	switch (updates_needed) {
@@ -34,20 +36,57 @@ void SmartData<DataType, false>::setImpl(ValueType newValue) {
 template <class DataType>
 void SmartData<DataType, true>::set(
 	typename SmartData<DataType, true>::baseType data, size_t element) {
-	if (element < totalElements) {
+	size_t total = totalElements;
+
+	if ((qC_parent != nullptr) && (cmdNumber != 255)) {
+		total = qC_parent->getCommandSize(cmdNumber) / sizeof(baseType);
+	}
+
+	if (element < total) {
 		value[element] = data;
 		currentElement = element + 1;  // set currentElement to next element
 	}
 }
 
 template <class DataType>
+uint16_t SmartData<DataType, true>:: setActiveSize(uint16_t newSize) {
+		if ((qC_parent != nullptr)  && (cmdNumber != 255)) {
+			if (newSize > totalElements) {
+				newSize = totalElements;
+			}
+			qC_parent->setCommandSize(cmdNumber, newSize * sizeof(baseType));
+			currentElement = 0; //reset array position.
+			return newSize;
+		}
+		return totalElements;
+	}
+
+
+template <class DataType>
+bool SmartData<DataType, true>::isFull(void){
+	size_t total = totalElements;
+	if ((qC_parent != nullptr) && (cmdNumber != 255)) {
+		total = qC_parent->getCommandSize(cmdNumber) / sizeof(baseType);
+	}
+	if (currentElement >= total) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+template <class DataType>
 bool SmartData<DataType, true>::setNext(
 	typename SmartData<DataType, true>::baseType data) {
-	// if (dataRequested) {
-	if (currentElement < totalElements) {
+	size_t total = totalElements;
+
+	if ((qC_parent != nullptr) && (cmdNumber != 255)) {
+		total = qC_parent->getCommandSize(cmdNumber) / sizeof(baseType);
+	}
+	if (currentElement < total) {
 		value[currentElement] = data;
 		currentElement++;
-		if (currentElement == totalElements) {
+		if (currentElement == total) {
 			// if this was last element, then
 			sendUpdate();
 		}

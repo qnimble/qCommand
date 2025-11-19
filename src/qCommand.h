@@ -30,6 +30,10 @@ void set_default_layout(const char* layout);
 
 class qCommand {
    public:
+
+   template <class DataType, bool isArray>
+   friend class SmartData;
+
 	enum class Commands : uint8_t {
 		ListCommands = 0,
 		Get = 1,
@@ -150,6 +154,10 @@ class qCommand {
 	   std::decay<T>::type>::value);
 	*/
 
+	size_t getCommandSize(uint8_t cmdNumber) {
+		return commandList[cmdNumber].size;
+	}
+
    private:
 	Stream *binaryStream;
 	const char* defaultLayout = nullptr;
@@ -239,6 +247,13 @@ class qCommand {
 											// waiting for terminator character
 	byte bufPos;							// Current position in the buffer
 	bool binaryConnected;
+
+protected:
+  void setCommandSize(uint8_t cmdNumber, uint16_t newSize) {
+	commandList[cmdNumber].size = newSize;
+}
+
+
 };
 
 // Specialization for pointers to arrays with size

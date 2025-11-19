@@ -3,7 +3,10 @@
 
 #include <Arduino.h>
 
+
 #include "typeTraits.h"
+
+class qCommand; // forward declaration
 
 class Base {
    public:
@@ -75,7 +78,6 @@ class AllSmartDataPtr : public Base {
 	void resetCurrentElement(void) { currentElement = 0; };
 
 	bool isEmpty(void) { return currentElement == 0; };
-	bool isFull(void) { return currentElement == totalElements; };
 
 	void ackObject(void) {
 		if (updates_needed == STATE_WAIT_ON_ACK) {
@@ -116,6 +118,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 		: AllSmartDataPtr(N), value(data){};
 
 	void set(baseType, size_t element);
+	bool isFull(void);
 	bool setNext(baseType);
 
 	uint16_t size(void) { return totalElements * sizeof(baseType); }
@@ -124,9 +127,15 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 
 	baseType& operator[](size_t index) { return value[index]; }
 	const baseType& operator[](size_t index) const { return value[index]; }
+	uint16_t setActiveSize(uint16_t newSize);
+
+  protected:
+	uint8_t cmdNumber = 255; // command number assigned during registration
+	qCommand* qC_parent = nullptr; // parent qCommand assigned during registration
 
    private:
 	DataType value;
+	size_t activeElements = 0;
 	friend class qCommand;
 };
 

@@ -411,6 +411,11 @@ void qCommand::assignVariable(const char *command, SmartData<T> *object,
 		// String subtype, max size is large
 		size = 255;
 	}
+    if constexpr (std::is_pointer_v<T>) {
+		object->qC_parent = this;
+		object->cmdNumber = commandCount;
+	}
+
 	addCommandInternal(command, types, object, size);
 }
 
