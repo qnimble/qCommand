@@ -128,6 +128,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 	baseType& operator[](size_t index) { return value[index]; }
 	const baseType& operator[](size_t index) const { return value[index]; }
 	uint16_t setActiveSize(uint16_t newSize);
+	size_t getActiveSize(void);
 
   protected:
 	uint8_t cmdNumber = 255; // command number assigned during registration

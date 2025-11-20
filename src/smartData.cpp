@@ -50,24 +50,36 @@ void SmartData<DataType, true>::set(
 
 template <class DataType>
 uint16_t SmartData<DataType, true>:: setActiveSize(uint16_t newSize) {
-		if ((qC_parent != nullptr)  && (cmdNumber != 255)) {
-			if (newSize > totalElements) {
-				newSize = totalElements;
-			}
-			qC_parent->setCommandSize(cmdNumber, newSize * sizeof(baseType));
-			currentElement = 0; //reset array position.
-			return newSize;
+	if ((qC_parent != nullptr)  && (cmdNumber != 255)) {
+		if (newSize > totalElements) {
+			newSize = totalElements;
 		}
-		return totalElements;
+
+		if (newSize > std::numeric_limits<uint16_t>::max() / sizeof(baseType)) {
+			newSize = std::numeric_limits<uint16_t>::max() / sizeof(baseType);
+		}
+
+		qC_parent->setCommandSize(cmdNumber, newSize * sizeof(baseType));
+		currentElement = 0; //reset array position.
+		return newSize;
 	}
+	return totalElements;
+}
 
 
 template <class DataType>
-bool SmartData<DataType, true>::isFull(void){
+size_t SmartData<DataType, true>::getActiveSize(void) {
 	size_t total = totalElements;
 	if ((qC_parent != nullptr) && (cmdNumber != 255)) {
 		total = qC_parent->getCommandSize(cmdNumber) / sizeof(baseType);
 	}
+	return total;
+}
+
+
+template <class DataType>
+bool SmartData<DataType, true>::isFull(void){
+	size_t total = getActiveSize();
 	if (currentElement >= total) {
 		return true;
 	} else {
@@ -78,11 +90,8 @@ bool SmartData<DataType, true>::isFull(void){
 template <class DataType>
 bool SmartData<DataType, true>::setNext(
 	typename SmartData<DataType, true>::baseType data) {
-	size_t total = totalElements;
+	size_t total = getActiveSize();
 
-	if ((qC_parent != nullptr) && (cmdNumber != 255)) {
-		total = qC_parent->getCommandSize(cmdNumber) / sizeof(baseType);
-	}
 	if (currentElement < total) {
 		value[currentElement] = data;
 		currentElement++;
