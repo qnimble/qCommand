@@ -2,26 +2,6 @@
 #include "qCommand.h"
 
 
-void Base::sendUpdate(void) {
-	switch (updates_needed) {
-		case STATE_IDLE:
-			updates_needed = STATE_NEED_TOSEND;
-			break;
-		case STATE_NEED_TOSEND:
-			// alread in need to send state, do nothing
-			break;
-		case STATE_WAIT_ON_ACK:
-			updates_needed =
-				STATE_WAIT_ON_ACK_PLUS_QUEUE;  // remaining states were waiting
-											   // on ACK, so now that plus queue
-			break;
-		case STATE_WAIT_ON_ACK_PLUS_QUEUE:
-			// already in wait on ack plus queue, do nothing
-			break;
-		default:
-			break;
-	}
-}
 
 template <class DataType>
 void SmartData<DataType, false>::setImpl(ValueType newValue) {
@@ -30,7 +10,7 @@ void SmartData<DataType, false>::setImpl(ValueType newValue) {
 	} else {
 		this->value = newValue;
 	}
-	this->sendUpdate();
+	this->requestUpdate = true;
 }
 
 template <class DataType>
@@ -97,7 +77,7 @@ bool SmartData<DataType, true>::setNext(
 		currentElement++;
 		if (currentElement == total) {
 			// if this was last element, then
-			sendUpdate();
+			this->requestUpdate = true;
 		}
 		return true;  // updated data
 	} else {

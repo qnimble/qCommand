@@ -17,10 +17,9 @@ class Base {
 		STATE_WAIT_ON_ACK_PLUS_QUEUE  // BC
 	};
 
-	Base() : stream(0), id(0), updates_needed(STATE_IDLE) {}
+	Base() : stream(0), id(0), ack_needed(0) {}
 
-	UpdateState getUpdateState(void) { return updates_needed; }
-	void sendUpdate(void);
+	bool getUpdateState(void) { return ack_needed; }
 	virtual uint16_t size(void) = 0;
 	virtual void resetUpdateState(void) = 0;
 	virtual void ackObject(void) = 0;
@@ -37,7 +36,9 @@ class Base {
 
    protected:
 	friend class qCommand;
-	UpdateState updates_needed;
+	bool ack_needed = 0;
+	volatile bool requestUpdate = false;
+
 };
 
 template <typename T>
@@ -80,17 +81,14 @@ class AllSmartDataPtr : public Base {
 	bool isEmpty(void) { return currentElement == 0; };
 
 	void ackObject(void) {
-		if (updates_needed == STATE_WAIT_ON_ACK) {
-			updates_needed = STATE_IDLE;  // reset to idle state
+		if (ack_needed == true) {
+			ack_needed = false;  // reset to idle state
 			currentElement = 0;			  // reset current element after ack
-		} else if (updates_needed == STATE_WAIT_ON_ACK_PLUS_QUEUE) {
-			updates_needed = STATE_NEED_TOSEND;	 // reset to need to send state
-			currentElement = 0;	 // reset current element after ack
 		}
 	}
 
 	void resetUpdateState(void) {
-		updates_needed = STATE_IDLE;
+		ack_needed = false;
 		currentElement = 0;
 	};
 
@@ -225,15 +223,10 @@ class SmartData<DataType, false>
 		}
 	}
 
-	void resetUpdateState(void) { this->updates_needed = this->STATE_IDLE; }
+	void resetUpdateState(void) { this->ack_needed = this->STATE_IDLE; }
 	void ackObject(void) {
-		if (this->updates_needed == this->STATE_WAIT_ON_ACK) {
-			this->updates_needed = this->STATE_IDLE;  // reset to idle state
-		} else if (this->updates_needed == this->STATE_WAIT_ON_ACK_PLUS_QUEUE) {
-			this->updates_needed =
-				this->STATE_NEED_TOSEND;  // reset to need to send state
-		} else {
-			// updates_needed = STATE_IDLE; // reset to idle state
+		if (this->ack_needed == true) {
+			this->ack_needed = false;
 		}
 	}
 	uint16_t size(void) { return sizeof(ValueType); }

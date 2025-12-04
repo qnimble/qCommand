@@ -371,12 +371,14 @@ char qCommand::readBinaryInt2(void) {
 		for (uint8_t i = 0; i < commandCount; i++) {
 			if (isSmartObject(commandList[i].types.sub_types.ptr)) {
 				Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
-				if (ptr->updates_needed ==
-					Base::UpdateState::STATE_NEED_TOSEND) {
-					// Serial2.printf("S%u ", i);
-					send_update_on_tracked_variable(i);
-					// Serial2.printf(" (%u)\n", Serial3.availableForWrite());
-					ptr->updates_needed = Base::UpdateState::STATE_WAIT_ON_ACK;
+				if (ptr->requestUpdate == true ) {
+					if (ptr->ack_needed == false) {
+						//idle, let's send
+						ptr->requestUpdate = false; // clear request flag
+						ptr->ack_needed = true;
+						send_update_on_tracked_variable(i);
+						break;
+					}
 				}
 			}
 		}
