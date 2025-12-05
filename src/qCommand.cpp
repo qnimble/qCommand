@@ -354,7 +354,9 @@ char qCommand::readBinaryInt2(void) {
 
 	static int dataReady;
 	// static uint8_t count = 0;
-	static int k = 0;
+	static uint8_t k = 0;
+	static uint8_t j = 0;
+
 	dataReady = binaryStream->available();
 	if (dataReady != 0) {
 		for (k = 0; k < dataReady; k++) {
@@ -368,20 +370,32 @@ char qCommand::readBinaryInt2(void) {
 	}
 
 	if (eui_get_host_setup()) {
-		for (uint8_t i = 0; i < commandCount; i++) {
-			if (isSmartObject(commandList[i].types.sub_types.ptr)) {
-				Base *ptr = static_cast<Base *>(commandList[i].ptr.object);
-				if (ptr->requestUpdate == true ) {
-					if (ptr->ack_needed == false) {
-						//idle, let's send
-						ptr->requestUpdate = false; // clear request flag
-						ptr->ack_needed = true;
-						send_update_on_tracked_variable(i);
-						break;
+		if (isSmartObject(commandList[j].types.sub_types.ptr)) {
+			Base *ptr = static_cast<Base *>(commandList[j].ptr.object);
+			if (ptr->requestUpdate == true ) {
+				if (ptr->ack_needed == false) {
+					//idle, let's send
+					/*
+					if (commandList[j].types.sub_types.data == 11) {
+						//floats
+						size_t offset = qCommand::getOffset(commandList[j].types, commandList[j].size);
+						const uint8_t *data = (static_cast<const uint8_t *>(commandList[j].ptr.data) + offset);
+						Serial2.printf("Sending update for command %s: with value of %f\n", commandList[j].command, * (float*) data);
+						Serial2.printf("Offset: %u, Data address: 0x%08x. With type = %u and size = %u\n", offset, (unsigned int)(commandList[j].ptr.data) + offset, commandList[j].types.sub_types.data, commandList[j].size);
 					}
+					*/
+					ptr->requestUpdate = false; // clear request flag
+					ptr->ack_needed = true;
+					send_update_on_tracked_variable(j);
 				}
 			}
 		}
+		j++;
+		if (j >= commandCount) {
+			j = 0;
+		}
+	} else {
+		j = 0;
 	}
 
 	PT_RESTART(pt);
