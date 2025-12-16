@@ -57,8 +57,7 @@ void qCommand::reset(void) {
 }
 
 void qCommand::readBinary(void) {
-	PT_SCHEDULE(readBinaryInt2());
-	// PT_SCHEDULE(checkHeartBeat());
+	readBinaryInt2();
 }
 
 uint16_t qCommand::sizeOfType(qCommand::Types type) {

@@ -135,7 +135,8 @@ class qCommand {
 	void assignVariable(const char *command, const T variable)
 		requires(std::is_pointer<T>::value &&
 				 !std::is_base_of<Base,
-								  typename std::remove_pointer<T>::type>::value)
+								  typename std::remove_pointer<T>::type>::value &&
+								std::is_const<typename std::remove_pointer<T>::type>::value)
 	;
 
 	// Arrays with size
@@ -280,8 +281,9 @@ template <typename T>
 void qCommand::assignVariable(const char *command, const T variable)
 	requires(
 		std::is_pointer<T>::value &&
-		!std::is_base_of<Base, typename std::remove_pointer<T>::type>::value)
-{
+		!std::is_base_of<Base, typename std::remove_pointer<T>::type>::value &&
+	        std::is_const<typename std::remove_pointer<T>::type>::value)
+	{
 	using base_type = typename std::remove_pointer<T>::type;		  // G
 	using array_type = typename std::remove_extent<base_type>::type;  // G
 	Types types;
