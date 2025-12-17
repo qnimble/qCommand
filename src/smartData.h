@@ -2,8 +2,7 @@
 #define SMARTDATA_h
 
 #include <Arduino.h>
-
-
+#include <functional>
 #include "typeTraits.h"
 
 class qCommand; // forward declaration
@@ -230,9 +229,17 @@ class SmartData<DataType, false>
 		}
 	}
 	uint16_t size(void) { return sizeof(ValueType); }
-	using SetterFuncPtr = ValueType (*)(ValueType, ValueType);
+	using SetterFuncPtr = std::function<ValueType(ValueType, ValueType)>;
 	void setSetter(SetterFuncPtr setter) { this->setter = setter; }
 
+	void setLimits(ValueType minV, ValueType maxV) {
+		//Store limits in class instance
+		minValue = minV;
+		maxValue = maxV;
+		setter = [this](ValueType newV, ValueType oldV) -> ValueType {
+			return this->enforceLimits(newV, oldV);
+		};
+	}
 
 	// Add conversion wrapper for enum-based setters
 	template <typename EnumType, typename T = DataType>
@@ -242,19 +249,11 @@ class SmartData<DataType, false>
 		std::is_same<typename std::underlying_type<EnumType>::type, ValueType>::value,
 		void>::type
 	setSetter(EnumType (*enumSetter)(EnumType, EnumType)) {
-		// Create a static wrapper that stores the enum function pointer
-		static EnumType (*storedEnumSetter)(EnumType, EnumType) = nullptr;
-		storedEnumSetter = enumSetter;
-
-		// Create a wrapper function that converts types
-		static auto wrapper = [](ValueType newV, ValueType oldV) -> ValueType {
+		this->setter = [enumSetter](ValueType newV, ValueType oldV) -> ValueType {
 			return static_cast<ValueType>(
-				storedEnumSetter(static_cast<EnumType>(newV), static_cast<EnumType>(oldV))
+				enumSetter(static_cast<EnumType>(newV), static_cast<EnumType>(oldV))
 			);
 		};
-
-		// Assign the wrapper (lambdas without captures can convert to function pointers)
-		this->setter = +wrapper;  // The + forces conversion to function pointer
 	}
 
 	uint8_t getMapSize(void) const { 
@@ -307,6 +306,18 @@ class SmartData<DataType, false>
 	bool dataRequested = false;
 	friend class qCommand;
 	SetterFuncPtr setter = nullptr;
+
+	ValueType minValue;
+	ValueType maxValue;
+
+	ValueType enforceLimits(ValueType newValue, ValueType oldValue) {
+		if (newValue < minValue) {
+			newValue = minValue;
+		} else if (newValue > maxValue) {
+			newValue = maxValue;
+		}
+		return newValue;
+	}
 
 	void setImpl(ValueType newValue);
 	// Add Keys-specific members
