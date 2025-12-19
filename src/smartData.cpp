@@ -5,12 +5,24 @@
 
 template <class DataType>
 void SmartData<DataType, false>::setImpl(ValueType newValue) {
+	ValueType tempValue;
 	if (setter != nullptr) {
-		this->value = setter(newValue, this->value);
+		tempValue = setter(newValue, this->value);
 	} else {
-		this->value = newValue;
+		tempValue = newValue;
 	}
-	this->requestUpdate = true;
+	bool changed = (tempValue != this->value);
+
+    if constexpr (std::is_floating_point_v<ValueType>) {
+        if (std::isnan(tempValue) && std::isnan(this->value)) {
+            changed = false;
+        }
+    }
+
+    if (changed) {
+		this->value = tempValue;
+		this->requestUpdate = true;
+	}
 }
 
 template <class DataType>
