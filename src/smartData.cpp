@@ -5,12 +5,7 @@
 
 template <class DataType>
 void SmartData<DataType, false>::setImpl(ValueType newValue) {
-	ValueType tempValue;
-	if (setter != nullptr) {
-		tempValue = setter(newValue, this->value);
-	} else {
-		tempValue = newValue;
-	}
+	const ValueType tempValue = applySetterIfAny(newValue, this->value);
 	bool changed = (tempValue != this->value);
 
     if constexpr (std::is_floating_point_v<ValueType>) {

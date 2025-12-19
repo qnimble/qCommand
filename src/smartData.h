@@ -2,7 +2,6 @@
 #define SMARTDATA_h
 
 #include <Arduino.h>
-#include <functional>
 #include "typeTraits.h"
 
 class qCommand; // forward declaration
@@ -159,6 +158,33 @@ class SmartData<DataType, false>
 	}
 
 	using ValueType = typename SmartDataKeyType<DataType>::type;
+
+    using PlainSetterFuncPtr = ValueType (*)(ValueType, ValueType);
+    using ThunkFuncPtr = ValueType (*)(void* ctx, ValueType newV, ValueType oldV);
+
+     template <typename EnumType>
+        requires (std::is_enum_v<EnumType> && (sizeof(EnumType) == sizeof(ValueType)))
+    void setSetter(EnumType (*enumSetter)(EnumType, EnumType)) {
+        // store the function pointer bytes as enumtype differs from ValueType for compiler type checking
+        static_assert(sizeof(enumSetter) == sizeof(StoredSetter.bytes),
+                      "Unexpected function pointer size");
+        memcpy(StoredSetter.bytes, &enumSetter, sizeof(enumSetter));
+        thunk = &SmartData::template enumThunk<EnumType>;
+    }
+
+	void setSetter(PlainSetterFuncPtr fn) {
+		StoredSetter.plain = fn;
+		thunk = &plainThunk;
+	}
+
+	void setLimits(ValueType minV, ValueType maxV) {
+		//Store limits in class instance
+		minValue = minV;
+		maxValue = maxV;
+		thunk = &limitsThunk;
+	}
+
+
 	// For fundamental types like int, float, bool
 	template <typename T = ValueType>
 	T get() const
@@ -229,32 +255,6 @@ class SmartData<DataType, false>
 		}
 	}
 	uint16_t size(void) { return sizeof(ValueType); }
-	using SetterFuncPtr = std::function<ValueType(ValueType, ValueType)>;
-	void setSetter(SetterFuncPtr setter) { this->setter = setter; }
-
-	void setLimits(ValueType minV, ValueType maxV) {
-		//Store limits in class instance
-		minValue = minV;
-		maxValue = maxV;
-		setter = [this](ValueType newV, ValueType oldV) -> ValueType {
-			return this->enforceLimits(newV, oldV);
-		};
-	}
-
-	// Add conversion wrapper for enum-based setters
-	template <typename EnumType, typename T = DataType>
-	typename std::enable_if<
-		is_option_ptr<T>::value &&
-		std::is_enum<EnumType>::value &&
-		std::is_same<typename std::underlying_type<EnumType>::type, ValueType>::value,
-		void>::type
-	setSetter(EnumType (*enumSetter)(EnumType, EnumType)) {
-		this->setter = [enumSetter](ValueType newV, ValueType oldV) -> ValueType {
-			return static_cast<ValueType>(
-				enumSetter(static_cast<EnumType>(newV), static_cast<EnumType>(oldV))
-			);
-		};
-	}
 
 	uint8_t getMapSize(void) const { 
 		if constexpr (is_option_ptr<DataType>::value) {
@@ -305,19 +305,50 @@ class SmartData<DataType, false>
    private:
 	bool dataRequested = false;
 	friend class qCommand;
-	SetterFuncPtr setter = nullptr;
+
+	ThunkFuncPtr thunk = nullptr;
+	union StoredSetter {
+		PlainSetterFuncPtr plain;
+		uint8_t bytes[sizeof(void (*)())];
+
+		// default-init to null
+		constexpr StoredSetter() : plain(nullptr) {}
+	} StoredSetter;
 
 	ValueType minValue;
 	ValueType maxValue;
 
-	ValueType enforceLimits(ValueType newValue, ValueType oldValue) {
-		if (newValue < minValue) {
-			newValue = minValue;
-		} else if (newValue > maxValue) {
-			newValue = maxValue;
-		}
-		return newValue;
-	}
+	// Call this inside setImpl instead of std::function
+    ValueType applySetterIfAny(ValueType newV, ValueType oldV) {
+        return (thunk != nullptr) ? thunk(this, newV, oldV) : newV;
+    }
+
+    static ValueType plainThunk(void* ctx, ValueType newV, ValueType oldV) {
+        auto* self = static_cast<SmartData*>(ctx);
+        return (self->StoredSetter.plain != nullptr) ? self->StoredSetter.plain(newV, oldV) : newV;
+    }
+
+    static ValueType limitsThunk(void* ctx, ValueType newV, ValueType /*oldV*/) {
+        auto* self = static_cast<SmartData*>(ctx);
+        if (newV < self->minValue) newV = self->minValue;
+        else if (newV > self->maxValue) newV = self->maxValue;
+        return newV;
+    }
+
+	// NEW enumThunk: reconstruct the original enum-typed function pointer via memcpy
+    template <typename EnumType>
+    static ValueType enumThunk(void* ctx, ValueType newV, ValueType oldV) {
+        auto* self = static_cast<SmartData*>(ctx);
+
+        EnumType (*fn)(EnumType, EnumType) = nullptr;
+        memcpy(&fn, self->StoredSetter.bytes, sizeof(fn));
+        if (fn == nullptr) {
+            return newV;
+        }
+
+        const auto out = fn(static_cast<EnumType>(newV), static_cast<EnumType>(oldV));
+        return static_cast<ValueType>(out);
+    }
 
 	void setImpl(ValueType newValue);
 	// Add Keys-specific members
