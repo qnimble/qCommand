@@ -351,21 +351,16 @@ char qCommand::readBinaryInt2(void) {
 	// static uint8_t store[64];
 	// static eui_interface_t *p_link = &serial_comms;
 
-	static int dataReady;
 	// static uint8_t count = 0;
-	static uint8_t k = 0;
 	static uint8_t j = 0;
 
-	dataReady = binaryStream->available();
-	if (dataReady != 0) {
-		for (k = 0; k < dataReady; k++) {
-			uint8_t inbound_byte = binaryStream->read();
-			eui_errors_t error = eui_parse(inbound_byte, &serial_comms);
-			if (error.parser == eui_parse_errors::EUI_PARSER_ERROR) {
-				reset();  // reset the qCommand states
-			}
-			PT_YIELD(pt);
+	while(binaryStream->available() > 0) {
+		uint8_t inbound_byte = binaryStream->read();
+		eui_errors_t error = eui_parse(inbound_byte, &serial_comms);
+		if (error.parser == eui_parse_errors::EUI_PARSER_ERROR) {
+			reset();  // reset the qCommand states
 		}
+		PT_YIELD(pt);
 	}
 
 	if (eui_get_host_setup()) {
