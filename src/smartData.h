@@ -300,11 +300,15 @@ class SmartData<DataType, false>
 		}
 	}
 
-
+	void runOnUpdate(void (*func)(void)) {
+		onUpdate = func;
+	}
 
    private:
 	bool dataRequested = false;
 	friend class qCommand;
+
+	void (*onUpdate)(void) = nullptr;
 
 	ThunkFuncPtr thunk = nullptr;
 	union StoredSetter {

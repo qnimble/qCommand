@@ -16,6 +16,9 @@ void SmartData<DataType, false>::setImpl(ValueType newValue) {
 
     if (changed) {
 		this->value = tempValue;
+		if (onUpdate) {
+			onUpdate();
+		}
 		this->requestUpdate = true;
 	}
 }
