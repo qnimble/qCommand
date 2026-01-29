@@ -141,6 +141,11 @@ template <class DataType>
 class SmartData<DataType, false>
 	: public BaseTyped<typename SmartDataKeyType<DataType>::type> {
    public:
+	using ValueType = typename SmartDataKeyType<DataType>::type;
+
+	// Default constructor
+	SmartData() : BaseTyped<ValueType>(ValueType{}) {}
+
 	template <typename T = DataType,
 			  typename std::enable_if<!is_option_ptr<T>::value, int>::type = 0>
 	SmartData(T data) : BaseTyped<DataType>(data) {}
@@ -156,8 +161,6 @@ class SmartData<DataType, false>
 			this->setName(data[0].value.c_str());
 		}
 	}
-
-	using ValueType = typename SmartDataKeyType<DataType>::type;
 
     using PlainSetterFuncPtr = ValueType (*)(ValueType, ValueType);
     using ThunkFuncPtr = ValueType (*)(void* ctx, ValueType newV, ValueType oldV);
