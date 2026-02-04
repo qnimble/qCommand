@@ -185,6 +185,7 @@ class SmartData<DataType, false>
 		minValue = minV;
 		maxValue = maxV;
 		thunk = &limitsThunk;
+		setImpl(this->value);
 	}
 
 
@@ -232,6 +233,77 @@ class SmartData<DataType, false>
         set(newValue);
         return *this;
     }
+
+	// Prefix increment
+	template <typename V = ValueType>
+    requires std::is_arithmetic_v<V>
+    SmartData& operator++() {
+        set(this->value + 1);
+        return *this;
+	}
+
+	// Postfix increment - returns the old VALUE
+	template <typename V = ValueType>
+    requires std::is_arithmetic_v<V>
+	ValueType operator++(int) {
+		ValueType oldValue = this->value;
+		set(this->value + 1);
+		return oldValue;
+	}
+
+	// Prefix decrement
+	template <typename V = ValueType>
+    requires std::is_arithmetic_v<V>
+	SmartData& operator--() {
+		set(this->value - 1);
+		return *this;
+	}
+
+	// Postfix decrement - returns the old VALUE
+	template <typename V = ValueType>
+    requires std::is_arithmetic_v<V>
+	ValueType operator--(int) {
+		ValueType oldValue = this->value;
+		set(this->value - 1);
+		return oldValue;
+	}
+
+	// Compound assignment operators
+	template <typename V = ValueType>
+    requires std::is_arithmetic_v<V>
+	SmartData& operator+=(ValueType rhs) {
+		set(this->value + rhs);
+		return *this;
+	}
+
+	template <typename V = ValueType>
+	requires std::is_arithmetic_v<V>
+	SmartData& operator-=(ValueType rhs) {
+		set(this->value - rhs);
+		return *this;
+	}
+
+	template <typename V = ValueType>
+	requires std::is_arithmetic_v<V>
+	SmartData& operator*=(ValueType rhs) {
+		set(this->value * rhs);
+		return *this;
+	}
+
+	template <typename V = ValueType>
+	requires std::is_arithmetic_v<V>
+	SmartData& operator/=(ValueType rhs) {
+		set(this->value / rhs);
+		return *this;
+	}
+
+	template <typename V = ValueType>
+	requires std::is_integral_v<V>
+	SmartData& operator%=(ValueType rhs) {
+		set(this->value % rhs);
+		return *this;
+	}
+
 
 	void set(ValueType newValue) {
 		if constexpr (is_option_ptr<DataType>::value) {
