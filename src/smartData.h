@@ -234,6 +234,22 @@ class SmartData<DataType, false>
         return *this;
     }
 
+	// Assignment from C-string when ValueType is String
+	template <typename V = ValueType>
+	requires std::is_same_v<V, String>
+	SmartData& operator=(const char* newValue) {
+		set(String(newValue));
+		return *this;
+	}
+
+	// Assignment from another SmartData should trigger set()
+	SmartData& operator=(const SmartData& other) {
+		if (this != &other) {
+			set(other.value);
+		}
+		return *this;
+	}
+
 	// Prefix increment
 	template <typename V = ValueType>
     requires std::is_arithmetic_v<V>
