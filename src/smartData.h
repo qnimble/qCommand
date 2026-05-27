@@ -116,6 +116,7 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
 	void set(baseType, size_t element);
 	bool isFull(void);
 	bool setNext(baseType);
+	void sendUpdate(void) { this->requestUpdate = true;}
 
 	uint16_t size(void) { return totalElements * sizeof(baseType); }
 	baseType get(size_t element) { return value[element]; }
