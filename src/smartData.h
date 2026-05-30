@@ -103,15 +103,17 @@ class SmartData<DataType, true> : public AllSmartDataPtr {
    public:
 	using baseType = typename std::remove_pointer<DataType>::type;
 
+	static constexpr size_t maxElements = std::numeric_limits<uint16_t>::max() / sizeof(baseType);
+
 	// For pointer arrays with explicitly set size
 	SmartData(DataType data, size_t size)
 		requires(TypeTraits<DataType>::isPointer)
-		: AllSmartDataPtr(size / sizeof(baseType)), value(data) {};
+		: AllSmartDataPtr(std::min(size / sizeof(baseType), maxElements)), value(data) {};
 
 	// For pointer types with arrays
 	template <size_t N>
 	SmartData(typename std::remove_pointer<DataType>::type (&data)[N])
-		: AllSmartDataPtr(N), value(data){};
+		: AllSmartDataPtr(std::min((size_t)N, maxElements)), value(data){};
 
 	void set(baseType, size_t element);
 	bool isFull(void);
